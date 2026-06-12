@@ -1,0 +1,306 @@
+:_mod-docs-content-type: ASSEMBLY
+:_mod-docs-content-type: SNIPPET
+// The {product-title} attribute provides the context-sensitive name of the relevant OpenShift distribution, for example, "OpenShift Container Platform" or "OKD". The {product-version} attribute provides the product version relative to the distribution, for example "4.9".
+// {product-title} and {product-version} are parsed when AsciiBinder queries the _distro_map.yml file in relation to the base branch of a pull request.
+// See https://github.com/openshift/openshift-docs/blob/main/contributing_to_docs/doc_guidelines.adoc#product-name-and-version for more information on this topic.
+// Other common attributes are defined in the following lines:
+:data-uri:
+:icons:
+:experimental:
+:toc: macro
+:toc-title:
+:imagesdir: images
+:prewrap!:
+
+:pipelines-title: Red Hat OpenShift Pipelines
+:pipelines-shortname: OpenShift Pipelines
+:pipelines-ver: pipelines-1.22
+:pipelines-version-number: 1.22
+:osp-version-patch: 0
+:tekton-cache: Tekton Cache
+:tekton-chains: Tekton Chains
+:tekton-results: Tekton Results
+:tekton-triggers: Tekton Triggers
+:tekton-hub: Tekton Hub
+:artifact-hub: Artifact Hub
+:pac: Pipelines as Code
+:product-registry: OpenShift image registry
+// IBM Power
+:ibmpowerProductName: IBM Power
+// IBM zSystems
+:ibmzProductName: IBM zSystems
+:linuxoneProductName: IBM(R) LinuxONE
+:kebab: image:kebab.png[title="Options menu"]
+
+:op-system-base: RHEL
+:op-system-base-full: Red Hat Enterprise Linux (RHEL)
+
+:cluster-manager-first: Red Hat OpenShift Cluster Manager
+:cluster-manager: OpenShift Cluster Manager
+:cluster-manager-url: link:https://console.redhat.com/openshift[OpenShift Cluster Manager Hybrid Cloud Console]
+:cluster-manager-url-pull: link:https://console.redhat.com/openshift/install/pull-secret[pull secret from the Red Hat OpenShift Cluster Manager]
+
+:oc-first: pass:quotes[OpenShift CLI (`oc`)]
+
+// Attributes not present in the main branch
+:OCP: OpenShift Container Platform
+
+//We should use lowercase like regular OCP docs and deprecate the above.
+:ocp: OpenShift Container Platform
+
+
+:ols-official: Red{nbsp}Hat OpenShift Lightspeed
+:ols: OpenShift Lightspeed
+
+// Attributes not present in the main branch
+:rhosp: Red Hat OpenStack Platform
+[id='installing-tkn']
+= Installing tkn
+:context: installing-tkn
+
+toc::[]
+
+[role="_abstract"]
+Use the CLI tool to manage {pipelines-title} from a terminal. You can install the CLI tool on different platforms.
+
+[NOTE]
+====
+Both the archives and the RPMs contain the following executables:
+
+* `tkn`
+* `tkn-pac`
+* `opc`
+====
+:FeatureName: Running {pipelines-title} with the `opc` CLI tool
+:_mod-docs-content-type: SNIPPET
+// When including this file, ensure that {FeatureName} is set immediately before
+// the include. Otherwise it will result in an incorrect replacement.
+
+[IMPORTANT]
+====
+[subs="attributes+"]
+{FeatureName} is a Technology Preview feature only. Technology Preview features are not supported with Red Hat production service level agreements (SLAs) and might not be functionally complete. Red Hat does not recommend using them in production. These features provide early access to upcoming product features, enabling customers to test functionality and provide feedback during the development process.
+
+For more information about the support scope of Red Hat Technology Preview features, see link:https://access.redhat.com/support/offerings/techpreview/[Technology Preview Features Support Scope].
+====
+// Undefine {FeatureName} attribute, so that any mistakes are easily spotted
+:!FeatureName:
+
+// Install tkn on Linux
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * tkn_cli/installing-tkn.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="installing-tkn-on-linux"]
+
+= Installing the {pipelines-title} CLI on Linux
+
+[role="_abstract"]
+For Linux distributions, you can download the CLI as a `tar.gz` archive.
+
+.Procedure
+
+. Download the relevant CLI tool.
+
+* link:https://mirror.openshift.com/pub/cgw/pipelines/{pipelines-version-number}.{osp-version-patch}/tkn-linux-amd64.tar.gz[Linux (x86_64, amd64)]
+
+* link:https://mirror.openshift.com/pub/cgw/pipelines/{pipelines-version-number}.{osp-version-patch}/tkn-linux-s390x.tar.gz[Linux on {ibmzProductName} and {linuxoneProductName} (s390x)]
+
+* link:https://mirror.openshift.com/pub/cgw/pipelines/{pipelines-version-number}.{osp-version-patch}/tkn-linux-ppc64le.tar.gz[Linux on {ibmpowerProductName} (ppc64le)]
+
+* link:https://mirror.openshift.com/pub/cgw/pipelines/{pipelines-version-number}.{osp-version-patch}/tkn-linux-arm64.tar.gz[Linux on ARM (aarch64, arm64)]
+
+// Binaries also need to be updated in the following modules:
+// op-installing-pipelines-as-code-cli.adoc
+// op-installing-tkn-on-windows.adoc
+// op-installing-tkn-on-macos.adoc
+
+. Unpack the archive:
++
+[source,terminal]
+----
+$ tar xvzf <file>
+----
+. Add the location of your `tkn`, `tkn-pac`, and `opc` files to your `PATH` environment variable.
+
+
+. To check your `PATH`, run the following command:
++
+[source,terminal]
+----
+$ echo $PATH
+----
+
+:leveloffset!:
+
+// Install tkn on Linux using RPM
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * tkn_cli/installing-tkn.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="installing-tkn-on-linux-using-rpm"]
+
+= Installing the {pipelines-title} CLI on Linux using an RPM
+
+[role="_abstract"]
+For {op-system-base-full} version 8, you can install the {pipelines-title} CLI as an RPM.
+
+.Prerequisites
+
+* You have an active {OCP} subscription on your Red Hat account.
+* You have root or sudo privileges on your local system.
+
+.Procedure
+
+. Register with Red Hat Subscription Manager:
++
+[source,terminal]
+----
+# subscription-manager register
+----
+
+. Pull the latest subscription data:
++
+[source,terminal]
+----
+# subscription-manager refresh
+----
+
+. List the available subscriptions:
++
+[source,terminal]
+----
+# subscription-manager list --available --matches '*pipelines*'
+----
+
+. In the output for the earlier command, find the pool ID for your {OCP} subscription and attach the subscription to the registered system:
++
+[source,terminal]
+----
+# subscription-manager attach --pool=<pool_id>
+----
+
+. Enable the repositories required by {pipelines-title}:
++
+* Linux (x86_64, amd64)
++
+[source,terminal,subs="attributes"]
+----
+# subscription-manager repos --enable="pipelines-{pipelines-version-number}-for-rhel-8-x86_64-rpms"
+----
++
+* Linux on {ibmzProductName} and {linuxoneProductName} (s390x)
++
+[source,terminal,subs="attributes"]
+----
+# subscription-manager repos --enable="pipelines-{pipelines-version-number}-for-rhel-8-s390x-rpms"
+----
++
+* Linux on {ibmpowerProductName} (ppc64le)
++
+[source,terminal,subs="attributes"]
+----
+# subscription-manager repos --enable="pipelines-{pipelines-version-number}-for-rhel-8-ppc64le-rpms"
+----
++
+* Linux on ARM (aarch64, arm64)
++
+[source,terminal,subs="attributes"]
+----
+# subscription-manager repos --enable="pipelines-{pipelines-version-number}-for-rhel-8-aarch64-rpms"
+----
+. Install the `openshift-pipelines-client` package:
++
+[source,terminal]
+----
+# yum install openshift-pipelines-client
+----
++
+After you install the CLI, you can use it with the `tkn` command:
++
+[source,terminal]
+----
+$ tkn version
+----
+
+:leveloffset!:
+
+//Install tkn on Windows
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * tkn_cli/installing-tkn.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="installing-tkn-on-windows"]
+
+= Installing the {pipelines-title} CLI on Windows
+
+[role="_abstract"]
+For Windows, you can download the CLI as a `zip` archive.
+
+.Procedure
+
+.  Download the link:https://mirror.openshift.com/pub/cgw/pipelines/{pipelines-version-number}.{osp-version-patch}/tkn-windows-amd64.zip[CLI tool].
+
+// Binaries also need to be updated in the following modules:
+// op-installing-tkn-on-linux.adoc
+// op-installing-pipelines-as-code-cli.adoc
+// op-installing-tkn-on-macos.adoc
+
+. Extract the archive with a ZIP program.
+. Add the location of your `tkn`, `tkn-pac`, and `opc` files to your `PATH` environment variable.
+
+. To check your `PATH`, run the following command:
++
+[source,terminal]
+----
+C:\> path
+----
+
+:leveloffset!:
+
+//Install tkn on macOS
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * tkn_cli/installing-tkn.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="installing-tkn-on-macos"]
+
+= Installing the {pipelines-title} CLI on macOS
+
+[role="_abstract"]
+For macOS, you can download the CLI as a `tar.gz` archive.
+
+.Procedure
+
+. Download the relevant CLI tool.
+
+* link:https://mirror.openshift.com/pub/cgw/pipelines/{pipelines-version-number}.{osp-version-patch}/tkn-macos-amd64.tar.gz[macOS]
+
+* link:https://mirror.openshift.com/pub/cgw/pipelines/{pipelines-version-number}.{osp-version-patch}/tkn-macos-arm64.tar.gz[macOS on ARM]
+
+// Binaries also need to be updated in the following modules:
+// op-installing-tkn-on-linux.adoc
+// op-installing-pipelines-as-code-cli.adoc
+// op-installing-tkn-on-windows.adoc
+
+. Unpack and extract the archive.
+
+. Add the location of your `tkn`, `tkn-pac`, and `opc` files to your `PATH` environment variable.
+
+
+. To check your `PATH`, run the following command:
++
+[source,terminal]
+----
+$ echo $PATH
+----
+
+:leveloffset!:

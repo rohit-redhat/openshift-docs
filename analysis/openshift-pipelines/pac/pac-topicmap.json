@@ -1,0 +1,34 @@
+{
+  "book": "pac",
+  "distro": "openshift-pipelines",
+  "topics": [
+    {
+      "name": "About Pipelines as Code",
+      "file": "about-pipelines-as-code"
+    },
+    {
+      "name": "Installing and configuring Pipelines as Code",
+      "file": "install-config-pipelines-as-code"
+    },
+    {
+      "name": "Using Pipelines as Code with a Git repository hosting service provider",
+      "file": "using-pipelines-as-code-repos"
+    },
+    {
+      "name": "Using the Repository custom resource",
+      "file": "using-repository-crd"
+    },
+    {
+      "name": "Creating pipeline runs in Pipelines as Code",
+      "file": "creating-pipeline-runs-pac"
+    },
+    {
+      "name": "Managing pipeline runs",
+      "file": "managing-pipeline-runs-pac"
+    },
+    {
+      "name": "Pipelines as Code command reference",
+      "file": "pac-command-reference"
+    }
+  ]
+}

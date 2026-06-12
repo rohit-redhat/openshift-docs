@@ -1,0 +1,178 @@
+:_mod-docs-content-type: ASSEMBLY
+:_mod-docs-content-type: SNIPPET
+// The {product-title} attribute provides the context-sensitive name of the relevant OpenShift distribution, for example, "OpenShift Container Platform" or "OKD". The {product-version} attribute provides the product version relative to the distribution, for example "4.9".
+// {product-title} and {product-version} are parsed when AsciiBinder queries the _distro_map.yml file in relation to the base branch of a pull request.
+// See https://github.com/openshift/openshift-docs/blob/main/contributing_to_docs/doc_guidelines.adoc#product-name-and-version for more information on this topic.
+// Other common attributes are defined in the following lines:
+:data-uri:
+:icons:
+:experimental:
+:toc: macro
+:toc-title:
+:imagesdir: images
+:prewrap!:
+
+:pipelines-title: Red Hat OpenShift Pipelines
+:pipelines-shortname: OpenShift Pipelines
+:pipelines-ver: pipelines-1.22
+:pipelines-version-number: 1.22
+:osp-version-patch: 0
+:tekton-cache: Tekton Cache
+:tekton-chains: Tekton Chains
+:tekton-results: Tekton Results
+:tekton-triggers: Tekton Triggers
+:tekton-hub: Tekton Hub
+:artifact-hub: Artifact Hub
+:pac: Pipelines as Code
+:product-registry: OpenShift image registry
+// IBM Power
+:ibmpowerProductName: IBM Power
+// IBM zSystems
+:ibmzProductName: IBM zSystems
+:linuxoneProductName: IBM(R) LinuxONE
+:kebab: image:kebab.png[title="Options menu"]
+
+:op-system-base: RHEL
+:op-system-base-full: Red Hat Enterprise Linux (RHEL)
+
+:cluster-manager-first: Red Hat OpenShift Cluster Manager
+:cluster-manager: OpenShift Cluster Manager
+:cluster-manager-url: link:https://console.redhat.com/openshift[OpenShift Cluster Manager Hybrid Cloud Console]
+:cluster-manager-url-pull: link:https://console.redhat.com/openshift/install/pull-secret[pull secret from the Red Hat OpenShift Cluster Manager]
+
+:oc-first: pass:quotes[OpenShift CLI (`oc`)]
+
+// Attributes not present in the main branch
+:OCP: OpenShift Container Platform
+
+//We should use lowercase like regular OCP docs and deprecate the above.
+:ocp: OpenShift Container Platform
+
+
+:ols-official: Red{nbsp}Hat OpenShift Lightspeed
+:ols: OpenShift Lightspeed
+
+// Attributes not present in the main branch
+:rhosp: Red Hat OpenStack Platform
+[id="uninstalling-pipelines"]
+= Uninstalling {pipelines-shortname}
+:context: uninstalling-pipelines
+
+toc::[]
+
+[role="_abstract"]
+Cluster administrators can uninstall the {pipelines-title} Operator by performing the following steps:
+
+. Delete the Custom Resources (CRs) for the optional components, `TektonHub` and `TektonResult`, if these CRs exist, and then delete the `TektonConfig` CR.
++
+[CAUTION]
+====
+If you uninstall the Operator without removing the CRs of optional components, you cannot remove the components later.
+====
+. Uninstall the {pipelines-title} Operator.
+. Delete the Custom Resource Definitions (CRDs) of the `operator.tekton.dev` group.
+
+Uninstalling only the Operator will not remove the {pipelines-title} components created by default when you install the Operator.
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * install_config/uninstalling-pipelines.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="op-deleting-the-pipelines-custom-resources_{context}"]
+= Deleting the {pipelines-shortname} custom resources
+
+[role="_abstract"]
+You can remove the {pipelines-shortname} custom resources (CRs) to clean up the configuration before uninstalling the Operator. This involves deleting optional components such as `TektonHub` and `TektonResult`, followed by the main `TektonConfig` CR.
+
+.Procedure
+. In the *Administrator* perspective of the web console, navigate to *Administration* -> *`CustomResourceDefinitions`*.
+
+. Type `TektonHub` in the *Filter by name* field to search for the `TektonHub` Custom Resource Definition (CRD).
+
+. Click the name of the `TektonHub` CRD to display the details page for the CRD.
+
+. Click the `Instances` tab.
+
+. If an instance appears, click the *Options* menu {kebab} for the displayed instance.
+
+. Select *Delete `TektonHub`*.
+
+. Click *Delete* to confirm the deletion of the CR.
+
+. Repeat these steps, searching for `TektonResult` and then `TektonConfig` in the *Filter by name* box. If any instances of these custom resource definitions (CRDs) exist, delete them.
++
+[NOTE]
+====
+Deleting the CRs also deletes the {pipelines-title} components and all the tasks and pipelines on the cluster.
+====
++
+[IMPORTANT]
+====
+If you uninstall the Operator without removing the `TektonHub` and `TektonResult` CRs, you cannot remove the {tekton-hub} and {tekton-results} components later.
+====
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * install_config/uninstalling-pipelines.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="op-uninstalling-the-pipelines-operator_{context}"]
+= Uninstalling the {pipelines-title} Operator
+
+[role="_abstract"]
+You can uninstall the {pipelines-title} Operator by using the {OCP} web console to remove the {pipelines-shortname} service from your cluster. This process involves deleting the Operator subscription and its associated operand instances.
+
+.Procedure
+
+. From the *Operators* -> *OperatorHub* page, use the *Filter by keyword* box to search for the *{pipelines-title}* Operator.
+
+. Click the *{pipelines-title}* Operator tile. The Operator tile indicates the installation status.
+
+. In the *{pipelines-title}* Operator description page, click *Uninstall*.
+
+. In the *Uninstall Operator?* window, select *Delete all operand instances for this operator*, and then click *Uninstall*.
++
+[WARNING]
+====
+When you uninstall the {pipelines-shortname} Operator, the uninstallation process deletes all resources within the `openshift-pipelines` target namespace where {pipelines-shortname} is installed, including the secrets you configured.
+====
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * install_config/uninstalling-pipelines.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="op-deleting-the-tekton-dev-crds_{context}"]
+= Deleting the custom resource definitions of the `operator.tekton.dev` group
+
+[role="_abstract"]
+You can delete the `operator.tekton.dev` custom resource definitions (CRDs) to fully remove all {pipelines-shortname} traces from your cluster. This step ensures that no residual definitions remain after the Operator uninstallation.
+
+Delete the `CustomResourceDefinitions` of the `operator.tekton.dev` group. The {pipelines-title} Operator creates these CRDs by default during installation.
+
+.Procedure
+
+. In the *Administrator* perspective of the web console, navigate to *Administration* -> *`CustomResourceDefinitions`*.
+
+. Type `operator.tekton.dev` in the *Filter by name* box to search for the CRDs in the `operator.tekton.dev` group.
+
+. To delete each of the displayed CRDs, complete the following steps:
+.. Click the *Options* menu {kebab}.
+.. Select *Delete `CustomResourceDefinition`*.
+.. Click *Delete* to confirm the deletion of the custom resource definition (CRD).
+
+:leveloffset!:
+
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://docs.openshift.com/container-platform/latest/operators/admin/olm-deleting-operators-from-cluster.html[deleting Operators from a cluster]

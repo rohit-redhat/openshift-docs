@@ -1,0 +1,27 @@
+{
+  "document": "op-release-notes-1-22.adoc",
+  "type": "ASSEMBLY",
+  "includes": [
+    {
+      "path": "_attributes/common-attributes.adoc",
+      "type": "SNIPPET",
+      "line": 3,
+      "context": "Attribute definitions"
+    },
+    {
+      "path": "modules/op-tkn-pipelines-compatibility-support-matrix.adoc",
+      "type": "REFERENCE",
+      "line": 29,
+      "leveloffset": "+1",
+      "section_title": "Compatibility and support matrix"
+    },
+    {
+      "path": "modules/op-release-notes-1-22-0.adoc",
+      "type": "REFERENCE",
+      "line": 32,
+      "leveloffset": "+1",
+      "section_title": "Release notes for Red Hat OpenShift Pipelines 1.22"
+    }
+  ],
+  "total_includes": 3
+}

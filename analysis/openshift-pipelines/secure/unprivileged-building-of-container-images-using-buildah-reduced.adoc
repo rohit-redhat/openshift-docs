@@ -1,0 +1,559 @@
+:_mod-docs-content-type: ASSEMBLY
+:_mod-docs-content-type: SNIPPET
+// The {product-title} attribute provides the context-sensitive name of the relevant OpenShift distribution, for example, "OpenShift Container Platform" or "OKD". The {product-version} attribute provides the product version relative to the distribution, for example "4.9".
+// {product-title} and {product-version} are parsed when AsciiBinder queries the _distro_map.yml file in relation to the base branch of a pull request.
+// See https://github.com/openshift/openshift-docs/blob/main/contributing_to_docs/doc_guidelines.adoc#product-name-and-version for more information on this topic.
+// Other common attributes are defined in the following lines:
+:data-uri:
+:icons:
+:experimental:
+:toc: macro
+:toc-title:
+:imagesdir: images
+:prewrap!:
+
+:pipelines-title: Red Hat OpenShift Pipelines
+:pipelines-shortname: OpenShift Pipelines
+:pipelines-ver: pipelines-1.22
+:pipelines-version-number: 1.22
+:osp-version-patch: 0
+:tekton-cache: Tekton Cache
+:tekton-chains: Tekton Chains
+:tekton-results: Tekton Results
+:tekton-triggers: Tekton Triggers
+:tekton-hub: Tekton Hub
+:artifact-hub: Artifact Hub
+:pac: Pipelines as Code
+:product-registry: OpenShift image registry
+// IBM Power
+:ibmpowerProductName: IBM Power
+// IBM zSystems
+:ibmzProductName: IBM zSystems
+:linuxoneProductName: IBM(R) LinuxONE
+:kebab: image:kebab.png[title="Options menu"]
+
+:op-system-base: RHEL
+:op-system-base-full: Red Hat Enterprise Linux (RHEL)
+
+:cluster-manager-first: Red Hat OpenShift Cluster Manager
+:cluster-manager: OpenShift Cluster Manager
+:cluster-manager-url: link:https://console.redhat.com/openshift[OpenShift Cluster Manager Hybrid Cloud Console]
+:cluster-manager-url-pull: link:https://console.redhat.com/openshift/install/pull-secret[pull secret from the Red Hat OpenShift Cluster Manager]
+
+:oc-first: pass:quotes[OpenShift CLI (`oc`)]
+
+// Attributes not present in the main branch
+:OCP: OpenShift Container Platform
+
+//We should use lowercase like regular OCP docs and deprecate the above.
+:ocp: OpenShift Container Platform
+
+
+:ols-official: Red{nbsp}Hat OpenShift Lightspeed
+:ols: OpenShift Lightspeed
+
+// Attributes not present in the main branch
+:rhosp: Red Hat OpenStack Platform
+[id="unprivileged-building-of-container-images-using-buildah"]
+= Building of container images using Buildah as a non-root user
+:context: unprivileged-building-of-container-images-using-buildah
+
+toc::[]
+
+[role="_abstract"]
+Running {pipelines-shortname} as the root user on a container can expose the container processes and the host to other potentially malicious resources. You can reduce this type of exposure by running the workload as a specific non-root user in the container.
+
+In most cases, you can run Buildah without root privileges by creating a custom task for building the image and configuring user namespaces in this task.
+
+If your image does not build successfully by using this configuration, you can use custom service account (SA) and security context constraint (SCC) definitions. However, with this option, you must enable the Buildah step to raise its privileges (`allowPrivilegeEscalation: true`).
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * secure/unprivileged-building-of-container-images-using-buildah.adoc
+
+:_mod-docs-content-type: PROCEDURE
+
+[id="nonroot-buildah-user-namespaces_{context}"]
+= Running Buildah as a non-root user by configuring user namespaces
+
+[role="_abstract"]
+Configuring user namespaces is the simplest way to run Buildah in a task as a non-root user. However, some images might not build using this option.
+
+.Prerequisites
+
+* You have installed the `oc` command-line utility.
+
+.Procedure
+
+. To create a copy of the `buildah` task, which Red Hat provides in the `openshift-pipelines` namespace, and to change the name of the copy to `buildah-as-user`, enter the following command:
++
+[source,terminal]
+----
+$ oc get task buildah -n openshift-pipelines -o yaml | yq '. |= (del .metadata |= with_entries(select(.key == "name" )))' | yq '.kind="Task"' | yq '.metadata.name="buildah-as-user"' | oc create -f -
+----
+
+. Edit the copied `buildah` task by entering the following command:
++
+[source,terminal]
+----
+$ oc edit task buildah-as-user
+----
++
+In the new task, create `annotations` and `stepTemplate` sections, as shown in the following example:
++
+.Example additions to the `buildah-as-user` task
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  annotations:
+    io.kubernetes.cri-o.userns-mode: 'auto:size=65536;map-to-root=true'
+    io.openshift.builder: 'true'
+  name: assemble-containerimage
+  namespace: pipeline-namespace
+spec:
+  description: This task builds an image.
+#  ...
+  stepTemplate:
+    env:
+      - name: HOME
+        value: /tekton/home
+    image: $(params.builder-image)
+    imagePullPolicy: IfNotPresent
+    name: ''
+    resources:
+      limits:
+        cpu: '1'
+        memory: 4Gi
+      requests:
+        cpu: 100m
+        memory: 2Gi
+    securityContext:
+      capabilities:
+        add:
+          - SETFCAP
+      runAsNonRoot: true
+      runAsUser: 1000
+    workingDir: $(workspaces.working-directory.path)
+#  ...
+----
++
+`runAsUser`:: The `runAsUser:` setting is not strictly necessary, because the task uses `podTemplate`.
+
+. Use the new `buildah-as-user` task to build the image in your pipeline.
+
+:leveloffset!:
+
+//Running Buildah as a non-root user by defining a custom SA and SCC
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * secure/unprivileged-building-of-container-images-using-buildah.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id="buildah-nonroot-sa-scc_{context}"]
+= Running Buildah as a non-root user by defining a custom SA and SCC
+
+[role="_abstract"]
+To run builds of container images by using Buildah as a non-root user, you can perform the following steps:
+
+* Define custom service account (SA) and security context constraint (SCC).
+* Configure Buildah to use the `build` user with id `1000`.
+* Start a task run with a custom config map, or integrate it with a pipeline run.
+
+:leveloffset!:
+
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * secure/unprivileged-building-of-container-images-using-buildah.adoc
+
+:_mod-docs-content-type: PROCEDURE
+
+[id="configuring-custom-sa-and-scc_{context}"]
+= Configuring custom service account and security context constraint
+
+[role="_abstract"]
+The default `pipeline` SA allows using a user ID outside of the namespace range. To reduce dependency on the default SA, you can define a custom SA and security context constraint (SCC) with the necessary cluster role and role bindings for the `build` user with user ID `1000`.
+
+[IMPORTANT]
+====
+At this time, Buildah requires enabling the `allowPrivilegeEscalation` setting to run successfully in the container. With this setting, Buildah can use `SETUID` and `SETGID` capabilities when running as a non-root user.
+====
+
+.Procedure
+
+* Create a custom SA and SCC with necessary cluster role and role bindings.
++
+.Example: Custom SA and SCC for used id `1000`
+[source,yaml]
+----
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: pipelines-sa-userid-1000
+---
+kind: SecurityContextConstraints
+metadata:
+  annotations:
+  name: pipelines-scc-userid-1000
+allowHostDirVolumePlugin: false
+allowHostIPC: false
+allowHostNetwork: false
+allowHostPID: false
+allowHostPorts: false
+allowPrivilegeEscalation: true
+allowPrivilegedContainer: false
+allowedCapabilities: null
+apiVersion: security.openshift.io/v1
+defaultAddCapabilities: null
+fsGroup:
+  type: MustRunAs
+groups:
+- system:cluster-admins
+priority: 10
+readOnlyRootFilesystem: false
+requiredDropCapabilities:
+- MKNOD
+- KILL
+runAsUser:
+  type: MustRunAs
+  uid: 1000
+seLinuxContext:
+  type: MustRunAs
+supplementalGroups:
+  type: RunAsAny
+users: []
+volumes:
+- configMap
+- downwardAPI
+- emptyDir
+- persistentVolumeClaim
+- projected
+- secret
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: pipelines-scc-userid-1000-clusterrole
+rules:
+- apiGroups:
+  - security.openshift.io
+  resourceNames:
+  - pipelines-scc-userid-1000
+  resources:
+  - securitycontextconstraints
+  verbs:
+  - use
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: pipelines-scc-userid-1000-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: pipelines-scc-userid-1000-clusterrole
+subjects:
+- kind: ServiceAccount
+  name: pipelines-sa-userid-1000
+----
++
+`name`:: Define a custom SA.
+`SecurityContextConstraints`:: Define a custom SCC created based on restricted privileges, with modified `runAsUser` field.
+`allowPrivilegeEscalation`:: At this time, Buildah requires enabling the `allowPrivilegeEscalation` setting to run successfully in the container. With this setting, Buildah can use `SETUID` and `SETGID` capabilities when running as a non-root user.
+`uid`:: Restrict any pod that gets attached with the custom SCC through the custom SA to run as user id `1000`.
+`ClusterRole`:: Define a cluster role that uses the custom SCC.
+`RoleBinding`:: Bind the cluster role that uses the custom SCC to the custom SA.
+
+:leveloffset!:
+
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * secure/unprivileged-building-of-container-images-using-buildah.adoc
+
+:_mod-docs-content-type: PROCEDURE
+
+[id="configuring-builah-to-use-build-user_{context}"]
+= Configuring Buildah to use `build` user
+
+[role="_abstract"]
+You can define a Buildah task to use the `build` user with user id `1000`.
+
+.Procedure
+
+. Create a copy of the `buildah` task in the `openshift-pipelines` namespace; change the name of the copy to `buildah-as-user`.
++
+[source,terminal]
+----
+$ oc get task buildah -n openshift-pipelines -o yaml \
+  | yq '. |= (del .metadata |= with_entries(select(.key == "name" )))' \
+  | yq '.kind="Task"' | yq '.metadata.name="buildah-as-user"' | oc create -f -
+----
+
+. Edit the copied `buildah` task.
++
+[source,terminal]
+----
+$ oc edit task buildah-as-user
+----
++
+.Example: Modified Buildah task with `build` user
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: buildah-as-user
+spec:
+  description: >-
+    Buildah task builds source into a container image and
+    then pushes it to a container registry.
+    Buildah Task builds source into a container image using Project Atomic's
+    Buildah build tool.It uses Buildah's support for building from Dockerfiles,
+    using its buildah bud command.This command executes the directives in the
+    Dockerfile to assemble a container image, then pushes that image to a
+    container registry.
+  params:
+  - name: IMAGE
+    description: Reference of the image buildah will produce.
+  - name: BUILDER_IMAGE
+    description: The location of the buildah builder image.
+    default: registry.redhat.io/rhel8/buildah@sha256:99cae35f40c7ec050fed3765b2b27e0b8bbea2aa2da7c16408e2ca13c60ff8ee
+  - name: STORAGE_DRIVER
+    description: Set buildah storage driver
+    default: vfs
+  - name: DOCKERFILE
+    description: Path to the Dockerfile to build.
+    default: ./Dockerfile
+  - name: CONTEXT
+    description: Path to the directory to use as context.
+    default: .
+  - name: TLSVERIFY
+    description: Verify the TLS on the registry endpoint (for push/pull to a non-TLS registry)
+    default: "true"
+  - name: FORMAT
+    description: The format of the built container, oci or docker
+    default: "oci"
+  - name: BUILD_EXTRA_ARGS
+    description: Extra parameters passed for the build command when building images.
+    default: ""
+  - description: Extra parameters passed for the push command when pushing images.
+    name: PUSH_EXTRA_ARGS
+    type: string
+    default: ""
+  - description: Skip pushing the built image
+    name: SKIP_PUSH
+    type: string
+    default: "false"
+  results:
+  - description: Digest of the image just built.
+    name: IMAGE_DIGEST
+    type: string
+  workspaces:
+  - name: source
+  steps:
+  - name: build
+    securityContext:
+      runAsUser: 1000
+    image: $(params.BUILDER_IMAGE)
+    workingDir: $(workspaces.source.path)
+    script: |
+      echo "Running as USER ID `id`"
+      buildah --storage-driver=$(params.STORAGE_DRIVER) bud \
+        $(params.BUILD_EXTRA_ARGS) --format=$(params.FORMAT) \
+        --tls-verify=$(params.TLSVERIFY) --no-cache \
+        -f $(params.DOCKERFILE) -t $(params.IMAGE) $(params.CONTEXT)
+      [[ "$(params.SKIP_PUSH)" == "true" ]] && echo "Push skipped" && exit 0
+      buildah --storage-driver=$(params.STORAGE_DRIVER) push \
+        $(params.PUSH_EXTRA_ARGS) --tls-verify=$(params.TLSVERIFY) \
+        --digestfile $(workspaces.source.path)/image-digest $(params.IMAGE) \
+        docker://$(params.IMAGE)
+      cat $(workspaces.source.path)/image-digest | tee /tekton/results/IMAGE_DIGEST
+    volumeMounts:
+    - name: varlibcontainers
+      mountPath: /home/build/.local/share/containers
+  volumes:
+  - name: varlibcontainers
+    emptyDir: {}
+----
++
+`runAsUser`:: Run the container explicitly as the user id `1000`, which corresponds to the `build` user in the Buildah image.
+`echo "Running as USER ID `id`"`:: Display the user id to confirm that the process is running as user id `1000`.
+`mountPath`:: You can change the path for the volume mount as necessary.
+
+:leveloffset!:
+
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * secure/unprivileged-building-of-container-images-using-buildah.adoc
+
+:_mod-docs-content-type: PROCEDURE
+
+[id="starting-a-task-run-with-custom-config-map-or-a-pipeline-run_{context}"]
+= Starting a task run with custom config map, or a pipeline run
+
+[role="_abstract"]
+After defining the custom Buildah task, you can create a `TaskRun` object that builds an image as a `build` user with user id `1000`. In addition, you can integrate the `TaskRun` object as part of a `PipelineRun` object.
+
+.Procedure
+
+. Create a `TaskRun` object with a custom `ConfigMap` and `Dockerfile` objects.
++
+.Example: A task run that runs Buildah as user id `1000`
+[source,yaml]
+----
+apiVersion: v1
+data:
+  Dockerfile: |
+    ARG BASE_IMG=registry.access.redhat.com/ubi9/ubi
+    FROM $BASE_IMG AS buildah-runner
+    RUN dnf -y update && \
+        dnf -y install git && \
+        dnf clean all
+    CMD git
+kind: ConfigMap
+metadata:
+  name: dockerfile
+---
+apiVersion: tekton.dev/v1
+kind: TaskRun
+metadata:
+  name: buildah-as-user-1000
+spec:
+  taskRunTemplate:
+    serviceAccountName: pipelines-sa-userid-1000
+  params:
+  - name: IMAGE
+    value: image-registry.openshift-image-registry.svc:5000/test/buildahuser
+  taskRef:
+    kind: Task
+    name: buildah-as-user
+  workspaces:
+  - configMap:
+      name: dockerfile
+    name: source
+----
++
+`configMapRef.name`:: Use a config map because the focus is on the task run, without any prior task that fetches some sources with a Dockerfile.
+`serviceAccountName`:: The name of the service account that you created.
+`workspaces.name`:: Mount a config map as the source workspace for the `buildah-as-user` task.
+
+. (Optional) Create a pipeline and a corresponding pipeline run.
++
+.Example: A pipeline and corresponding pipeline run
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: pipeline-buildah-as-user-1000
+spec:
+  params:
+  - name: IMAGE
+  - name: URL
+  workspaces:
+  - name: shared-workspace
+  - name: sslcertdir
+    optional: true
+  tasks:
+  - name: fetch-repository
+    taskRef:
+      resolver: cluster
+      params:
+      - name: kind
+        value: task
+      - name: name
+        value: git-clone
+      - name: namespace
+        value: openshift-pipelines
+    workspaces:
+    - name: output
+      workspace: shared-workspace
+    params:
+    - name: URL
+      value: $(params.URL)
+    - name: SUBDIRECTORY
+      value: ""
+    - name: DELETE_EXISTING
+      value: "true"
+  - name: buildah
+    taskRef:
+      name: buildah-as-user
+    runAfter:
+    - fetch-repository
+    workspaces:
+    - name: source
+      workspace: shared-workspace
+    - name: sslcertdir
+      workspace: sslcertdir
+    params:
+    - name: IMAGE
+      value: $(params.IMAGE)
+---
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: pipelinerun-buildah-as-user-1000
+spec:
+  taskRunSpecs:
+    - pipelineTaskName: buildah
+      taskServiceAccountName: pipelines-sa-userid-1000
+  params:
+  - name: URL
+    value: https://github.com/openshift/pipelines-vote-api
+  - name: IMAGE
+    value: image-registry.openshift-image-registry.svc:5000/test/buildahuser
+  pipelineRef:
+    name: pipeline-buildah-as-user-1000
+  workspaces:
+  - name: shared-workspace
+    volumeClaimTemplate:
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 100Mi
+----
++
+`tasks.name: fetch-repository`:: Use the `git-clone` task to fetch the source containing a Dockerfile and build it using the modified Buildah task.
+`taskRef.name`:: Refer to the modified Buildah task.
+`taskServiceAccountName`:: Use the service account that you created for the Buildah task.
+`workspaces.name: shared-workspace`:: Share data between the `git-clone` task and the modified Buildah task by using a persistent volume claim (PVC) created automatically by the controller.
+
+. Start the task run or the pipeline run.
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * secure/unprivileged-building-of-container-images-using-buildah.adoc
+
+:_mod-docs-content-type: CONCEPT
+
+[id="limitations-of-unprivileged-builds_{context}"]
+= Limitations of unprivileged builds
+
+[role="_abstract"]
+The process for unprivileged builds works with most `Dockerfile` objects. However, there are some known limitations might cause a build to fail:
+
+* Using the `--mount=type=cache` option might fail due to lack of necessary permissions issues.
+* Using the `--mount=type=secret` option fails because mounting resources requires additional capabilities that are not provided by the custom SCC.
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://access.redhat.com/solutions/6969529[Using the --mount=type=cache option with unprivileged builds]
+
+:leveloffset!:
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://docs.openshift.com/container-platform/latest/authentication/managing-security-context-constraints.html[Managing security context constraints (SCCs)]

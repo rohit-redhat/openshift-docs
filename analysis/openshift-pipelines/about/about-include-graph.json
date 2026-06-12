@@ -1,0 +1,87 @@
+{
+  "assemblies": [
+    {
+      "name": "About OpenShift Pipelines",
+      "file": "about/about-pipelines.adoc",
+      "modules": []
+    },
+    {
+      "name": "Understanding OpenShift Pipelines",
+      "file": "about/understanding-openshift-pipelines.adoc",
+      "modules": [
+        {
+          "path": "modules/op-key-features.adoc",
+          "type": "CONCEPT",
+          "leveloffset": "+1",
+          "title": "Key features"
+        },
+        {
+          "path": "modules/op-pipelines-concepts.adoc",
+          "type": "CONCEPT",
+          "leveloffset": "+1",
+          "title": "OpenShift Pipelines concepts"
+        },
+        {
+          "path": "modules/op-about-tasks.adoc",
+          "type": "CONCEPT",
+          "leveloffset": "+2",
+          "title": "Tasks"
+        },
+        {
+          "path": "modules/op-about-whenexpression.adoc",
+          "type": "CONCEPT",
+          "leveloffset": "+2",
+          "title": "When expression"
+        },
+        {
+          "path": "modules/op-about-finally_tasks.adoc",
+          "type": "CONCEPT",
+          "leveloffset": "+2",
+          "title": "Finally tasks"
+        },
+        {
+          "path": "modules/op-about-taskrun.adoc",
+          "type": "CONCEPT",
+          "leveloffset": "+2",
+          "title": "Task run"
+        },
+        {
+          "path": "modules/op-about-pipelines.adoc",
+          "type": "CONCEPT",
+          "leveloffset": "+2",
+          "title": "Pipelines"
+        },
+        {
+          "path": "modules/op-about-pipelinerun.adoc",
+          "type": "CONCEPT",
+          "leveloffset": "+2",
+          "title": "Pipeline run"
+        },
+        {
+          "path": "modules/op-about-podtemplate.adoc",
+          "type": "CONCEPT",
+          "leveloffset": "+2",
+          "title": "Pod templates"
+        },
+        {
+          "path": "modules/op-about-workspace.adoc",
+          "type": "CONCEPT",
+          "leveloffset": "+2",
+          "title": "Workspaces"
+        },
+        {
+          "path": "modules/op-about-stepactions.adoc",
+          "type": "CONCEPT",
+          "leveloffset": "+2",
+          "title": "Step actions"
+        },
+        {
+          "path": "modules/op-about-triggers.adoc",
+          "type": "CONCEPT",
+          "leveloffset": "+2",
+          "title": "Triggers"
+        }
+      ]
+    }
+  ]
+}

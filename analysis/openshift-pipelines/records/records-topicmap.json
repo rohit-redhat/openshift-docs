@@ -1,0 +1,19 @@
+{
+  "book": {
+    "name": "Observability in OpenShift Pipelines",
+    "dir": "records",
+    "distros": ["openshift-pipelines"]
+  },
+  "topics": [
+    {
+      "name": "Using Tekton Results for OpenShift Pipelines observability",
+      "file": "using-tekton-results-for-openshift-pipelines-observability",
+      "path": "/Users/roparmar/git/openshift-docs/records/using-tekton-results-for-openshift-pipelines-observability.adoc"
+    },
+    {
+      "name": "Understanding the Tekton Results retention policy",
+      "file": "understanding-the-tekton-results-retention-policy",
+      "path": "/Users/roparmar/git/openshift-docs/records/understanding-the-tekton-results-retention-policy.adoc"
+    }
+  ]
+}

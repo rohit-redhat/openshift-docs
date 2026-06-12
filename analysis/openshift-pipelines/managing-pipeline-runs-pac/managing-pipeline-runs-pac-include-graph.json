@@ -1,0 +1,46 @@
+{
+  "document": "managing-pipeline-runs-pac.adoc",
+  "variant": "self-managed",
+  "includes": [
+    {
+      "module_path": "modules/op-verifying-pipeline-run-pac.adoc",
+      "leveloffset": "+1",
+      "module_type": "UNKNOWN"
+    },
+    {
+      "module_path": "modules/op-running-pipeline-run-using-pipelines-as-code.adoc",
+      "leveloffset": "+1",
+      "module_type": "UNKNOWN"
+    },
+    {
+      "module_path": "modules/op-triggering-pipelinerun-on-git-tags-using-pipelines-as-code.adoc",
+      "leveloffset": "+1",
+      "module_type": "UNKNOWN"
+    },
+    {
+      "module_path": "modules/op-triggering-pipelineruns-for-gitops-commands-using-tagged-commits.adoc",
+      "leveloffset": "+2",
+      "module_type": "UNKNOWN"
+    },
+    {
+      "module_path": "modules/op-restarting-or-canceling-pipeline-run-using-pipelines-as-code.adoc",
+      "leveloffset": "+1",
+      "module_type": "UNKNOWN"
+    },
+    {
+      "module_path": "modules/op-monitoring-pipeline-run-status-using-pipelines-as-code.adoc",
+      "leveloffset": "+1",
+      "module_type": "UNKNOWN"
+    },
+    {
+      "module_path": "modules/op-cleaning-up-pipeline-run-using-pipelines-as-code.adoc",
+      "leveloffset": "+1",
+      "module_type": "UNKNOWN"
+    },
+    {
+      "module_path": "modules/op-using-incoming-webhook-with-pipelines-as-code.adoc",
+      "leveloffset": "+1",
+      "module_type": "UNKNOWN"
+    }
+  ]
+}

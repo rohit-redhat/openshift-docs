@@ -1,0 +1,19 @@
+{
+  "book": "install_config",
+  "name": "Installing and configuring",
+  "distro": "openshift-pipelines",
+  "topics": [
+    {
+      "name": "Installing OpenShift Pipelines",
+      "file": "installing-pipelines"
+    },
+    {
+      "name": "Uninstalling OpenShift Pipelines",
+      "file": "uninstalling-pipelines"
+    },
+    {
+      "name": "Customizing configurations in the TektonConfig custom resource",
+      "file": "customizing-configurations-in-the-tektonconfig-cr"
+    }
+  ]
+}

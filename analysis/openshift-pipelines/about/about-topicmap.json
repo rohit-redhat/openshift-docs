@@ -1,0 +1,17 @@
+{
+  "book": {
+    "name": "About OpenShift Pipelines",
+    "dir": "about",
+    "distro": "openshift-pipelines",
+    "topics": [
+      {
+        "name": "About OpenShift Pipelines",
+        "file": "about-pipelines"
+      },
+      {
+        "name": "Understanding OpenShift Pipelines",
+        "file": "understanding-openshift-pipelines"
+      }
+    ]
+  }
+}

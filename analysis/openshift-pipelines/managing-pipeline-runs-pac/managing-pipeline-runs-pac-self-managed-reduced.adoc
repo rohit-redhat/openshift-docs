@@ -1,0 +1,527 @@
+:_mod-docs-content-type: ASSEMBLY
+:_mod-docs-content-type: SNIPPET
+// The {product-title} attribute provides the context-sensitive name of the relevant OpenShift distribution, for example, "OpenShift Container Platform" or "OKD". The {product-version} attribute provides the product version relative to the distribution, for example "4.9".
+// {product-title} and {product-version} are parsed when AsciiBinder queries the _distro_map.yml file in relation to the base branch of a pull request.
+// See https://github.com/openshift/openshift-docs/blob/main/contributing_to_docs/doc_guidelines.adoc#product-name-and-version for more information on this topic.
+// Other common attributes are defined in the following lines:
+:data-uri:
+:icons:
+:experimental:
+:toc: macro
+:toc-title:
+:imagesdir: images
+:prewrap!:
+
+:pipelines-title: Red Hat OpenShift Pipelines
+:pipelines-shortname: OpenShift Pipelines
+:pipelines-ver: pipelines-1.22
+:pipelines-version-number: 1.22
+:osp-version-patch: 0
+:tekton-cache: Tekton Cache
+:tekton-chains: Tekton Chains
+:tekton-results: Tekton Results
+:tekton-triggers: Tekton Triggers
+:tekton-hub: Tekton Hub
+:artifact-hub: Artifact Hub
+:pac: Pipelines as Code
+:product-registry: OpenShift image registry
+// IBM Power
+:ibmpowerProductName: IBM Power
+// IBM zSystems
+:ibmzProductName: IBM zSystems
+:linuxoneProductName: IBM(R) LinuxONE
+:kebab: image:kebab.png[title="Options menu"]
+
+:op-system-base: RHEL
+:op-system-base-full: Red Hat Enterprise Linux (RHEL)
+
+:cluster-manager-first: Red Hat OpenShift Cluster Manager
+:cluster-manager: OpenShift Cluster Manager
+:cluster-manager-url: link:https://console.redhat.com/openshift[OpenShift Cluster Manager Hybrid Cloud Console]
+:cluster-manager-url-pull: link:https://console.redhat.com/openshift/install/pull-secret[pull secret from the Red Hat OpenShift Cluster Manager]
+
+:oc-first: pass:quotes[OpenShift CLI (`oc`)]
+
+// Attributes not present in the main branch
+:OCP: OpenShift Container Platform
+
+//We should use lowercase like regular OCP docs and deprecate the above.
+:ocp: OpenShift Container Platform
+
+
+:ols-official: Red{nbsp}Hat OpenShift Lightspeed
+:ols: OpenShift Lightspeed
+
+// Attributes not present in the main branch
+:rhosp: Red Hat OpenStack Platform
+[id="managing-pipeline-runs-pac_{context}"]
+= Managing pipeline runs
+:context: managing-pipeline-runs-pac
+
+toc::[]
+
+[role="_abstract"]
+Verify, run, and manage pipeline runs that use {pac}.
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/managing-pipeline-runs-pac.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="verifying-pipeline-run-pac_{context}"]
+= Verifying a pipeline run
+
+You can verify that the {pac} resolver correctly processes the pipeline run definition that you created.
+[role="_abstract"]
+You can verify that the {pac} resolver correctly processes the pipeline run definition that you created.
+
+.Prerequisites
+
+* You installed the `tkn` command line utility.
+* You logged in to your {OCP} cluster using {oc-first}.
+* You cloned your Git repository locally.
+
+.Procedure
+
+* From the root of your cloned Git repository, run the following command, specifying your pipeline run definition file name:
++
+[source, terminal]
+----
+$ tkn pac resolve .tekton/pipeline-run-definition.yaml
+----
++
+This command processes the pipeline run definition by using the {pac} resolver. If the resolver fails to find any referenced resource, the output displays an error message. If the resolver completes successfully, the output displays the definition of a `PipelineRun` custom resource (CR) that includes all referenced resources, such as remote task definitions.
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/managing-pipeline-runs-pac.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="running-pipeline-run-using-pipelines-as-code_{context}"]
+= Running a pipeline run using {pac}
+
+[role="_abstract"]
+With default configuration, {pac} runs any pipeline run in the `.tekton/` directory of the default branch of repository, when specified events such as pull request or push occurs on the repository. For example, if a pipeline run on the default branch has the annotation `pipelinesascode.tekton.dev/on-event: "[pull_request]"`, it will run whenever a pull request event occurs.
+
+In case of a pull request or a merge request, {pac} also runs pipelines from branches other than the default branch, if the author of the pull request meets the following conditions:
+
+* The author is the owner of the repository.
+* The author is a collaborator on the repository.
+* The author is a public member on the organization of the repository.
+* The `OWNERS` file lists the pull request author in the `approvers` or `reviewers` section in the root of the repository, as defined in the https://www.kubernetes.dev/docs/guide/owners/[Kubernetes documentation]. {pac} supports the specification for the `OWNERS` and `OWNERS_ALIASES` files. If the `OWNERS` file includes a https://github.com/kubernetes/community/blob/master/contributors/guide/owners.md#filters[filters] section, {pac} matches approvers and reviewers only against the `.*` filter.
+
+If the pull request author does not meet the requirements, another user who meets them can comment `/ok-to-test` on the pull request. The user can also post this comment in a discussion thread reply.
+
+*Pipeline run execution*
+A pipeline run always runs in the namespace of the `Repository` custom resource definition (CRD) associated with the repository that generated the event.
+
+You can observe the execution of your pipeline runs using the `tkn pac` CLI tool.
+
+* To follow the execution of the last pipeline run, use the following example:
++
+[source,terminal]
+----
+$ tkn pac logs -n <my_pipeline_ci> -L
+----
+`<my_pipeline_ci>`:: The namespace for the `Repository` CRD.
+
+* To follow the execution of any pipeline run interactively, use the following example:
++
+[source,terminal]
+----
+$ tkn pac logs -n <my_pipeline_ci>
+----
+`<my_pipeline_ci>`:: The namespace for the `Repository` CRD.
+If you need to view a pipeline run other than the last one, you can use the `tkn pac logs` command to select a `PipelineRun` attached to the repository:
+
+If you have configured {pac} with a GitHub App, {pac} posts a URL in the *Checks* tab of the GitHub App. You can click the URL and follow the pipeline execution.
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assembly:
+// * pac/managing-pipeline-runs-pac.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id="op-triggering-pipelinerun-on-git-tags-using-pipelines-as-code_{context}"]
+= Triggering a PipelineRun on Git tags
+
+[role="_abstract"]
+
+When you create or reference a Git tag in a repository that integrates with {pac}, you can trigger a `PipelineRun` on a tag by using GitOps comment. This capability enables you to test or deploy tagged versions of your code, supporting release-based workflows and version control practices.
+
+{pac} resolves the Git tag to its corresponding commit SHA and runs the `PipelineRun` defined for that commit. You can start or manage such runs by commenting on the tagged commit by using supported GitOps commands.
+
+GitHub App, GitHub Webhook, and GitLab integrations support triggering `PipelineRun` on Git tags. This functionality is not currently available for Gitea, Bitbucket Cloud, or Bitbucket Data Center.
+
+== Supported GitOps commands
+
+* `/test tag:<tag>`:: Retrigger all matching `PipelineRun` for the tag commit
+* `/test <pipelinerun_name> tag:<tag>`:: Retrigger only the named `PipelineRun`
+* `/retest tag:<tag>`:: Retrigger all matching `PipelineRun` for the tag commit
+* `/retest <pipelinerun_name> tag:<tag>`:: Retrigger only the named `PipelineRun`
+* `/cancel tag:<tag>`:: Cancel all running `PipelineRun` for the tag commit
+* `/cancel <pipelinerun_name> tag:<tag>`:: Cancel only the named `PipelineRun`
+
+A `PipelineRun` configured to respond to tag events typically includes annotations such as `pipelinesascode.tekton.dev/on-target-branch: "[refs/tags/*]"` and `pipelinesascode.tekton.dev/on-event: "[push]"`. These annotations ensure that {pac} recognizes tag creation events as push events and processes them correctly. When you create or reference a tag, {pac} treats it as a push event and uses the resolved commit SHA to run the associated `PipelineRun`. The same logic applies to next GitOps commands added as comments on the tagged commit.
+
+Tag based triggering is particularly useful in continuous delivery scenarios where tags represent specific versions or releases. This method enables you to validate and promote release artifacts consistently without modifying the branch state.
+
+The following example shows a minimal `PipelineRun` configuration that triggers on tag events:
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: pipelinerun-on-tag
+  annotations:
+    pipelinesascode.tekton.dev/on-target-branch: "[refs/tags/*]"
+    pipelinesascode.tekton.dev/on-event: "[push]"
+spec:
+  pipelineSpec:
+    tasks:
+      - name: tag-task
+        taskSpec:
+          steps:
+            - name: echo
+              image: registry.access.redhat.com/ubi9/ubi-micro
+              script: |
+                echo "tag: {{ git_tag }}"
+----
+
+:leveloffset!:
+
+:leveloffset: +2
+
+// This module is included in the following assembly:
+// * pac/managing-pipeline-runs-pac.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="op-triggering-pipelineruns-for-gitops-commands-using-tagged-commits_{context}"]
+= Triggering PipelineRuns for GitOps commands using tagged commits
+
+[role="_abstract"]
+You can trigger a `PipelineRun` by using a Git tag for tagged commits.
+
+.Procedure
+
+. Open your GitHub repository.
+. Navigate to the *Tags* view or the *Releases* section.
+. Select the required tag, for example `v1.0.0`, to view its associated commit.
+. Click the commit SHA for the selected tag.
+. In the comment field of the commit, enter a supported GitOps command, such as `/test tag:v1.0.0` or `/cancel tag:v1.0.0`.
+. Verify that {pac} processes the comment and triggers or updates the corresponding `PipelineRun`.
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/managing-pipeline-runs-pac.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="restarting-or-canceling-pipeline-run-using-pipelines-as-code_{context}"]
+= Restarting or canceling a pipeline run using {pac}
+
+You can restart or cancel a pipeline run without triggering an event, such as sending a new commit to a branch or creating a pull request. To restart all pipeline runs, use the *Re-run all checks* feature in the GitHub App.
+[role="_abstract"]
+You can restart or cancel a pipeline run without triggering an event, such as sending a new commit to a branch or creating a pull request. To restart all pipeline runs, use the *Re-run all checks* feature in the GitHub App.
+
+To restart all or specific pipeline runs, use the following comments:
+
+* The `/test` and `/retest` comments restart all pipeline runs.
+
+* The `/test <pipeline_run_name>` and `/retest <pipeline_run_name>` comments start or restart a specific pipeline run. You can use these commands to start any {pac} pipeline run on the repository, whether or not an event triggered this pipeline run.
+
+To cancel all or specific pipeline runs, use the following comments:
+
+* The `/cancel` comment cancels all pipeline runs.
+
+* The `/cancel <pipeline_run_name>` comment cancels a specific pipeline run.
+
+The results of the comments are visible under the *Checks* tab of the GitHub App.
+
+The comment starts, restarts, or cancels any pipeline runs only if the comment author meets one of the following requirements:
+
+* The author is the owner of the repository.
+* The author is a collaborator on the repository.
+* The author is a public member of the organization that owns the repository.
+* The `OWNERS` file lists the comment author in the `approvers` or `reviewers` section in the root of the repository, as defined in the https://www.kubernetes.dev/docs/guide/owners/[Kubernetes documentation]. {pac} supports the specification for the `OWNERS` and `OWNERS_ALIASES` files. If the `OWNERS` file includes a https://github.com/kubernetes/community/blob/master/contributors/guide/owners.md#filters[filters] section, {pac} matches approvers and reviewers only against the `.*` filter.
+
+:FeatureName: Using a comment to start a pipeline run that does not match an event
+:_mod-docs-content-type: SNIPPET
+// When including this file, ensure that {FeatureName} is set immediately before
+// the include. Otherwise it will result in an incorrect replacement.
+
+[IMPORTANT]
+====
+[subs="attributes+"]
+{FeatureName} is a Technology Preview feature only. Technology Preview features are not supported with Red Hat production service level agreements (SLAs) and might not be functionally complete. Red Hat does not recommend using them in production. These features provide early access to upcoming product features, enabling customers to test functionality and provide feedback during the development process.
+
+For more information about the support scope of Red Hat Technology Preview features, see link:https://access.redhat.com/support/offerings/techpreview/[Technology Preview Features Support Scope].
+====
+// Undefine {FeatureName} attribute, so that any mistakes are easily spotted
+:!FeatureName:
+
+
+.Procedure
+
+* If you target a pull request and you use the GitHub App, go to the *Checks* tab and click *Re-run all checks*.
+
+* If you target a pull or merge request, use the comments inside your pull request:
++
+.Example comment that cancels all pipeline runs
+[source]
+----
+This is a comment inside a pull request.
+/cancel
+----
+
+* If you target a push request, include the comments within your commit messages.
++
+[NOTE]
+====
+{pac} supports this feature for GitHub and GitLab providers only.
+====
+
+.. Go to your GitHub or GitLab repository.
+
+.. In GitHub, click the *Commits* section. In GitLab, click the *History* section.
+
+.. Click the commit where you want to restart a pipeline run.
+
+.. click the line number where you want to add a comment. The following example shows a comment that starts or restarts a specific pipeline run:
++
+[source]
+----
+This is a comment inside a commit.
+/retest example_pipeline_run
+----
++
+[NOTE]
+====
+If you run a command on a commit that exists in many branches within a push request, {pac} uses the branch with the latest commit.
+
+This results in two situations:
+
+* If you run a command on a commit without any argument, such as `/test`, the test is automatically performed on the `main` branch.
+
+* If you include a branch specification, such as `/test branch:user-branch`, {pac} performs the test on the commit that has the comment with the context of the `user-branch` branch.
+====
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/managing-pipeline-runs-pac.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="monitoring-pipeline-run-status-using-pipelines-as-code_{context}"]
+= Monitoring pipeline run status using {pac}
+
+[role="_abstract"]
+Depending on the context and supported tools, you can monitor the status of a pipeline run in different ways.
+
+*Status on GitHub Apps*
+When a pipeline run finishes, {pac} adds the status in the *Check* tabs with limited information about how long each task of your pipeline took, and the output of the `tkn pipelinerun describe` command.
+
+*Log error snippet*
+When {pac} detects an error in one of the tasks of a pipeline, the page displays a small snippet consisting of the last 3 lines in the task breakdown of the first failed task.
+
+[NOTE]
+====
+{pac} avoids leaking secrets by looking into the pipeline run and replacing secret values with hidden characters. However, {pac} cannot hide secrets coming from workspaces and `envFrom` source.
+====
+
+*Annotations for log error snippets*
+
+In the `TektonConfig` custom resource, in the `pipelinesAsCode.settings` spec, you can set the `error-detection-from-container-logs` parameter to `true`. In this case, {pac} detects the errors from the container logs and adds them as annotations on the pull request where the error occurred.
+
+:FeatureName: Adding annotations for log error snippets
+:_mod-docs-content-type: SNIPPET
+// When including this file, ensure that {FeatureName} is set immediately before
+// the include. Otherwise it will result in an incorrect replacement.
+
+[IMPORTANT]
+====
+[subs="attributes+"]
+{FeatureName} is a Technology Preview feature only. Technology Preview features are not supported with Red Hat production service level agreements (SLAs) and might not be functionally complete. Red Hat does not recommend using them in production. These features provide early access to upcoming product features, enabling customers to test functionality and provide feedback during the development process.
+
+For more information about the support scope of Red Hat Technology Preview features, see link:https://access.redhat.com/support/offerings/techpreview/[Technology Preview Features Support Scope].
+====
+// Undefine {FeatureName} attribute, so that any mistakes are easily spotted
+:!FeatureName:
+
+Currently, {pac} supports only the simple cases where the error looks like `makefile` or `grep` output of the following format:
+[source,yaml]
+----
+<filename>:<line>:<column>: <error message>
+----
+
+You can customize the regular expression used to detect the errors with the `error-detection-simple-regexp` parameter. The regular expression uses named groups to give flexibility on how to specify the matching. The groups needed to match are `filename`, `line`, and `error`. You can view the {pac} config map for the default regular expression.
+
+[NOTE]
+====
+By default, {pac} scans only the last 50 lines of the container logs. You can increase this value in the `error-detection-max-number-of-lines` field or set `-1` for an unlimited number of lines. However, such configurations might increase the memory usage of the watcher.
+====
+
+*Status for webhook*
+For webhook, when the event is a pull request, {pac} adds the status as a comment on the pull or merge request.
+
+*Failures*
+If {pac} matches a namespace to a `Repository` custom resource definition (CRD), {pac} emits its failure log messages in the Kubernetes events inside the namespace.
+
+*YAML parting error messages in pull request comments*
+{pac} detects and reports YAML errors in `PipelineRun` definitions within the `.tekton` directory. When {pac} finds an invalid `PipelineRun` YAML in a pull request (PR) event, {pac} creates a comment on the PR describing the error and halts the execution of other correctly formatted pipeline runs. Consider the following scenarios:
+
+* If you update the PR and {pac} detects new YAML errors, {pac} updates the comment with the latest information.
+* If {pac} finds no new errors, the existing comment remains unchanged and {pac} does not delete it.
+* If {pac} finds a validation issue, {pac} logs the error in the user namespace events log and the {pac} controller log.
+
+These error scenarios do not halt the execution of valid pipeline runs. The system continues to process validated and matched pipeline runs, preventing a single validation problem from disrupting the entire workflow.
+
+*Status associated with Repository CRD*
+{pac} stores the last 5 status messages for a pipeline run inside the `Repository` custom resource.
+
+[source,terminal]
+----
+$ oc get repo -n <pipelines_as_code_ci>
+----
+
+.Example output
+[source,terminal]
+----
+NAME                  URL                                                        NAMESPACE             SUCCEEDED   REASON      STARTTIME   COMPLETIONTIME
+pipelines-as-code-ci   https://github.com/openshift-pipelines/pipelines-as-code   pipelines-as-code-ci   True        Succeeded   59m         56m
+----
+
+Using the `tkn pac describe` command, you can extract the status of the runs associated with your repository and its metadata.
+
+*Notifications*
+{pac} does not manage notifications. If you need to have notifications, use the `finally` feature of pipelines.
+
+:leveloffset!:
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://github.com/chmouel/tekton-slack-task-status[An example task to send Slack messages on success or failure]
+
+* link:https://github.com/openshift-pipelines/pipelines-as-code/blob/7b41cc3f769af40a84b7ead41c6f037637e95070/.tekton/push.yaml[An example of a pipeline run with `finally` tasks triggered on push events]
+
+* link:https://github.com/openshift-pipelines/pipelines-as-code/blob/main/test/testdata/pipelinerun_git_clone_private.yaml[An example of the `git-clone` task used for cloning private repositories]
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/managing-pipeline-runs-pac.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="cleaning-up-pipeline-run-using-pipelines-as-code_{context}"]
+= Cleaning up pipeline run using {pac}
+
+[role="_abstract"]
+
+There can be many pipeline runs in a user namespace. By setting the `max-keep-runs` annotation, you can configure {pac} to retain a limited number of pipeline runs that matches an event. For example:
+
+[source,yaml]
+----
+...
+  pipelinesascode.tekton.dev/max-keep-runs: "<max_number>"
+...
+----
+`<max_number>`:: {pac} starts cleaning up right after it finishes a successful execution, retaining only the maximum number of pipeline runs configured using the annotation.
++
+[NOTE]
+====
+* {pac} skips cleaning the running pipelines but cleans up the pipeline runs with an unknown status.
+* {pac} skips cleaning a failed pull request.
+====
+
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/managing-pipeline-runs-pac.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="using-incoming-webhook-with-pipelines-as-code_{context}"]
+= Using incoming webhook with {pac}
+
+[role="_abstract"]
+Using an incoming webhook URL and a shared secret, you can start a pipeline run in a repository.
+
+To use incoming webhooks, specify the following within the `spec` section of the `Repository` custom resource definition (CRD):
+
+* The incoming webhook URL that {pac} matches.
+* The Git provider and the user token. Currently, {pac} supports `github`, `gitlab`, and `bitbucket-cloud`.
++
+[NOTE]
+====
+When using incoming webhook URLs in the context of GitHub app, you must specify the token.
+====
+* The target branches and a secret for the incoming webhook URL.
+
+.Example: `Repository` CRD with incoming webhook
+[source,yaml]
+----
+apiVersion: "pipelinesascode.tekton.dev/v1alpha1"
+kind: Repository
+metadata:
+  name: repo
+  namespace: ns
+spec:
+  url: "https://github.com/owner/repo"
+  git_provider:
+    type: github
+    secret:
+      name: "owner-token"
+  incoming:
+    - targets:
+      - main
+      secret:
+        name: repo-incoming-secret
+      type: webhook-url
+----
+
+.Example: The `repo-incoming-secret` secret for incoming webhook
+[source,yaml]
+----
+apiVersion: v1
+kind: Secret
+metadata:
+  name: repo-incoming-secret
+  namespace: ns
+type: Opaque
+stringData:
+  secret: <very_secure_shared_secret>
+----
+
+To trigger a pipeline run located in the `.tekton` directory of a Git repository, use the following command:
+
+[source,terminal]
+----
+$ curl -X POST 'https://control.pac.url/incoming?secret=very-secure-shared-secret&repository=repo&branch=main&pipelinerun=target_pipelinerun'
+----
+
+{pac} matches the incoming URL and treats it as a `push` event. However, {pac} does not report status of the pipeline runs triggered by this command.
+
+To get a report or a notification, add it directly with a `finally` task to your pipeline. Or, you can inspect the `Repository` CRD with the `tkn pac` CLI tool.
+
+:leveloffset!:
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://github.com/openshift-pipelines/pipelines-as-code/tree/main/.tekton[An example of the `.tekton/` directory in the {pac} repository]
+
+* link:https://docs.openshift.com/container-platform/latest/applications/creating_applications/odc-creating-applications-using-developer-perspective.html[Creating applications using the Developer perspective]

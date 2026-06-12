@@ -1,0 +1,21 @@
+{
+  "document": "about-pipelines",
+  "source_file": "/Users/roparmar/git/openshift-docs/about/about-pipelines.adoc",
+  "variant": "self-managed",
+  "includes": [
+    {
+      "path": "_attributes/common-attributes.adoc",
+      "type": "SNIPPET",
+      "line": 2
+    }
+  ],
+  "sections": [
+    {
+      "title": "About Red Hat OpenShift Pipelines",
+      "level": 1,
+      "line": 4,
+      "source_module": "about/about-pipelines.adoc",
+      "module_type": "ASSEMBLY"
+    }
+  ]
+}

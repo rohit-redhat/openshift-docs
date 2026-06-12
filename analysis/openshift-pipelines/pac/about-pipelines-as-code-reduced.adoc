@@ -1,0 +1,117 @@
+:_mod-docs-content-type: ASSEMBLY
+:_mod-docs-content-type: SNIPPET
+// The {product-title} attribute provides the context-sensitive name of the relevant OpenShift distribution, for example, "OpenShift Container Platform" or "OKD". The {product-version} attribute provides the product version relative to the distribution, for example "4.9".
+// {product-title} and {product-version} are parsed when AsciiBinder queries the _distro_map.yml file in relation to the base branch of a pull request.
+// See https://github.com/openshift/openshift-docs/blob/main/contributing_to_docs/doc_guidelines.adoc#product-name-and-version for more information on this topic.
+// Other common attributes are defined in the following lines:
+:data-uri:
+:icons:
+:experimental:
+:toc: macro
+:toc-title:
+:imagesdir: images
+:prewrap!:
+
+:pipelines-title: Red Hat OpenShift Pipelines
+:pipelines-shortname: OpenShift Pipelines
+:pipelines-ver: pipelines-1.22
+:pipelines-version-number: 1.22
+:osp-version-patch: 0
+:tekton-cache: Tekton Cache
+:tekton-chains: Tekton Chains
+:tekton-results: Tekton Results
+:tekton-triggers: Tekton Triggers
+:tekton-hub: Tekton Hub
+:artifact-hub: Artifact Hub
+:pac: Pipelines as Code
+:product-registry: OpenShift image registry
+// IBM Power
+:ibmpowerProductName: IBM Power
+// IBM zSystems
+:ibmzProductName: IBM zSystems
+:linuxoneProductName: IBM(R) LinuxONE
+:kebab: image:kebab.png[title="Options menu"]
+
+:op-system-base: RHEL
+:op-system-base-full: Red Hat Enterprise Linux (RHEL)
+
+:cluster-manager-first: Red Hat OpenShift Cluster Manager
+:cluster-manager: OpenShift Cluster Manager
+:cluster-manager-url: link:https://console.redhat.com/openshift[OpenShift Cluster Manager Hybrid Cloud Console]
+:cluster-manager-url-pull: link:https://console.redhat.com/openshift/install/pull-secret[pull secret from the Red Hat OpenShift Cluster Manager]
+
+:oc-first: pass:quotes[OpenShift CLI (`oc`)]
+
+// Attributes not present in the main branch
+:OCP: OpenShift Container Platform
+
+//We should use lowercase like regular OCP docs and deprecate the above.
+:ocp: OpenShift Container Platform
+
+
+:ols-official: Red{nbsp}Hat OpenShift Lightspeed
+:ols: OpenShift Lightspeed
+
+// Attributes not present in the main branch
+:rhosp: Red Hat OpenStack Platform
+[id="about-pipelines-as-code"]
+= About {pac}
+:context: about-pipelines-as-code
+
+toc::[]
+
+
+// :FeatureName: Pipelines as Code
+[role="_abstract"]
+With {pac}, cluster administrators and users with the required privileges can define pipeline templates as part of source code Git repositories. When triggered by a source code push or a pull request for the configured Git repository, {pac} runs the pipeline and reports the status.
+
+[id="pac-key-features"]
+== Key features
+{pac} supports the following features:
+
+* Pull request status and control on the platform hosting the Git repository.
+* GitHub Checks API to set the status of a pipeline run, including rechecks.
+* GitHub pull request and commit events.
+* Pull request actions in comments, such as `/retest`.
+* Git events filtering and a separate pipeline for each event.
+* Automatic task resolution in {pipelines-shortname}, including local tasks, {tekton-hub}, and remote URLs.
+* Retrieval of configurations using GitHub blobs and objects API.
+* Access Control List (ACL) over a GitHub organization or using a Prow style `OWNERS` file.
+* The `tkn pac` CLI plugin for managing bootstrapping and {pac} repositories.
+* Support for GitHub App, GitHub Webhook, Bitbucket Data Center, and Bitbucket Cloud.
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/using-pipelines-as-code-repos.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id="pac-concepts_{context}"]
+= {pac} concepts
+
+{pac} interacts with your Git repository provider. To use {pac}, you must first configure this integration.
+[role="_abstract"]
+{pac} interacts with your Git repository provider. To use {pac}, you must first configure this integration.
+
+You can use {pac} with any number of repositories within your Git repository provider. For each repository, you must create a `Repository` custom resource (CR) within an {OCP} namespace that you control. This CR has information that {pac} can use to access this repository.
+
+{pac} starts the pipeline runs for a repository within the namespace containing the `Repository` CR for this repository.
+
+Inside your Git repository, you must create a `.tekton` directory and store pipeline run definitions as YAML files in this directory. Each pipeline run that you define must include annotations that find the events that must trigger this pipeline run.
+
+The definition can reference other YAML files in the same directory. For example, you can define a pipeline in a separate YAML file and see this pipeline in the pipeline run file. You can also use annotations in the pipeline run definition to reference task and pipeline resources from {tekton-hub}, from HTTP locations, and from other paths in your directory. You can use special variables in the definition to reference execution context, such as the name of the branch.
+
+When a matching event happens, {pac} creates a `PipelineRun` CR based on the definition that you provided in the repository. Creating a `PipelineRun` CR triggers execution of the pipeline defined in the pipeline run.
+
+{pac} uses the _{pac} resolver_ to create the `PipelineRun` CR based on your definition. The {pac} resolver retrieves all of the resources that you referenced by using annotations and adds them to the `PipelineRun` CR. If the {pac} resolver fails to retrieve any referenced resource, {pac} logs an error and does not create a pipeline run.
+
+{pac} also replaces dynamic variables in your pipeline run definition with their values.
+
+[IMPORTANT]
+====
+By default, when creating a `PipelineRun` CR for a pull request or push event, {pac} uses the definitions from the `.tekton` directory of the source branch of the pull request or push event. If the pull request or push event modifies the `.tekton` directory, {pac} uses the modified version.
+
+You can define the `pipelinerun_provenance: "default_branch"` setting in the `Repository` CR to change this behaviour. If you specify this setting, {pac} always uses definitions from the `.tekton` directory of the default branch configured on the Git repository provider, such as `main`, `master`, or `trunk`.
+====
+
+:leveloffset!:

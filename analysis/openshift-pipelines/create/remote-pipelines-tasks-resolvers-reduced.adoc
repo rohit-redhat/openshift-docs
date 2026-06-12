@@ -1,0 +1,3581 @@
+:_mod-docs-content-type: ASSEMBLY
+:_mod-docs-content-type: SNIPPET
+// The {product-title} attribute provides the context-sensitive name of the relevant OpenShift distribution, for example, "OpenShift Container Platform" or "OKD". The {product-version} attribute provides the product version relative to the distribution, for example "4.9".
+// {product-title} and {product-version} are parsed when AsciiBinder queries the _distro_map.yml file in relation to the base branch of a pull request.
+// See https://github.com/openshift/openshift-docs/blob/main/contributing_to_docs/doc_guidelines.adoc#product-name-and-version for more information on this topic.
+// Other common attributes are defined in the following lines:
+:data-uri:
+:icons:
+:experimental:
+:toc: macro
+:toc-title:
+:imagesdir: images
+:prewrap!:
+
+:pipelines-title: Red Hat OpenShift Pipelines
+:pipelines-shortname: OpenShift Pipelines
+:pipelines-ver: pipelines-1.22
+:pipelines-version-number: 1.22
+:osp-version-patch: 0
+:tekton-cache: Tekton Cache
+:tekton-chains: Tekton Chains
+:tekton-results: Tekton Results
+:tekton-triggers: Tekton Triggers
+:tekton-hub: Tekton Hub
+:artifact-hub: Artifact Hub
+:pac: Pipelines as Code
+:product-registry: OpenShift image registry
+// IBM Power
+:ibmpowerProductName: IBM Power
+// IBM zSystems
+:ibmzProductName: IBM zSystems
+:linuxoneProductName: IBM(R) LinuxONE
+:kebab: image:kebab.png[title="Options menu"]
+
+:op-system-base: RHEL
+:op-system-base-full: Red Hat Enterprise Linux (RHEL)
+
+:cluster-manager-first: Red Hat OpenShift Cluster Manager
+:cluster-manager: OpenShift Cluster Manager
+:cluster-manager-url: link:https://console.redhat.com/openshift[OpenShift Cluster Manager Hybrid Cloud Console]
+:cluster-manager-url-pull: link:https://console.redhat.com/openshift/install/pull-secret[pull secret from the Red Hat OpenShift Cluster Manager]
+
+:oc-first: pass:quotes[OpenShift CLI (`oc`)]
+
+// Attributes not present in the main branch
+:OCP: OpenShift Container Platform
+
+//We should use lowercase like regular OCP docs and deprecate the above.
+:ocp: OpenShift Container Platform
+
+
+:ols-official: Red{nbsp}Hat OpenShift Lightspeed
+:ols: OpenShift Lightspeed
+
+// Attributes not present in the main branch
+:rhosp: Red Hat OpenStack Platform
+[id="remote-pipelines-tasks-resolvers"]
+= Specifying remote pipelines, tasks, and step actions using resolvers
+:context: remote-pipelines-tasks-resolvers
+
+toc::[]
+
+[role="_abstract"]
+Pipelines and tasks are reusable blocks for your CI/CD processes. You can reuse pipelines or tasks that you developed before, or that were developed by others, without having to copy and paste their definitions. These pipelines or tasks can be available from several types of sources, from other namespaces on your cluster to public catalogs.
+
+In a pipeline run resource, you can specify a pipeline from an existing source. In a pipeline resource or a task run resource, you can specify a task from an existing source.
+
+Step actions, defined in `StepAction` custom resources (CRs), are reusable actions that a single step within a task completes. When specifying a step, you can reference a `StepAction` definition from an existing source.
+
+In these cases, the _resolvers_ in {pipelines-title} retrieve the pipeline, task, or `StepAction` definition from the specified source at run time.
+
+The following resolvers are available in a default installation of {pipelines-title}:
+
+Hub resolver:: Retrieves a task, pipeline, or `StepAction` definition from the Pipelines Catalog available on {artifact-hub} or {tekton-hub}.
+Bundles resolver:: Retrieves a task, pipeline, or `StepAction` definition from a Tekton bundle, which is an OCI image available from any OCI repository, such as an OpenShift container repository.
+Git resolver:: Retrieves a task, pipeline, or `StepAction` definition from a Git repository. You must specify the repository, the branch, and the path.
+HTTP resolver:: Retrieves a task, pipeline, or `StepAction` definition from a remote HTTP or HTTPS URL. You must specify the URL for authentication.
+Cluster resolver:: Retrieves a task, pipeline, or `StepAction` definition that is already created on the same {OCP} cluster in a specific namespace.
+
+An {pipelines-shortname} installation includes a set of standard tasks that you can use in your pipelines. {pipelines-shortname} stores these tasks in the installation namespace, which is normally the `openshift-pipelines` namespace. You can use the cluster resolver to access the tasks.
+
+{pipelines-shortname} also provides a standard `StepAction` definition. You can use the cluster resolver to access this definition.
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * create/remote-pipelines-tasks-resolvers.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id="resolver-hub_{context}"]
+= Specifying a remote pipeline, task, or step action from a Tekton catalog
+
+[role="_abstract"]
+You can use the hub resolver to specify a remote pipeline, task, or `StepAction` definition from a public Tekton catalog of link:https://artifacthub.io/[{artifact-hub}] or from an instance of {tekton-hub}.
+
+[NOTE]
+====
+The public instance of {tekton-hub} (`hub.tekton.dev`) is deprecated and Red Hat will remove it in a future release. Use link:https://artifacthub.io[{artifact-hub}] as an alternative for Tekton `Pipeline` and `Task` resources:
+
+* link:https://artifacthub.io/packages/search?repo=tekton-catalog-tasks[Tekton Catalog Tasks]
+* link:https://artifacthub.io/packages/search?repo=tekton-catalog-pipelines[Tekton Catalog Pipelines]
+
+{artifact-hub} is open source and supports self-hosting, providing greater flexibility for managing your Tekton `Pipeline` and `Task` resources.
+====
+
+:leveloffset!:
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * create/remote-pipelines-tasks-resolvers.adoc
+
+// // *openshift_pipelines/remote-pipelines-tasks-resolvers.adoc
+:_mod-docs-content-type: PROCEDURE
+
+[id="resolver-hub-config_{context}"]
+= Configuring the hub resolver
+
+[role="_abstract"]
+You can change the default hub for pulling a resource, and the default catalog settings, by configuring the hub resolver.
+
+.Procedure
+
+. To edit the `TektonConfig` custom resource, enter the following command:
++
+[source,terminal]
+----
+$ oc edit TektonConfig config
+----
+. In the `TektonConfig` custom resource, edit the `pipeline.hub-resolver-config` spec:
++
+[source,yaml]
+----
+apiVersion: operator.tekton.dev/v1alpha1
+kind: TektonConfig
+metadata:
+  name: config
+spec:
+  pipeline:
+    hub-resolver-config:
+      default-tekton-hub-catalog: Tekton
+      default-artifact-hub-task-catalog: tekton-catalog-tasks
+      default-artifact-hub-pipeline-catalog: tekton-catalog-pipelines
+      defailt-kind: pipeline
+      default-type: tekton
+      tekton-hub-api: "https://my-custom-tekton-hub.example.com"
+      artifact-hub-api: "https://my-custom-artifact-hub.example.com"
+----
+`default-tekton-hub-catalog`:: The default {tekton-hub} catalog for pulling a resource.
+`default-artifact-hub-task-catalog`:: The default {artifact-hub} catalog for pulling a task resource.
+`default-artifact-hub-pipeline-catalog`:: The default {artifact-hub} catalog for pulling a pipeline resource.
+`defailt-kind`:: The default object kind for references.
+`default-type`:: The default hub for pulling a resource, either `artifact` for {artifact-hub} or `tekton` for {tekton-hub}.
+`tekton-hub-api`:: The {tekton-hub} API used, if you set the `default-type` option to `tekton`.
+`artifact-hub-api`:: Optional: The {artifact-hub} API used, if you set the `default-type` option to `artifact`.
++
+[IMPORTANT]
+====
+If you set the `default-type` option to `tekton`, you must configure your own instance of the {tekton-hub} by setting the `tekton-hub-api` value.
+
+If you set the `default-type` option to `artifact` then the resolver uses the public hub API at https://artifacthub.io/ by default. You can configure your own {artifact-hub} API by setting the `artifact-hub-api` value.
+====
+
+:leveloffset!:
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * create/remote-pipelines-tasks-resolvers.adoc
+
+// // *openshift_pipelines/remote-pipelines-tasks-resolvers.adoc
+:_mod-docs-content-type: PROCEDURE
+[id="resolver-hub-specify_{context}"]
+= Specifying a remote pipeline, task, or step action using the hub resolver
+
+[role="_abstract"]
+Specify a remote pipeline, task, or step action from {artifact-hub} or {tekton-hub} by using the hub resolver.
+
+When creating a pipeline run, you can specify a remote pipeline from {artifact-hub} or {tekton-hub}. When creating a pipeline or a task run, you can specify a remote task from {artifact-hub} or {tekton-hub}. When creating a step within a task, you can reference a remote `StepAction` definition from {artifact-hub} or {tekton-hub}.
+
+.Procedure
+
+* To specify a remote pipeline, task, or `StepAction` definition from {artifact-hub} or {tekton-hub}, use the following reference format in the `pipelineRef`, `taskRef`, or `step.ref` spec:
++
+[source,yaml]
+----
+# ...
+  resolver: hub
+  params:
+  - name: catalog
+    value: <catalog>
+  - name: type
+    value: <catalog_type>
+  - name: kind
+    value: [pipeline|task]
+  - name: name
+    value: <resource_name>
+  - name: version
+    value: <resource_version>
+# ...
+----
++
+.Supported parameters for the hub resolver
+|===
+| Parameter | Description | Example value
+
+| `catalog`
+| The catalog for pulling the resource.
+| Default:  `tekton-catalog-tasks` (for the `task` kind);  `tekton-catalog-pipelines` (for the `pipeline` kind).
+
+| `type`
+| The type of the catalog for pulling the resource. Either `artifact` for {artifact-hub} or `tekton` for {tekton-hub}.
+| Default:  `artifact`
+
+| `kind`
+| Either `task` or `pipeline`.
+| Default: `task`
+
+| `name`
+| The name of the task or pipeline to fetch from the hub.
+| `golang-build`
+
+| `version`
+| The version of the task or pipeline to fetch from the hub. You must use quotes (`"`) around the number.
+| `"0.5.0"`
+|===
++
+If the pipeline or task requires additional parameters, specify values for these parameters in the `params` section of the specification of the pipeline, pipeline run, or task run. The `params` section of the `pipelineRef` or `taskRef` specification must contain only the parameters that the resolver supports.
++
+The following example pipeline run references a remote pipeline from a catalog:
++
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: hub-pipeline-reference-demo
+spec:
+  pipelineRef:
+    resolver: hub
+    params:
+    - name: catalog
+      value: tekton-catalog-pipelines
+    - name: type
+      value: artifact
+    - name: kind
+      value: pipeline
+    - name: name
+      value: example-pipeline
+    - name: version
+      value: "0.1"
+  params:
+  - name: sample-pipeline-parameter
+    value: test
+----
+
+The following example pipeline references a remote task from a catalog:
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: pipeline-with-hub-task-reference-demo
+spec:
+  tasks:
+  - name: "cluster-task-reference-demo"
+    taskRef:
+      resolver: hub
+      params:
+      - name: catalog
+        value: tekton-catalog-tasks
+      - name: type
+        value: artifact
+      - name: kind
+        value: task
+      - name: name
+        value: example-task
+      - name: version
+        value: "0.6"
+    params:
+    - name: sample-task-parameter
+      value: test
+----
+
+The following example task run references a remote task from a catalog:
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: TaskRun
+metadata:
+  name: hub-task-reference-demo
+spec:
+  taskRef:
+    resolver: hub
+    params:
+    - name: catalog
+      value: tekton-catalog-tasks
+    - name: type
+      value: artifact
+    - name: kind
+      value: task
+    - name: name
+      value: example-task
+    - name: version
+      value: "0.6"
+  params:
+  - name: sample-task-parameter
+    value: test
+----
+
+The following example task includes a step that references a `StepAction` definition from a catalog:
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: hub-stepaction-reference-demo
+spec:
+  steps:
+  - name: example-step
+    ref:
+    - resolver: hub
+    - params:
+      - name: catalog
+        value: tekton-catalog-stepactions
+      - name: type
+        value: artifact
+      - name: kind
+        value: StepAction
+      - name: name
+        value: example-stepaction
+      - name: version
+        value: "0.6"
+    params:
+    - name: sample-stepaction-parameter
+      value: test
+----
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * create/remote-pipelines-tasks-resolvers.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id="resolver-bundles_{context}"]
+= Specifying a remote pipeline, task, or step action from a Tekton bundle
+
+[role="_abstract"]
+You can use the bundles resolver to specify a remote pipeline, task, or `StepAction` definition from a Tekton bundle. A Tekton bundle is an OCI image available from any OCI repository, such as an OpenShift container repository.
+
+:leveloffset!:
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * create/remote-pipelines-tasks-resolvers.adoc
+
+// // *openshift_pipelines/remote-pipelines-tasks-resolvers.adoc
+:_mod-docs-content-type: PROCEDURE
+[id="resolver-bundles-config_{context}"]
+= Configuring the bundles resolver
+
+[role="_abstract"]
+You can change the default service account name and the default kind for pulling resources from a Tekton bundle by configuring the bundles resolver.
+
+.Procedure
+
+. To edit the `TektonConfig` custom resource, enter the following command:
++
+[source,terminal]
+----
+$ oc edit TektonConfig config
+----
++
+. In the `TektonConfig` custom resource, edit the `pipeline.bundles-resolver-config` spec:
++
+[source,yaml]
+----
+apiVersion: operator.tekton.dev/v1alpha1
+kind: TektonConfig
+metadata:
+  name: config
+spec:
+  pipeline:
+    bundles-resolver-config:
+      default-service-account: pipelines
+      default-kind: task
+----
+`default-service-account`:: The default service account name to use for bundle requests.
+`default-kind`:: The default layer kind in the bundle image.
+
+:leveloffset!:
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * create/remote-pipelines-tasks-resolvers.adoc
+
+// // *openshift_pipelines/remote-pipelines-tasks-resolvers.adoc
+:_mod-docs-content-type: PROCEDURE
+[id="resolver-bundles-specify_{context}"]
+= Specifying a remote pipeline, task, or step action using the bundles resolver
+
+[role="_abstract"]
+When creating a pipeline run, you can specify a remote pipeline from a Tekton bundle. When creating a pipeline or a task run, you can specify a remote task from a Tekton bundle. When creating a step within a task, you can reference a remote `StepAction` definition from a Tekton bundle.
+
+.Procedure
+
+* To specify a remote pipeline, task, or `StepAction` definition from a Tekton bundle, use the following reference format in the `pipelineRef`, `taskRef`, or `step.ref` spec:
++
+[source,yaml]
+----
+# ...
+  resolver: bundles
+  params:
+  - name: bundle
+    value: <fully_qualified_image_name>
+  - name: name
+    value: <resource_name>
+  - name: kind
+    value: [pipeline|task]
+# ...
+----
++
+.Supported parameters for the bundles resolver
+|===
+| Parameter | Description | Example value
+
+| `serviceAccount`
+| The name of the service account to use when constructing registry credentials.
+| `default`
+
+| `bundle`
+| The bundle URL pointing at the image to fetch.
+| `gcr.io/tekton-releases/catalog/upstream/golang-build:0.1`
+
+| `name`
+| The name of the resource to pull out of the bundle.
+| `golang-build`
+
+| `kind`
+| The kind of the resource to pull out of the bundle.
+| `task`
+|===
++
+If the pipeline or task requires additional parameters, specify values for these parameters in the `params` section of the specification of the pipeline, pipeline run, or task run. The `params` section of the `pipelineRef` or `taskRef` specification must contain only the parameters that the resolver supports.
++
+The following example pipeline run references a remote pipeline from a Tekton bundle:
++
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: bundle-pipeline-reference-demo
+spec:
+  pipelineRef:
+    resolver: bundles
+    params:
+    - name: bundle
+      value: registry.example.com:5000/simple/pipeline:latest
+    - name: name
+      value: hello-pipeline
+    - name: kind
+      value: pipeline
+  params:
+  - name: sample-pipeline-parameter
+    value: test
+  - name: username
+    value: "pipelines"
+----
+
+The following example pipeline references a remote task from a Tekton bundle:
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: pipeline-with-bundle-task-reference-demo
+spec:
+  tasks:
+  - name: "bundle-task-demo"
+    taskRef:
+      resolver: bundles
+      params:
+      - name: bundle
+        value: registry.example.com:5000/advanced/task:latest
+      - name: name
+        value: hello-world
+      - name: kind
+        value: task
+    params:
+    - name: sample-task-parameter
+      value: test
+----
+
+The following example task run references a remote task from a Tekton bundle:
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: TaskRun
+metadata:
+  name: bundle-task-reference-demo
+spec:
+  taskRef:
+    resolver: bundles
+    params:
+    - name: bundle
+      value: registry.example.com:5000/simple/new_task:latest
+    - name: name
+      value: hello-world
+    - name: kind
+      value: task
+  params:
+  - name: sample-task-parameter
+    value: test
+----
+
+The following example task includes a step that references a `StepAction` definition from a Tekton bundle:
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: bundle-stepaction-reference-demo
+spec:
+  steps:
+  - name: example-step
+    ref:
+      resolver: bundles
+      params:
+      - name: bundle
+        value: registry.example.com:5000/simple/new_task:latest
+      - name: name
+        value: hello-world-action
+      - name: kind
+        value: StepAction
+    params:
+    - name: sample-stepaction-parameter
+      value: test
+----
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * create/remote-pipelines-tasks-resolvers.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id="resolver-git-anon_{context}"]
+= Specifying a remote pipeline, task, or step action with anonymous Git cloning
+
+[role="_abstract"]
+You can use the Git resolver to access a remote pipeline, task, or `StepAction` definition from a Git repository. The repository must include a YAML file that defines the pipeline or task. For anonymous access, you can clone repositories with the resolver without needing authentication credentials.
+
+:leveloffset!:
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * create/remote-pipelines-tasks-resolvers.adoc
+
+// // *openshift_pipelines/remote-pipelines-tasks-resolvers.adoc
+:_mod-docs-content-type: PROCEDURE
+[id="resolver-git-config-anon_{context}"]
+= Configuring the Git resolver for anonymous Git cloning
+
+[role="_abstract"]
+If you want to use anonymous Git cloning, you can configure the default Git revision, fetch timeout, and default repository URL for pulling remote pipelines and tasks from a Git repository.
+
+.Procedure
+
+. To edit the `TektonConfig` custom resource, enter the following command:
++
+[source,terminal]
+----
+$ oc edit TektonConfig config
+----
+. In the `TektonConfig` custom resource, edit the `pipeline.git-resolver-config` spec:
++
+[source,yaml]
+----
+apiVersion: operator.tekton.dev/v1alpha1
+kind: TektonConfig
+metadata:
+  name: config
+spec:
+  pipeline:
+    git-resolver-config:
+      default-revision: main
+      fetch-timeout: 1m
+      default-url: https://github.com/tektoncd/catalog.git
+----
+`default-revision`:: The default Git revision to use if you do not specify one.
+`fetch-timeout`:: The maximum time any single Git clone resolution might take, for example, `1m`, `2s`, `700ms`. {pipelines-title} also enforces a global maximum timeout of 1 minute on all resolution requests.
+`default-url`:: The default Git repository URL for anonymous cloning if you do not specify one.
+
+:leveloffset!:
+:leveloffset: +2
+
+// This module is included in the following assembly:
+//
+// openshift_pipelines/remote-pipelines-tasks-resolvers.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="resolver-git-anon-specify_{context}"]
+= Specifying a remote pipeline, task, or step action by using the Git resolver for anonymous cloning
+
+[role="_abstract"]
+Specify a remote pipeline, task, or step action from a Git repository by using the Git resolver with anonymous cloning.
+
+You can reference remote pipelines, tasks, and `StepAction` definitions from a Git repository by using anonymous cloning.
+
+.Procedure
+
+* To specify a remote pipeline, task, or `StepAction` definition from a Git repository, use the following reference format in the `pipelineRef`, `taskRef`, or `step.ref` spec:
++
+[source,yaml]
+----
+# ...
+  resolver: git
+  params:
+  - name: url
+    value: <git_repository_url>
+  - name: revision
+    value: <branch_name>
+  - name: pathInRepo
+    value: <path_in_repository>
+# ...
+----
++
+.Supported parameters for the Git resolver
+|===
+| Parameter | Description | Example value
+
+| `url`
+| The URL of the repository, when using anonymous cloning.
+| `+https://github.com/tektoncd/catalog.git+`
+
+| `revision`
+| The Git revision in the repository. You can specify a branch name, a tag name, or a commit SHA hash.
+| `main`, `v0.38.2`, `aeb957601cf41c012be462827053a21a420befca`
+
+| `pathInRepo`
+| The path name of the YAML file in the repository.
+| `task/golang-build/0.3/golang-build.yaml`
+|===
++
+[NOTE]
+====
+To clone and fetch the repository anonymously, use the `url` parameter. Do not specify the `url` parameter and the `repo` parameter together.
+====
++
+If the pipeline or task requires additional parameters, give these parameters in `params`.
++
+The following example pipeline run references a remote pipeline from a Git repository:
++
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: git-pipeline-reference-demo
+spec:
+  pipelineRef:
+    resolver: git
+    params:
+      - name: url
+        value: https://github.com/tektoncd/catalog.git
+      - name: revision
+        value: main
+      - name: pathInRepo
+        value: pipeline/simple/0.1/simple.yaml
+  params:
+    - name: name
+      value: "testPipelineRun"
+    - name: sample-pipeline-parameter
+      value: test
+----
+
+The following example pipeline references a remote task from a Git repository:
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: pipeline-with-git-task-reference-demo
+spec:
+  tasks:
+    - name: "git-task-reference-demo"
+      taskRef:
+        resolver: git
+        params:
+          - name: url
+            value: https://github.com/tektoncd/catalog.git
+          - name: revision
+            value: main
+          - name: pathInRepo
+            value: task/git-clone/0.6/git-clone.yaml
+      params:
+      - name: sample-task-parameter
+        value: test
+----
+
+The following example task run references a remote task from a Git repository:
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: TaskRun
+metadata:
+  name: git-task-reference-demo
+spec:
+  taskRef:
+    resolver: git
+    params:
+      - name: url
+        value: https://github.com/tektoncd/catalog.git
+      - name: revision
+        value: main
+      - name: pathInRepo
+        value: task/git-clone/0.6/git-clone.yaml
+  params:
+  - name: sample-task-parameter
+    value: test
+----
+
+The following example task includes a step that references a `StepAction` definition from a Git repository:
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: git-stepaction-reference-demo
+spec:
+  steps:
+  - name: example-step
+    ref:
+      resolver: git
+      - name: url
+        value: https://github.com/openshift-pipelines/tektoncd-catalog.git
+      - name: revision
+        value: p
+      - name: pathInRepo
+        value: stepactions/stepaction-git-clone/0.4.1/stepaction-git-clone.yaml
+    params:
+    - name: sample-stepaction-parameter
+      value: test
+----
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * create/remote-pipelines-tasks-resolvers.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id="resolver-git-scm_{context}"]
+= Specifying a remote pipeline, task, or step action with an authenticated Git API
+
+[role="_abstract"]
+You can specify a remote pipeline, task, or `StepAction` definition from a Git repository by using the Git resolver. The repository must contain a YAML file that defines the pipeline or task. You can securely access repositories by using an authenticated API, which supports user authentication.
+
+:leveloffset!:
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * create/remote-pipelines-tasks-resolvers.adoc
+
+// // *openshift_pipelines/remote-pipelines-tasks-resolvers.adoc
+:_mod-docs-content-type: PROCEDURE
+[id="resolver-git-config-scm_{context}"]
+= Configuring the Git resolver for an authenticated API
+
+[role="_abstract"]
+For an authenticated Source Control Management (SCM) API, you must set the configuration for the authenticated Git connection.
+
+You can use Git repository providers that the `go-scm` library supports. Red Hat has not tested all `go-scm` implementations with the Git resolver, but Red Hat knows the following providers work:
+
+* `github.com` and GitHub Enterprise
+* `gitlab.com` and self-hosted Gitlab
+* Gitea
+* Bitbucket Data Center
+* Bitbucket Cloud
+
+[NOTE]
+====
+* You can configure Git connections by using the authenticated SCM API. You can give a security token that enables all users on your cluster to access one repository. Additionally, you can specify different SCM providers and tokens for specific pipelines or tasks.
+
+* If you configure the Git resolver to use the authenticated SCM API, you can also use anonymous Git clone references to retrieve pipelines and tasks.
+====
+
+
+.Procedure
+
+. To edit the `TektonConfig` custom resource, enter the following command:
++
+[source,terminal]
+----
+$ oc edit TektonConfig config
+----
+
+. In the `TektonConfig` custom resource, edit the `pipeline.git-resolver-config` spec:
++
+[source,yaml]
+----
+apiVersion: operator.tekton.dev/v1alpha1
+kind: TektonConfig
+metadata:
+  name: config
+spec:
+  pipeline:
+    git-resolver-config:
+      default-revision: main
+      fetch-timeout: 1m
+      scm-type: github
+      server-url: api.internal-github.com
+      api-token-secret-name: github-auth-secret
+      api-token-secret-key: github-auth-key
+      api-token-secret-namespace: github-auth-namespace
+      default-org: tektoncd
+----
+`default-revision`:: The default Git revision to use if you do not specify one.
+`fetch-timeout`:: The maximum time any single Git clone resolution might take, for example, `1m`, `2s`, `700ms`. {pipelines-title} also enforces a global maximum timeout of 1 minute on all resolution requests.
+`scm-type`:: The SCM provider type.
+`server-url`:: The base URL for use with the authenticated SCM API. This setting is not required if you are using `github.com`, `gitlab.com`, or Bitbucket Cloud.
+`api-token-secret-name`:: The name of the secret that has the SCM provider API token.
+`api-token-secret-key`:: The key within the token secret that has the token.
+`api-token-secret-namespace`:: The namespace containing the token secret, if not `default`.
+`default-org`:: Optional: The default organization for the repository, when using the authenticated API. The resolver uses this organization if you do not specify an organization in the resolver parameters.
++
+[NOTE]
+====
+You must set `scm-type`, `api-token-secret-name`, and `api-token-secret-key` to use the authenticated SCM API.
+====
+
+:leveloffset!:
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * create/remote-pipelines-tasks-resolvers.adoc
+// * openshift_pipelines/remote-pipelines-tasks-resolvers.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="op-resolver-git-config-multiple-providers_{context}"]
+= Configuring many Git providers
+
+[role="_abstract"]
+You can configure many Git providers, or you can add many configurations for the same Git provider, to use in different task runs and pipeline runs.
+
+Add details in the `TektonConfig` custom resource (CR) with your unique identifier key prefix.
+
+.Procedure
+
+. Edit the `TektonConfig` CR by running the following command:
++
+[source,terminal]
+----
+$ oc edit TektonConfig config
+----
+
+. In the `TektonConfig` CR, edit the `pipeline.git-resolver-config` spec:
++
+[source,yaml]
+----
+apiVersion: operator.tekton.dev/v1alpha1
+kind: TektonConfig
+metadata:
+  name: config
+spec:
+# ...
+  pipeline:
+    git-resolver-config:
+      # configuration 1
+      fetch-timeout: "1m"
+      default-url: "https://github.com/tektoncd/catalog.git"
+      default-revision: "main"
+      scm-type: "github"
+      server-url: ""
+      api-token-secret-name: ""
+      api-token-secret-key: ""
+      api-token-secret-namespace: "default"
+      default-org: ""
+      # configuration 2
+      test1.fetch-timeout: "5m"
+      test1.default-url: ""
+      test1.default-revision: "stable"
+      test1.scm-type: "github"
+      test1.server-url: "api.internal-github.com"
+      test1.api-token-secret-name: "test1-secret"
+      test1.api-token-secret-key: "token"
+      test1.api-token-secret-namespace: "test1"
+      test1.default-org: "tektoncd"
+      # configuration 3
+      test2.fetch-timeout: "10m"
+      test2.default-url: ""
+      test2.default-revision: "stable"
+      test2.scm-type: "gitlab"
+      test2.server-url: "api.internal-gitlab.com"
+      test2.api-token-secret-name: "test2-secret"
+      test2.api-token-secret-key: "pat"
+      test2.api-token-secret-namespace: "test2"
+      test2.default-org: "tektoncd-infra"
+# ...
+----
+`# configuration 1`:: The default configuration to use if you do not provide a `configKey` key or you provide the key with the `default` value.
+`# configuration 2`:: The configuration that the resolver uses if you pass the `configKey` key with the `test1` value.
+`# configuration 3`:: The configuration that the resolver uses if you pass the `configKey` key with the `test2` value.
++
+[WARNING]
+====
+`configKey` values with the `.` symbol are not supported. If you try to pass a `configKey` value that has the `.` symbol, the `TaskRun` or `PipelineRun` resource where you passed the value fails to run.
+====
+
+:leveloffset!:
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * create/remote-pipelines-tasks-resolvers.adoc
+
+// // *openshift_pipelines/remote-pipelines-tasks-resolvers.adoc
+:_mod-docs-content-type: PROCEDURE
+[id="resolver-git-specify_{context}"]
+= Specifying a remote pipeline, task, or step action using the Git resolver with the authenticated SCM API
+
+[role="_abstract"]
+Specify a remote pipeline, task, or step action from a Git repository by using the Git resolver with the SCM API.
+
+You can reference remote pipelines, tasks, and `StepAction` definitions from a Git repository by using the authenticated SCM API.
+
+.Prerequisites
+
+* If you want to use the authenticated SCM API, you must configure the authenticated Git connection for the Git resolver.
+
+.Procedure
+
+* To specify a remote pipeline, task, or `StepAction` definition from a Git repository, use the following reference format in the `pipelineRef`, `taskRef`, or `step.ref` spec:
++
+[source,yaml]
+----
+# ...
+  resolver: git
+  params:
+  - name: org
+    value: <git_organization_name>
+  - name: repo
+    value: <git_repository_name>
+  - name: revision
+    value: <branch_name>
+  - name: pathInRepo
+    value: <path_in_repository>
+# ...
+----
++
+.Supported parameters for the Git resolver
+|===
+| Parameter | Description | Example value
+
+| `org`
+| The organization for the repository, when using the authenticated SCM API.
+| `tektoncd`
+
+| `repo`
+| The repository name, when using the authenticated SCM API.
+| `test-infra`
+
+| `revision`
+| The Git revision in the repository. You can specify a branch name, a tag  name, or a commit SHA hash.
+| `main`, `v0.38.2`, `aeb957601cf41c012be462827053a21a420befca`
+
+| `pathInRepo`
+| The path name of the YAML file in the repository.
+| `task/golang-build/0.3/golang-build.yaml`
+|===
++
+[NOTE]
+====
+To clone and fetch the repository anonymously, use the `url` parameter. To use the authenticated SCM API, use the `repo` parameter. Do not specify the `url` parameter and the `repo` parameter together.
+====
++
+If the pipeline or task requires additional parameters, add them to the `params` section. The `pipelineRef` or `taskRef` `params` section must contain only resolver-supported parameters.
++
+The following example pipeline run references a remote pipeline from a Git repository:
++
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: git-pipeline-reference-demo
+spec:
+  pipelineRef:
+    resolver: git
+    params:
+    - name: org
+      value: tektoncd
+    - name: repo
+      value: catalog
+    - name: revision
+      value: main
+    - name: pathInRepo
+      value: pipeline/simple/0.1/simple.yaml
+  params:
+  - name: name
+    value: "testPipelineRun"
+  - name: sample-pipeline-parameter
+    value: test
+----
+
+The following example pipeline references a remote task from a Git repository:
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: pipeline-with-git-task-reference-demo
+spec:
+  tasks:
+  - name: "git-task-reference-demo"
+    taskRef:
+      resolver: git
+      params:
+      - name: org
+        value: tektoncd
+      - name: repo
+        value: catalog
+      - name: revision
+        value: main
+      - name: pathInRepo
+        value: task/git-clone/0.6/git-clone.yaml
+    params:
+    - name: sample-task-parameter
+      value: test
+----
+
+The following example task run references a remote task from a Git repository:
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: TaskRun
+metadata:
+  name: git-task-reference-demo
+spec:
+  taskRef:
+    resolver: git
+    params:
+    - name: org
+      value: tektoncd
+    - name: repo
+      value: catalog
+    - name: revision
+      value: main
+    - name: pathInRepo
+      value: task/git-clone/0.6/git-clone.yaml
+  params:
+  - name: sample-task-parameter
+    value: test
+----
+
+The following example task includes a step that references a `StepAction` definition from a Git repository:
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: git-stepaction-reference-demo
+spec:
+  steps:
+  - name: example-step
+    ref:
+      resolver: git
+      - name: org
+        value: openshift-pipelines
+      - name: repo
+        value: tektoncd-catalog
+      - name: revision
+        value: p
+      - name: pathInRepo
+        value: stepactions/stepaction-git-clone/0.4.1/stepaction-git-clone.yaml
+    params:
+    - name: sample-stepaction-parameter
+      value: test
+----
+
+:leveloffset!:
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * create/remote-pipelines-tasks-resolvers.adoc
+// * openshift_pipelines/remote-pipelines-tasks-resolvers.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="op-resolver-git-specify-multiple-providers_{context}"]
+= Specifying many Git providers
+
+[role="_abstract"]
+You can specify many Git providers by passing the unique `configKey` parameter when creating `TaskRun` and `PipelineRun` resources.
+
+If you do not pass a `configKey` parameter, the resolver uses the default configuration. You can also specify default configuration by setting the `configKey` value to `default`.
+
+[WARNING]
+====
+`configKey` values with the `.` symbol are not supported. If you try to pass a `configKey` value that has the `.` symbol, the `TaskRun` or `PipelineRun` resource where you passed the value fails to run.
+====
+
+.Prerequisites
+
+* Configure many Git providers through the `Tektonconfig` custom resource. For more information, see "Configuring many Git providers".
+
+.Procedure
+
+* To specify a Git provider, use the following reference format in the `pipelineRef` and `taskRef` spec:
++
+[source,yaml]
+----
+# ...
+  resolver: git
+  params:
+  # ...
+  - name: configKey
+    value: <your_unique_key>
+# ...
+----
+`<your_unique_key>`:: Your unique key that matches one of the configuration keys, for example, `test1`.
+
+:leveloffset!:
+:leveloffset: +2
+
+// This module is included in the following assembly:
+//
+// openshift_pipelines/remote-pipelines-tasks-resolvers.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="op-resolver-git-override-scm_{context}"]
+= Specifying a remote pipeline or task by using the Git resolver with the authenticated SCM API overriding the Git resolver configuration
+
+[role="_abstract"]
+You can override the default configuration in specific pipeline runs or tasks. Use this method to access an authenticated provider outside of the `TektonConfig` custom resource (CR).
+
+The following example task run references a remote task from a Git repository. It overrides the earlier resolver configuration:
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: TaskRun
+metadata:
+  name: git-task-reference-demo
+spec:
+  taskRef:
+    resolver: git
+    params:
+    - name: org
+      value: tektoncd
+    - name: repo
+      value: catalog
+    - name: revision
+      value: main
+    - name: pathInRepo
+      value: task/git-clone/0.6/git-clone.yaml
+    - name: token
+      value: my-secret-token
+    - name: tokenKey
+      value: token
+    - name: scmType
+      value: github
+    - name: serverURL
+      value: https://ghe.mycompany.com
+----
+.Supported parameters to override the Git resolver
+|===
+| Parameter | Description | Example value
+
+| `org`
+| The organization for the repository.
+| `tektoncd`
+
+| repo
+| The repository name.
+| catalog
+
+| revision
+| The Git revision in the repository. You can specify a branch name, a tag name, or a commit SHA hash.
+| main
+
+| pathInRepo
+| The path name of the YAML file in the repository.
+| task/git-clone/0.6/git-clone.yaml
+
+| token
+| The secret name used for authentication.
+| my-secret-token
+
+| `tokenKey`
+| The key name for the token.
+| token
+
+| `scmType`
+| The type of SCM (Source Control Management) system.
+| `github`
+
+| serverURL
+| The URL of the server hosting the repository.
+| `+https://ghe.mycompany.com+`
+|===
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * create/remote-pipelines-tasks-resolvers.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id="resolver-http_{context}"]
+= Specifying a remote pipeline, task, or step action by using the HTTP resolver
+
+[role="_abstract"]
+You can specify a remote pipeline, task, or `StepAction` definition from an HTTP or HTTPS URL by using the HTTP resolver. The URL must point to a YAML file that defines the pipeline, task, or step action.
+
+:leveloffset!:
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * create/remote-pipelines-tasks-resolvers.adoc
+
+// // *openshift_pipelines/remote-pipelines-tasks-resolvers.adoc
+:_mod-docs-content-type: PROCEDURE
+
+[id="resolver-http-config_{context}"]
+= Configuring the HTTP resolver
+
+[role="_abstract"]
+You can use the HTTP resolver to fetch pipelines or tasks from an HTTP or HTTPS URL. You can configure the default values for the HTTP resolver by editing the `TektonConfig` custom resource (CR).
+
+.Procedure
+
+. Edit the `TektonConfig` CR by entering the following command:
++
+[source,terminal]
+----
+$ oc edit TektonConfig config
+----
+. In the `TektonConfig` CR, edit the `pipeline.http-resolver-config` spec:
++
+[source,yaml]
+----
+apiVersion: operator.tekton.dev/v1alpha1
+kind: TektonConfig
+metadata:
+  name: config
+spec:
+  pipeline:
+    http-resolver-config:
+      fetch-timeout: "1m"
+----
+`fetch-timeout`:: The maximum amount of time the HTTP resolver waits for a response from the server.
+
+:leveloffset!:
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * create/remote-pipelines-tasks-resolvers.adoc
+
+// // *openshift_pipelines/remote-pipelines-tasks-resolvers.adoc
+:_mod-docs-content-type: PROCEDURE
+[id="resolver-http-specify_{context}"]
+= Specifying a remote pipeline, task, or step action  with the HTTP Resolver
+
+[role="_abstract"]
+Specify a remote pipeline, task, or step action from an HTTP or HTTPS URL by using the HTTP resolver.
+
+When creating a pipeline run, you can specify a remote pipeline from an HTTP or HTTPS URL. When creating a pipeline or a task run, you can specify a remote task from an HTTP or HTTPS URL. When creating a step within a task, you can reference a remote `StepAction` definition from an HTTP or HTTPS URL.
+
+.Procedure
+
+* Specify a remote pipeline, task, or `StepAction` definition from an HTTP or HTTPS URL, using the following format in the `pipelineRef`, `taskRef`, or `step.ref` spec:
++
+[source,yaml]
+----
+# ...
+  resolver: http
+  params:
+  - name: url
+    value: <fully_qualified_http_url>
+# ...
+----
++
+.Supported parameters for the HTTP Resolver
+|===
+| Parameter | Description | Example Value
+
+| `url`
+| The HTTP URL pointing to the Tekton resource to fetch.
+| `\https://raw.githubusercontent.com/openshift-pipelines/tektoncd-catalog/p/tasks/task-git-clone/0.4.1/task-git-clone.yaml`
+|===
++
+The following example pipeline run references a remote pipeline from the same cluster:
++
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: http-pipeline-reference-demo
+spec:
+  pipelineRef:
+    resolver: http
+    params:
+    - name: url
+      value: https://raw.githubusercontent.com/tektoncd/catalog/main/pipeline/build-push-gke-deploy/0.1/build-push-gke-deploy.yaml
+  params:
+  - name: sample-pipeline-parameter
+    value: test
+  - name: username
+    value: "pipelines"
+----
+
+The following example pipeline defines a task that references a remote task from an HTTPS URL:
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: pipeline-with-http-task-reference-demo
+spec:
+  tasks:
+  - name: "http-task-demo"
+    taskRef:
+      resolver: http
+      params:
+      - name: url
+        value: https://raw.githubusercontent.com/openshift-pipelines/tektoncd-catalog/p/tasks/task-git-clone/0.4.1/task-git-clone.yaml
+    params:
+    - name: sample-task-parameter
+      value: test
+----
+
+The following example task run references a remote task from an HTTPS URL:
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: TaskRun
+metadata:
+  name: http-task-reference-demo
+spec:
+  taskRef:
+    resolver: http
+    params:
+    - name: url
+      value: https://raw.githubusercontent.com/openshift-pipelines/tektoncd-catalog/p/tasks/task-git-clone/0.4.1/task-git-clone.yaml
+  params:
+  - name: sample-task-parameter
+    value: test
+----
+
+The following example task includes a step that references a `StepAction` definition from an HTTPS URL:
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: http-stepaction-reference-demo
+spec:
+  steps:
+  - name: example-step
+    ref:
+      resolver: http
+      params:
+      - name: url
+        value: https://raw.githubusercontent.com/openshift-pipelines/tektoncd-catalog/p/stepactions/stepaction-git-clone/0.4.1/stepaction-git-clone.yaml
+    params:
+    - name: sample-stepaction-parameter
+      value: test
+----
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * create/remote-pipelines-tasks-resolvers.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id="resolver-cluster_{context}"]
+= Specifying a pipeline, task, or step action from the same cluster
+
+[role="_abstract"]
+You can use the cluster resolver to specify a pipeline, task, or `StepAction` definition in a namespace on the {OCP} cluster where {pipelines-title} runs. In particular, you can use the cluster resolver to access tasks that {pipelines-shortname} provides in its installation namespace, which is normally the `openshift-pipelines` namespace.
+
+:leveloffset!:
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * create/remote-pipelines-tasks-resolvers.adoc
+
+// // *openshift_pipelines/remote-pipelines-tasks-resolvers.adoc
+:_mod-docs-content-type: PROCEDURE
+[id="resolver-cluster-config_{context}"]
+= Configuring the cluster resolver
+
+[role="_abstract"]
+You can change the default kind and namespace for the cluster resolver, or limit the namespaces that the cluster resolver can use.
+
+.Procedure
+
+. To edit the `TektonConfig` custom resource, enter the following command:
++
+[source,terminal]
+----
+$ oc edit TektonConfig config
+----
++
+. In the `TektonConfig` custom resource, edit the `pipeline.cluster-resolver-config` spec:
++
+[source,yaml]
+----
+apiVersion: operator.tekton.dev/v1alpha1
+kind: TektonConfig
+metadata:
+  name: config
+spec:
+  pipeline:
+    cluster-resolver-config:
+      default-kind: pipeline
+      default-namespace: namespace1
+      allowed-namespaces: namespace1, namespace2
+      blocked-namespaces: namespace3, namespace4
+----
+`default-kind`:: The default resource kind to fetch, if not specified in parameters.
+`default-namespace`:: The default namespace for fetching resources, if not specified in parameters.
+`allowed-namespaces`:: A comma-separated list of namespaces that the resolver can access. If you do not define this key, the resolver can access all namespaces.
+`blocked-namespaces`:: An optional comma-separated list of namespaces that the resolver cannot access. If you do not define this key, the resolver can access all namespaces.
+
+:leveloffset!:
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * create/remote-pipelines-tasks-resolvers.adoc
+
+// // *openshift_pipelines/remote-pipelines-tasks-resolvers.adoc
+:_mod-docs-content-type: PROCEDURE
+[id="resolver-cluster-specify_{context}"]
+= Specifying a pipeline, task, or step action from the same cluster using the cluster resolver
+
+[role="_abstract"]
+When creating a pipeline run, you can specify a pipeline that exists on the same cluster. When creating a pipeline or a task run, you can specify a task that exists on the same cluster. When creating a step within a task, you can specify a `StepAction` definition that exists on the same cluster.
+
+.Procedure
+
+* To specify a pipeline, task, or `StepAction` definition from the same cluster, use the following reference format in the `pipelineRef`, `taskRef`, or `step.ref` spec:
++
+[source,yaml]
+----
+# ...
+  resolver: cluster
+  params:
+  - name: name
+    value: <name>
+  - name: namespace
+    value: <namespace>
+  - name: kind
+    value: [pipeline|task|stepaction]
+# ...
+----
++
+.Supported parameters for the cluster resolver
+|===
+| Parameter | Description | Example value
+
+| `name`
+| The name of the resource to fetch.
+| `some-pipeline`
+
+| `namespace`
+| The namespace in the cluster containing the resource.
+| `other-namespace`
+
+| `kind`
+| The kind of the resource to fetch.
+| `pipeline`
+
+|===
++
+If the pipeline or task requires additional parameters, give these parameters in `params`.
++
+The following example pipeline run references a pipeline from the same cluster:
++
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: cluster-pipeline-reference-demo
+spec:
+  pipelineRef:
+    resolver: cluster
+    params:
+    - name: name
+      value: some-pipeline
+    - name: namespace
+      value: test-namespace
+    - name: kind
+      value: pipeline
+  params:
+  - name: sample-pipeline-parameter
+    value: test
+----
+
+The following example pipeline references a task from the same cluster:
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: pipeline-with-cluster-task-reference-demo
+spec:
+  tasks:
+  - name: "cluster-task-reference-demo"
+    taskRef:
+      resolver: cluster
+      params:
+      - name: name
+        value: some-task
+      - name: namespace
+        value: test-namespace
+      - name: kind
+        value: task
+    params:
+    - name: sample-task-parameter
+      value: test
+----
+
+The following example task run references a task from the same cluster:
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: TaskRun
+metadata:
+  name: cluster-task-reference-demo
+spec:
+  taskRef:
+    resolver: cluster
+    params:
+    - name: name
+      value: some-task
+    - name: namespace
+      value: test-namespace
+    - name: kind
+      value: task
+  params:
+  - name: sample-task-parameter
+    value: test
+----
+
+The following example task includes a step that references a `StepAction` definition from the same cluster:
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: cluster-stepaction-reference-demo
+spec:
+  steps:
+  - name: example-step
+    ref:
+      resolver: cluster
+      params:
+      - name: name
+        value: some-step
+      - name: namespace
+        value: test-namespace
+      - name: kind
+        value: stepaction
+  params:
+  - name: sample-stepaction-parameter
+    value: test
+----
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * create/remote-pipelines-tasks-resolvers.adoc
+
+// // *openshift_pipelines/remote-pipelines-tasks-resolvers.adoc
+:_mod-docs-content-type: REFERENCE
+[id="resolver-cluster-tasks-ref_{context}"]
+= Tasks provided in the {pipelines-shortname} namespace
+
+An {pipelines-shortname} installation includes a set of standard tasks that you can use in your pipelines. {pipelines-shortname} stores these tasks in the installation namespace, which is normally the `openshift-pipelines` namespace. You can use the cluster resolver to access the tasks.
+[role="_abstract"]
+An {pipelines-shortname} installation includes a set of standard tasks that you can use in your pipelines. {pipelines-shortname} stores these tasks in the installation namespace, which is normally the `openshift-pipelines` namespace. You can use the cluster resolver to access the tasks.
+
+Until version 1.16, {pipelines-shortname} included `ClusterTask` functionality. Versions 1.17 and later no longer include this functionality. If your pipelines use `ClusterTask` references, you can re-create them with the tasks that are available from the {pipelines-shortname} installation namespace by using the cluster resolver. However, the tasks have certain changes compared to the earlier existing `ClusterTask` definitions.
+
+You cannot specify a custom execution image in any of the tasks available in the {pipelines-shortname} installation namespace. These tasks do not support parameters such as `BUILDER_IMAGE`, `gitInitImage`, or `KN_IMAGE`. If you want to use a custom execution image, create a copy of the task and replace the image by editing the copy.
+
+[id="op-taskref-buildah_{context}"]
+== buildah
+
+The `buildah` task builds a source code tree into a container image and then pushes the image to a container registry.
+
+.Example usage of the `buildah` task
+[source,yaml,subs="attributes+"]
+----
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: build-and-deploy
+spec:
+# ...
+  tasks:
+# ...
+  - name: build-image
+    taskRef:
+      resolver: cluster
+      params:
+      - name: kind
+        value: task
+      - name: name
+        value: buildah
+      - name: namespace
+        value: openshift-pipelines
+    params:
+    - name: IMAGE
+      value: $(params.IMAGE)
+    workspaces:
+    - name: source
+      workspace: shared-workspace
+# ...
+----
+
+.Supported parameters for the `buildah` task
+[cols="1,2,1,1",options="header"]
+|===
+| Parameter | Description | Type | Default value
+|`IMAGE` |Buildah builds this fully qualified container image name. |`string` |
+|`DOCKERFILE` |Path to the `Dockerfile` (or `Containerfile`) relative to the `source` workspace. |`string` |`./Dockerfile`
+|`CONTEXT` |Path to the directory to use as the context. |`string` |`.`
+|`STORAGE_DRIVER` |Set the Buildah storage driver to reflect the settings of the current cluster node settings. |`string` |`vfs`
+|`FORMAT` |The format of the container to build, either `oci` or `docker`. |`string` |`oci`
+|`BUILD_EXTRA_ARGS` |Extra parameters for the `build` command when building the image. |`string` |
+|`PUSH_EXTRA_ARGS` |Extra parameters for the `push` command when pushing the image. |`string` |
+|`SKIP_PUSH` |Skip pushing the image to the container registry. |`string` |`false`
+|`TLS_VERIFY` |The TLS verification flag, normally `true`. |`string` |`true`
+|`VERBOSE` |Turn on verbose logging; the system adds all executed commands to the log. |`string` |`false`
+|===
+
+.Supported workspaces for the `buildah` task
+[cols="1,3",options="header"]
+|===
+| Workspace | Description
+|`source` |Container build context, usually the application source code that includes a `Dockerfile` or `Containerfile` file.
+|`dockerconfig` |An optional workspace for providing a `.docker/config.json` file that Buildah uses to access the container registry. Place the file at the root of the workspace with the name `config.json` or `.dockerconfigjson`.
+|`rhel-entitlement` |An optional workspace for providing the subscription keys that Buildah uses to access a {op-system-base-full} subscription. The mounted workspace must has the `entitlement.pem` and `entitlement-key.pem` files.
+|===
+
+.Results that the `buildah` task returns
+[cols="1,1,2",options="header"]
+|===
+| Result | Type | Description
+|`IMAGE_URL` |`string` |The fully qualified name of the built image.
+|`IMAGE_DIGEST` |`string` |Digest of the built image.
+|===
+
+*Changes from the `buildah` `ClusterTask`*
+
+* The `VERBOSE` parameter was added.
+* The `BUILDER_IMAGE` parameter was removed.
+
+[id="op-taskref-git-cli_{context}"]
+== git-cli
+
+The `git-cli` task runs the `git` command-line utility. You can pass the full Git command or several commands to run using the `GIT_SCRIPT` parameter. If the commands need authentication to a Git repository, for example, to complete a push, you must supply the authentication credentials.
+
+.Example usage of the `git-cli` task
+[source,yaml,subs="attributes+"]
+----
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: update-repo
+spec:
+# ...
+  tasks:
+# ...
+  - name: push-to-repo
+    taskRef:
+      resolver: cluster
+      params:
+      - name: kind
+        value: task
+      - name: name
+        value: git-cli
+      - name: namespace
+        value: openshift-pipelines
+    params:
+    - name: GIT_SCRIPT
+      value: "git push"
+    - name: GIT_USER_NAME
+      value: "Example Developer"
+    - name: GIT_USER_EMAIL
+      value: "developer@example.com"
+    workspaces:
+    - name: ssh-directory
+      workspace: ssh-workspace
+    - name: source
+      workspace: shared-workspace
+# ...
+----
+`workspace`:: In this example, `ssh-workspace` must contain the contents of the `.ssh` directory with a valid key for authorization to the Git repository.
+
+.Supported parameters for the `git-cli` task
+[cols="1,2,1,1",options="header"]
+|===
+| Parameter | Description | Type | Default value
+|`CRT_FILENAME` |Certificate Authority (CA) bundle filename in the `ssl-ca-directory` workspace. |`string` |`ca-bundle.crt`
+|`HTTP_PROXY` |HTTP proxy server (non-TLS requests). |`string` |
+|`HTTPS_PROXY` |HTTPS proxy server (TLS requests). |`string` |
+|`NO_PROXY` |Opt out of proxying HTTP/HTTPS requests. |`string` |
+|`SUBDIRECTORY` |Relative path to the `source` workspace where the git repository is present. |`string` |
+|`USER_HOME` |Absolute path to the Git user home directory in the pod. |`string` |`/home/git`
+|`DELETE_EXISTING` |Erase any existing contents of the `source` workspace before completing the git operations. |`string` |`true`
+|`VERBOSE` |Log all the executed commands. |`string` |`false`
+|`SSL_VERIFY` |The global `http.sslVerify` value. Do not use `false` unless
+you trust the remote repository. |`string` |`true`
+|`GIT_USER_NAME` |Git user name for performing Git operations. |`string` |
+|`GIT_USER_EMAIL` |Git user email for performing Git operations. |`string` |
+|`GIT_SCRIPT` |The Git script to run. |`string` |`git help`
+|===
+
+.Supported workspaces for the `git-cli` task
+[cols="1,3",options="header"]
+|===
+| Workspace | Description
+|`ssh-directory` |A `.ssh` directory with the private key, `known_hosts`, `config`, and other files as necessary. If you give this workspace, the task uses it for authentication to the Git repository. Bind this workspace to a `Secret` resource for secure storage of authentication information.
+|`basic-auth` |A workspace containing a `.gitconfig` and `.git-credentials` files. If you give this workspace, the task uses it for authentication to the Git repository. Use a `ssh-directory` workspace for authentication instead of `basic-auth` whenever possible. Bind this workspace to a `Secret` resource for secure storage of authentication information.
+|`ssl-ca-directory` |A workspace containing CA certificates. If you give this workspace, Git uses these certificates to verify the peer when interacting with remote repositories using HTTPS.
+|`source` |A workspace that has the fetched Git repository.
+|`input` |An optional workspace that has the files to add to the Git repository. You can access the workspace from your script using `$(workspaces.input.path)`, for example:
+
+`cp $(workspaces.input.path)/<file_that_i_want> .`
+
+`git add <file_that_i_want>`
+|===
+
+.Results that the `git-cli` task returns
+[cols="1,1,2",options="header"]
+|===
+| Result | Type | Description
+|`COMMIT` |`string` |The SHA digest of the commit that is at the `HEAD` of the current branch in the cloned Git repository.
+|===
+
+*Changes from the `git-cli` `ClusterTask`*
+
+* Several new parameters were added.
+* The `BASE_IMAGE` parameter was removed.
+* The `ssl-ca-directory` workspace was added.
+* The default values for the `USER_HOME` and `VERBOSE` parameters changed.
+* The name of the result changed from `commit` to `COMMIT`.
+
+[id="op-taskref-git-clone_{context}"]
+== git-clone
+
+The `git-clone` task uses Git to initialize and clone a remote repository on a workspace. You can use this task at the start of a pipeline that builds or otherwise processes this source code.
+
+.Example usage of the `git-clone` task
+[source,yaml,subs="attributes+"]
+----
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: build-source
+spec:
+# ...
+  tasks:
+  - name: clone-repo
+    taskRef:
+      resolver: cluster
+      params:
+      - name: kind
+        value: task
+      - name: name
+        value: git-clone
+      - name: namespace
+        value: openshift-pipelines
+    params:
+    - name: URL
+      value: "https://github.com/example/repo.git"
+    workspaces:
+    - name: output
+      workspace: shared-workspace
+----
+
+.Supported parameters for the `git-clone` task
+[cols="1,2,1,1",options="header"]
+|===
+| Parameter | Description | Type | Default value
+|`CRT_FILENAME` |CA bundle filename in the `ssl-ca-directory` workspace. |`string` |`ca-bundle.crt`
+|`HTTP_PROXY` |HTTP proxy server (non-TLS requests). |`string` |
+|`HTTPS_PROXY` |HTTPS proxy server (TLS requests). |`string` |
+|`NO_PROXY` |Opt out of proxying HTTP/HTTPS requests. |`string` |
+|`SUBDIRECTORY` |Relative path in the `output` workspace where the task places the Git repository. |`string` |
+|`USER_HOME` |Absolute path to the Git user home directory in the pod. |`string` |`/home/git`
+|`DELETE_EXISTING` |Delete the contents of the default workspace, if they exist, before running the Git operations. |`string` |`true`
+|`VERBOSE` |Log the executed commands. |`string` |`false`
+|`SSL_VERIFY` |The global `http.sslVerify` value. Do not set this parameter to `false` unless you trust the remote repository. |`string` |`true`
+|`URL` |Git repository URL. |`string` |
+|`REVISION` |The revision to check out, for example, a branch or tag. |`string` |`main`
+|`REFSPEC` |The `refspec` string for the repository that the task fetches before checking out the revision. |`string` |
+|`SUBMODULES` |Initialize and fetch Git submodules. |`string` |`true`
+|`DEPTH` |Number of commits to fetch, a "shallow clone" is a single commit. |`string` |`1`
+|`SPARSE_CHECKOUT_DIRECTORIES` |List of directory patterns, separated by commas, for performing a  "sparse checkout". |`string` |
+|===
+
+.Supported workspaces for the `git-clone` task
+[cols="1,3",options="header"]
+|===
+| Workspace | Description
+|`ssh-directory` |A `.ssh` directory with the private key, `known_hosts`, `config`, and other files as necessary. If you give this workspace, the task uses it for authentication to the Git repository. Bind this workspace to a `Secret` resource for secure storage of authentication information.
+|`basic-auth` |A workspace containing a `.gitconfig` and `.git-credentials` files. If you give this workspace, the task uses it for authentication to the Git repository. Use a `ssh-directory` workspace for authentication instead of `basic-auth` whenever possible. Bind this workspace to a `Secret` resource for secure storage of authentication information.
+|`ssl-ca-directory` |A workspace containing CA certificates. If you give this workspace, Git uses these certificates to verify the peer when interacting with remote repositories using HTTPS.
+|`output` |A workspace that has the fetched git repository; the task places data on the root of the workspace or on the relative path defined by the `SUBDIRECTORY` parameter.
+|===
+
+.Results that the `git-clone` task returns
+[cols="1,1,2",options="header"]
+|===
+| Result | Type | Description
+|`COMMIT` |`string` |The SHA digest of the commit that is at the `HEAD` of the current branch in the cloned Git repository.
+|`URL` |`string` |The URL of the cloned repository.
+|`COMMITTER_DATE` |`string` |The epoch timestamp of the commit that is at the `HEAD` of the current branch in the cloned Git repository.
+|===
+
+*Changes from the `git-clone` `ClusterTask`*
+
+* All parameter names changed to uppercase.
+* All result names changed to uppercase.
+* The `gitInitImage` parameter was removed.
+
+[id="op-taskref-kn_{context}"]
+== kn
+
+The `kn` task uses the `kn` command-line utility to complete operations on Knative resources, such as services, revisions, or routes.
+
+.Example usage of the `kn` task
+[source,yaml,subs="attributes+"]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+ name: kn-run
+spec:
+ pipelineSpec:
+   tasks:
+   - name: kn-run
+     taskRef:
+       resolver: cluster
+       params:
+       - name: kind
+         value: task
+       - name: name
+         value: kn
+       - name: namespace
+         value: openshift-pipelines
+     params:
+     - name: ARGS
+       value: [version]
+----
+
+.Supported parameters for the `kn` task
+[cols="1,2,1,1",options="header"]
+|===
+| Parameter | Description | Type | Default value
+|`ARGS` |The arguments for the `kn` utility. |`array` |`- help`
+|===
+
+*Changes from the `kn` `ClusterTask`*
+
+* The `KN_IMAGE` parameter was removed.
+
+[id="op-taskref-kn-apply_{context}"]
+== kn-apply
+
+The `kn-apply` task deploys a specified image to a Knative Service. This task uses the `kn service apply` command to create or update the specified Knative service.
+
+.Example usage of the `kn-apply` task
+[source,yaml,subs="attributes+"]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+ name: kn-apply-run
+spec:
+ pipelineSpec:
+   tasks:
+   - name: kn-apply-run
+     taskRef:
+       resolver: cluster
+       params:
+       - name: kind
+         value: task
+       - name: name
+         value: kn-apply
+       - name: namespace
+         value: openshift-pipelines
+     params:
+     - name: SERVICE
+       value: "hello"
+     - name: IMAGE
+       value: "gcr.io/knative-samples/helloworld-go:latest"
+----
+
+.Supported parameters for the `kn-apply` task
+[cols="1,2,1,1",options="header"]
+|===
+| Parameter | Description | Type | Default value
+|`SERVICE` |The Knative service name. |`string` |
+|`IMAGE` |The fully qualified name of the image to deploy. |`string` |
+|===
+
+*Changes from the `kn-apply` `ClusterTask`*
+
+* The `KN_IMAGE` parameter was removed.
+
+
+[id="op-taskref-maven_{context}"]
+== maven
+
+The `maven` task runs a Maven build.
+
+.Example usage of the `maven` task
+[source,yaml,subs="attributes+"]
+----
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: build-and-deploy
+spec:
+# ...
+  tasks:
+# ...
+  - name: build-from-source
+    taskRef:
+      resolver: cluster
+      params:
+      - name: kind
+        value: task
+      - name: name
+        value: maven
+      - name: namespace
+        value: openshift-pipelines
+    workspaces:
+    - name: source
+      workspace: shared-workspace
+# ...
+----
+
+.Supported parameters for the `maven` task
+[cols="1,2,1,1",options="header"]
+|===
+| Parameter | Description | Type | Default value
+|`GOALS` | The Maven goals to run. |`array` |`- package`
+|`MAVEN_MIRROR_URL` |The Maven repository mirror URL. |`string` |
+|`SUBDIRECTORY` |The subdirectory within the `source` workspace that the task runs the Maven build on. |`string` |`.`
+|===
+
+.Supported workspaces for the `maven` task
+[cols="1,3",options="header"]
+|===
+| Workspace | Description
+|`source` |The workspace that has the Maven project.
+|`server_secret` |The workspace that has the secrets for connecting to the Maven server, such as the user name and password.
+|`proxy_secret` |The workspace that has the credentials for connecting to the proxy server, such as the user name and password.
+|`proxy_configmap` |The workspace that has proxy configuration values, such as `proxy_port`, `proxy_host`, `proxy_protocol`, `proxy_non_proxy_hosts`.
+|`maven_settings` |The workspace that has custom Maven settings.
+|===
+
+*Changes from the `maven` `ClusterTask`*
+
+* The parameter name `CONTEXT_DIR` changed to `SUBDIRECTORY`.
+* The workspace name `maven-settings` changed to `maven_settings`.
+
+[id="op-taskref-openshift-client_{context}"]
+== openshift-client
+
+The `openshift-client` task runs commands by using the `oc` command-line interface. You can use this task to manage an {OCP} cluster.
+
+.Example usage of the `openshift-client` task
+[source,yaml,subs="attributes+"]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+ name: openshift-client-run
+spec:
+ pipelineSpec:
+   tasks:
+   - name: openshift-client-run
+     taskRef:
+       resolver: cluster
+       params:
+       - name: kind
+         value: task
+       - name: name
+         value: openshift-client
+       - name: namespace
+         value: openshift-pipelines
+     params:
+     - name: SCRIPT
+       value: "oc version"
+----
+
+.Supported parameters for the `openshift-client` task
+[cols="1,2,1,1",options="header"]
+|===
+| Parameter | Description | Type | Default value
+|`SCRIPT` |The `oc` CLI arguments to run. |`string` |`oc help`
+|`VERSION` |The {OCP} version to use. |`string` |`latest`
+|===
+
+.Supported workspaces for the `openshift-client` task
+[cols="1,3",options="header"]
+|===
+| Workspace | Description
+|`manifest_dir` |The workspace containing manifest files that you want to apply using the `oc` utility.
+|`kubeconfig_dir` |An optional workspace in which you can give a `.kube/config` file that has credentials for accessing the cluster. Place this file at the root of the workspace and name it `kubeconfig`.
+|===
+
+*Changes from the `openshift-client` `ClusterTask`*
+
+* The workspace name `manifest-dir` changed to `manifest_dir`.
+* The workspace name `kubeconfig-dir` changed to `kubeconfig_dir`.
+
+
+[id="op-taskref-s2i-dotnet_{context}"]
+== s2i-dotnet
+
+The `s2i-dotnet` task builds the source code by using the Source to Image (S2I) `.NET` builder image, which is available from the {OCP} registry as `image-registry.openshift-image-registry.svc:5000/openshift/dotnet`.
+
+:lang: dotnet
+:_mod-docs-content-type: SNIPPET
+.Example usage of the `s2i-{lang}` task
+[source,yaml,subs="attributes+"]
+----
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: build-and-deploy
+spec:
+# ...
+  tasks:
+# ...
+  - name: build-s2i
+    taskRef:
+      resolver: cluster
+      params:
+      - name: kind
+        value: task
+      - name: name
+        value: s2i-{lang}
+      - name: namespace
+        value: openshift-pipelines
+    workspaces:
+    - name: source
+      workspace: shared-workspace
+# ...
+----
+
+.Supported parameters for the `s2i-{lang}` task
+[cols="1,2,1,1",options="header"]
+|===
+| Parameter | Description | Type | Default value
+|`IMAGE` |The fully qualified name for the container image that the S2I process builds. |`string` |
+|`IMAGE_SCRIPTS_URL` |The URL containing the default assemble and run scripts for the builder image. |`string` |`image:///usr/libexec/s2i`
+|`ENV_VARS` |An array of values for environment variables to set in the build process, listed in the `KEY=VALUE` format. |`array` |
+|`CONTEXT` |Path to the directory within the `source` workspace to use as the context. |`string` |`.`
+|`STORAGE_DRIVER` |Set the Buildah storage driver to reflect the settings of the current cluster node settings. |`string` |`vfs`
+|`FORMAT` |The format of the container to build, either `oci` or `docker`. |`string` |`oci`
+|`BUILD_EXTRA_ARGS` |Extra parameters for the `build` command when building the image. |`string` |
+|`PUSH_EXTRA_ARGS` |Extra parameters for the `push` command when pushing the image. |`string` |
+|`SKIP_PUSH` |Skip pushing the image to the container registry. |`string` |`false`
+|`TLS_VERIFY` |The TLS verification flag, normally `true`. |`string` |`true`
+|`VERBOSE` |Turn on verbose logging. The task adds all executed commands to the log. |`string` |`false`
+|`VERSION` |The tag of the image stream, which corresponds to the language version. |`string` |`latest`
+|===
+
+.Supported workspaces for the `s2i-{lang}` task
+[cols="1,3",options="header"]
+|===
+| Workspace | Description
+|`source` |The application source code, which is the build context for the S2I workflow.
+|`dockerconfig` |An optional workspace for providing a `.docker/config.json` file that Buildah uses to access the container registry. Place the file at the root of the workspace with the name `config.json` or `.dockerconfigjson`.
+|===
+
+.Results that the `s2i-{lang}` task returns
+[cols="1,1,2",options="header"]
+|===
+| Result | Type | Description
+|`IMAGE_URL` |`string` |The fully qualified name of the built image.
+|`IMAGE_DIGEST` |`string` |Digest of the built image.
+|===
+
+:!lang:
+
+[id="op-taskref-s2i-go_{context}"]
+== s2i-go
+
+The `s2i-go` task builds the source code by using the S2I Golang builder image, which is available from the {OCP} registry as `image-registry.openshift-image-registry.svc:5000/openshift/golang`.
+
+:lang: go
+:_mod-docs-content-type: SNIPPET
+.Example usage of the `s2i-{lang}` task
+[source,yaml,subs="attributes+"]
+----
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: build-and-deploy
+spec:
+# ...
+  tasks:
+# ...
+  - name: build-s2i
+    taskRef:
+      resolver: cluster
+      params:
+      - name: kind
+        value: task
+      - name: name
+        value: s2i-{lang}
+      - name: namespace
+        value: openshift-pipelines
+    workspaces:
+    - name: source
+      workspace: shared-workspace
+# ...
+----
+
+.Supported parameters for the `s2i-{lang}` task
+[cols="1,2,1,1",options="header"]
+|===
+| Parameter | Description | Type | Default value
+|`IMAGE` |The fully qualified name for the container image that the S2I process builds. |`string` |
+|`IMAGE_SCRIPTS_URL` |The URL containing the default assemble and run scripts for the builder image. |`string` |`image:///usr/libexec/s2i`
+|`ENV_VARS` |An array of values for environment variables to set in the build process, listed in the `KEY=VALUE` format. |`array` |
+|`CONTEXT` |Path to the directory within the `source` workspace to use as the context. |`string` |`.`
+|`STORAGE_DRIVER` |Set the Buildah storage driver to reflect the settings of the current cluster node settings. |`string` |`vfs`
+|`FORMAT` |The format of the container to build, either `oci` or `docker`. |`string` |`oci`
+|`BUILD_EXTRA_ARGS` |Extra parameters for the `build` command when building the image. |`string` |
+|`PUSH_EXTRA_ARGS` |Extra parameters for the `push` command when pushing the image. |`string` |
+|`SKIP_PUSH` |Skip pushing the image to the container registry. |`string` |`false`
+|`TLS_VERIFY` |The TLS verification flag, normally `true`. |`string` |`true`
+|`VERBOSE` |Turn on verbose logging. The task adds all executed commands to the log. |`string` |`false`
+|`VERSION` |The tag of the image stream, which corresponds to the language version. |`string` |`latest`
+|===
+
+.Supported workspaces for the `s2i-{lang}` task
+[cols="1,3",options="header"]
+|===
+| Workspace | Description
+|`source` |The application source code, which is the build context for the S2I workflow.
+|`dockerconfig` |An optional workspace for providing a `.docker/config.json` file that Buildah uses to access the container registry. Place the file at the root of the workspace with the name `config.json` or `.dockerconfigjson`.
+|===
+
+.Results that the `s2i-{lang}` task returns
+[cols="1,1,2",options="header"]
+|===
+| Result | Type | Description
+|`IMAGE_URL` |`string` |The fully qualified name of the built image.
+|`IMAGE_DIGEST` |`string` |Digest of the built image.
+|===
+
+:!lang:
+
+[id="op-taskref-s2i-java_{context}"]
+== s2i-java
+
+The `s2i-java` task builds the source code by using the S2I Java builder image, which is available from the {OCP} registry as `image-registry.openshift-image-registry.svc:5000/openshift/java`.
+
+.Supported parameters for the `s2i-java` task
+[cols="1,2,1,1",options="header"]
+|===
+| Parameter | Description | Type | Default value
+
+|`IMAGE` |The fully qualified name for the container image that the S2I process builds. |`string` |
+|`IMAGE_SCRIPTS_URL` |The URL containing the default assemble and run scripts for the builder image. |`string` |`image:///usr/libexec/s2i`
+|`ENV_VARS` |An array of values for environment variables to set in the build process, listed in the `KEY=VALUE` format. |`array` |
+|`CONTEXT` |Path to the directory within the `source` workspace to use as the context. |`string` |`.`
+|`STORAGE_DRIVER` |Set the Buildah storage driver to reflect the settings of the current cluster node settings. |`string` |`vfs`
+|`FORMAT` |The format of the container to build, either `oci` or `docker`. |`string` |`oci`
+|`BUILD_EXTRA_ARGS` |Extra parameters for the `build` command when building the image. |`string` |
+|`PUSH_EXTRA_ARGS` |Extra parameters for the `push` command when pushing the image. |`string` |
+|`SKIP_PUSH` |Skip pushing the image to the container registry. |`string` |`false`
+|`TLS_VERIFY` |The TLS verification flag, normally `true`. |`string` |`true`
+|`VERBOSE` |Turn on verbose logging; the system adds all executed commands to the log. |`string` |`false`
+|`VERSION` |The tag of the image stream, which corresponds to the language version. |`string` |`latest`
+|===
+
+.Supported workspaces for the `s2i-java` task
+[cols="1,3",options="header"]
+|===
+| Workspace | Description
+|`source` |The application source code, which is the build context for the S2I workflow.
+|`dockerconfig` |An optional workspace for providing a `.docker/config.json` file that Buildah uses to access the container registry. Place the file at the root of the workspace with the name `config.json` or `.dockerconfigjson`.
+|===
+
+.Results that the `s2i-java` task returns
+[cols="1,1,2",options="header"]
+|===
+| Result | Type | Description
+|`IMAGE_URL` |`string` |The fully qualified name of the built image.
+|`IMAGE_DIGEST` |`string` |Digest of the built image.
+|===
+
+*Changes from the `s2i-java` `ClusterTask`*
+
+* Several new parameters were added.
+* The `BUILDER_IMAGE`, `MAVEN_ARGS_APPEND`, `MAVEN_CLEAR_REPO`, and `MAVEN_MIRROR_URL` parameters were removed. You can pass the `MAVEN_ARGS_APPEND`, `MAVEN_CLEAR_REPO`, and `MAVEN_MIRROR_URL` values as environment variables.
+* The parameter name `PATH_CONTEXT` changed to `CONTEXT`.
+* The parameter name `TLS_VERIFY` changed to `TLSVERIFY`.
+* The `IMAGE_URL` result was added.
+
+[id="op-taskref-s2i-nodejs_{context}"]
+== s2i-nodejs
+
+The `s2i-nodejs` task builds the source code by using the S2I `Node.js` builder image, which is available from the {OCP} registry as `image-registry.openshift-image-registry.svc:5000/openshift/nodejs`.
+
+:lang: nodejs
+:_mod-docs-content-type: SNIPPET
+.Example usage of the `s2i-{lang}` task
+[source,yaml,subs="attributes+"]
+----
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: build-and-deploy
+spec:
+# ...
+  tasks:
+# ...
+  - name: build-s2i
+    taskRef:
+      resolver: cluster
+      params:
+      - name: kind
+        value: task
+      - name: name
+        value: s2i-{lang}
+      - name: namespace
+        value: openshift-pipelines
+    workspaces:
+    - name: source
+      workspace: shared-workspace
+# ...
+----
+
+.Supported parameters for the `s2i-{lang}` task
+[cols="1,2,1,1",options="header"]
+|===
+| Parameter | Description | Type | Default value
+|`IMAGE` |The fully qualified name for the container image that the S2I process builds. |`string` |
+|`IMAGE_SCRIPTS_URL` |The URL containing the default assemble and run scripts for the builder image. |`string` |`image:///usr/libexec/s2i`
+|`ENV_VARS` |An array of values for environment variables to set in the build process, listed in the `KEY=VALUE` format. |`array` |
+|`CONTEXT` |Path to the directory within the `source` workspace to use as the context. |`string` |`.`
+|`STORAGE_DRIVER` |Set the Buildah storage driver to reflect the settings of the current cluster node settings. |`string` |`vfs`
+|`FORMAT` |The format of the container to build, either `oci` or `docker`. |`string` |`oci`
+|`BUILD_EXTRA_ARGS` |Extra parameters for the `build` command when building the image. |`string` |
+|`PUSH_EXTRA_ARGS` |Extra parameters for the `push` command when pushing the image. |`string` |
+|`SKIP_PUSH` |Skip pushing the image to the container registry. |`string` |`false`
+|`TLS_VERIFY` |The TLS verification flag, normally `true`. |`string` |`true`
+|`VERBOSE` |Turn on verbose logging. The task adds all executed commands to the log. |`string` |`false`
+|`VERSION` |The tag of the image stream, which corresponds to the language version. |`string` |`latest`
+|===
+
+.Supported workspaces for the `s2i-{lang}` task
+[cols="1,3",options="header"]
+|===
+| Workspace | Description
+|`source` |The application source code, which is the build context for the S2I workflow.
+|`dockerconfig` |An optional workspace for providing a `.docker/config.json` file that Buildah uses to access the container registry. Place the file at the root of the workspace with the name `config.json` or `.dockerconfigjson`.
+|===
+
+.Results that the `s2i-{lang}` task returns
+[cols="1,1,2",options="header"]
+|===
+| Result | Type | Description
+|`IMAGE_URL` |`string` |The fully qualified name of the built image.
+|`IMAGE_DIGEST` |`string` |Digest of the built image.
+|===
+
+:!lang:
+
+[id="op-taskref-s2i-perl_{context}"]
+== s2i-perl
+
+The `s2i-perl` task builds the source code by using the S2I Perl builder image, which is available from the {OCP} registry as `image-registry.openshift-image-registry.svc:5000/openshift/perl`.
+
+:lang: perl
+:_mod-docs-content-type: SNIPPET
+.Example usage of the `s2i-{lang}` task
+[source,yaml,subs="attributes+"]
+----
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: build-and-deploy
+spec:
+# ...
+  tasks:
+# ...
+  - name: build-s2i
+    taskRef:
+      resolver: cluster
+      params:
+      - name: kind
+        value: task
+      - name: name
+        value: s2i-{lang}
+      - name: namespace
+        value: openshift-pipelines
+    workspaces:
+    - name: source
+      workspace: shared-workspace
+# ...
+----
+
+.Supported parameters for the `s2i-{lang}` task
+[cols="1,2,1,1",options="header"]
+|===
+| Parameter | Description | Type | Default value
+|`IMAGE` |The fully qualified name for the container image that the S2I process builds. |`string` |
+|`IMAGE_SCRIPTS_URL` |The URL containing the default assemble and run scripts for the builder image. |`string` |`image:///usr/libexec/s2i`
+|`ENV_VARS` |An array of values for environment variables to set in the build process, listed in the `KEY=VALUE` format. |`array` |
+|`CONTEXT` |Path to the directory within the `source` workspace to use as the context. |`string` |`.`
+|`STORAGE_DRIVER` |Set the Buildah storage driver to reflect the settings of the current cluster node settings. |`string` |`vfs`
+|`FORMAT` |The format of the container to build, either `oci` or `docker`. |`string` |`oci`
+|`BUILD_EXTRA_ARGS` |Extra parameters for the `build` command when building the image. |`string` |
+|`PUSH_EXTRA_ARGS` |Extra parameters for the `push` command when pushing the image. |`string` |
+|`SKIP_PUSH` |Skip pushing the image to the container registry. |`string` |`false`
+|`TLS_VERIFY` |The TLS verification flag, normally `true`. |`string` |`true`
+|`VERBOSE` |Turn on verbose logging. The task adds all executed commands to the log. |`string` |`false`
+|`VERSION` |The tag of the image stream, which corresponds to the language version. |`string` |`latest`
+|===
+
+.Supported workspaces for the `s2i-{lang}` task
+[cols="1,3",options="header"]
+|===
+| Workspace | Description
+|`source` |The application source code, which is the build context for the S2I workflow.
+|`dockerconfig` |An optional workspace for providing a `.docker/config.json` file that Buildah uses to access the container registry. Place the file at the root of the workspace with the name `config.json` or `.dockerconfigjson`.
+|===
+
+.Results that the `s2i-{lang}` task returns
+[cols="1,1,2",options="header"]
+|===
+| Result | Type | Description
+|`IMAGE_URL` |`string` |The fully qualified name of the built image.
+|`IMAGE_DIGEST` |`string` |Digest of the built image.
+|===
+
+:!lang:
+
+[id="op-taskref-s2i-php_{context}"]
+== s2i-php
+
+The `s2i-php` task builds the source code by using the S2I `PHP` builder image, which is available from the {OCP} registry as `image-registry.openshift-image-registry.svc:5000/openshift/php`.
+
+:lang: php
+:_mod-docs-content-type: SNIPPET
+.Example usage of the `s2i-{lang}` task
+[source,yaml,subs="attributes+"]
+----
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: build-and-deploy
+spec:
+# ...
+  tasks:
+# ...
+  - name: build-s2i
+    taskRef:
+      resolver: cluster
+      params:
+      - name: kind
+        value: task
+      - name: name
+        value: s2i-{lang}
+      - name: namespace
+        value: openshift-pipelines
+    workspaces:
+    - name: source
+      workspace: shared-workspace
+# ...
+----
+
+.Supported parameters for the `s2i-{lang}` task
+[cols="1,2,1,1",options="header"]
+|===
+| Parameter | Description | Type | Default value
+|`IMAGE` |The fully qualified name for the container image that the S2I process builds. |`string` |
+|`IMAGE_SCRIPTS_URL` |The URL containing the default assemble and run scripts for the builder image. |`string` |`image:///usr/libexec/s2i`
+|`ENV_VARS` |An array of values for environment variables to set in the build process, listed in the `KEY=VALUE` format. |`array` |
+|`CONTEXT` |Path to the directory within the `source` workspace to use as the context. |`string` |`.`
+|`STORAGE_DRIVER` |Set the Buildah storage driver to reflect the settings of the current cluster node settings. |`string` |`vfs`
+|`FORMAT` |The format of the container to build, either `oci` or `docker`. |`string` |`oci`
+|`BUILD_EXTRA_ARGS` |Extra parameters for the `build` command when building the image. |`string` |
+|`PUSH_EXTRA_ARGS` |Extra parameters for the `push` command when pushing the image. |`string` |
+|`SKIP_PUSH` |Skip pushing the image to the container registry. |`string` |`false`
+|`TLS_VERIFY` |The TLS verification flag, normally `true`. |`string` |`true`
+|`VERBOSE` |Turn on verbose logging. The task adds all executed commands to the log. |`string` |`false`
+|`VERSION` |The tag of the image stream, which corresponds to the language version. |`string` |`latest`
+|===
+
+.Supported workspaces for the `s2i-{lang}` task
+[cols="1,3",options="header"]
+|===
+| Workspace | Description
+|`source` |The application source code, which is the build context for the S2I workflow.
+|`dockerconfig` |An optional workspace for providing a `.docker/config.json` file that Buildah uses to access the container registry. Place the file at the root of the workspace with the name `config.json` or `.dockerconfigjson`.
+|===
+
+.Results that the `s2i-{lang}` task returns
+[cols="1,1,2",options="header"]
+|===
+| Result | Type | Description
+|`IMAGE_URL` |`string` |The fully qualified name of the built image.
+|`IMAGE_DIGEST` |`string` |Digest of the built image.
+|===
+
+:!lang:
+
+[id="op-taskref-s2i-python_{context}"]
+== s2i-python
+
+The `s2i-python` task builds the source code by using the S2I Python builder image, which is available from the {OCP} registry as `image-registry.openshift-image-registry.svc:5000/openshift/python`.
+
+:lang: python
+:_mod-docs-content-type: SNIPPET
+.Example usage of the `s2i-{lang}` task
+[source,yaml,subs="attributes+"]
+----
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: build-and-deploy
+spec:
+# ...
+  tasks:
+# ...
+  - name: build-s2i
+    taskRef:
+      resolver: cluster
+      params:
+      - name: kind
+        value: task
+      - name: name
+        value: s2i-{lang}
+      - name: namespace
+        value: openshift-pipelines
+    workspaces:
+    - name: source
+      workspace: shared-workspace
+# ...
+----
+
+.Supported parameters for the `s2i-{lang}` task
+[cols="1,2,1,1",options="header"]
+|===
+| Parameter | Description | Type | Default value
+|`IMAGE` |The fully qualified name for the container image that the S2I process builds. |`string` |
+|`IMAGE_SCRIPTS_URL` |The URL containing the default assemble and run scripts for the builder image. |`string` |`image:///usr/libexec/s2i`
+|`ENV_VARS` |An array of values for environment variables to set in the build process, listed in the `KEY=VALUE` format. |`array` |
+|`CONTEXT` |Path to the directory within the `source` workspace to use as the context. |`string` |`.`
+|`STORAGE_DRIVER` |Set the Buildah storage driver to reflect the settings of the current cluster node settings. |`string` |`vfs`
+|`FORMAT` |The format of the container to build, either `oci` or `docker`. |`string` |`oci`
+|`BUILD_EXTRA_ARGS` |Extra parameters for the `build` command when building the image. |`string` |
+|`PUSH_EXTRA_ARGS` |Extra parameters for the `push` command when pushing the image. |`string` |
+|`SKIP_PUSH` |Skip pushing the image to the container registry. |`string` |`false`
+|`TLS_VERIFY` |The TLS verification flag, normally `true`. |`string` |`true`
+|`VERBOSE` |Turn on verbose logging. The task adds all executed commands to the log. |`string` |`false`
+|`VERSION` |The tag of the image stream, which corresponds to the language version. |`string` |`latest`
+|===
+
+.Supported workspaces for the `s2i-{lang}` task
+[cols="1,3",options="header"]
+|===
+| Workspace | Description
+|`source` |The application source code, which is the build context for the S2I workflow.
+|`dockerconfig` |An optional workspace for providing a `.docker/config.json` file that Buildah uses to access the container registry. Place the file at the root of the workspace with the name `config.json` or `.dockerconfigjson`.
+|===
+
+.Results that the `s2i-{lang}` task returns
+[cols="1,1,2",options="header"]
+|===
+| Result | Type | Description
+|`IMAGE_URL` |`string` |The fully qualified name of the built image.
+|`IMAGE_DIGEST` |`string` |Digest of the built image.
+|===
+
+:!lang:
+
+[id="op-taskref-s2i-ruby_{context}"]
+== s2i-ruby
+
+The `s2i-ruby` task builds the source code by using the S2I Ruby builder image, which is available from the {OCP} registry as `image-registry.openshift-image-registry.svc:5000/openshift/ruby`.
+
+:lang: ruby
+:_mod-docs-content-type: SNIPPET
+.Example usage of the `s2i-{lang}` task
+[source,yaml,subs="attributes+"]
+----
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: build-and-deploy
+spec:
+# ...
+  tasks:
+# ...
+  - name: build-s2i
+    taskRef:
+      resolver: cluster
+      params:
+      - name: kind
+        value: task
+      - name: name
+        value: s2i-{lang}
+      - name: namespace
+        value: openshift-pipelines
+    workspaces:
+    - name: source
+      workspace: shared-workspace
+# ...
+----
+
+.Supported parameters for the `s2i-{lang}` task
+[cols="1,2,1,1",options="header"]
+|===
+| Parameter | Description | Type | Default value
+|`IMAGE` |The fully qualified name for the container image that the S2I process builds. |`string` |
+|`IMAGE_SCRIPTS_URL` |The URL containing the default assemble and run scripts for the builder image. |`string` |`image:///usr/libexec/s2i`
+|`ENV_VARS` |An array of values for environment variables to set in the build process, listed in the `KEY=VALUE` format. |`array` |
+|`CONTEXT` |Path to the directory within the `source` workspace to use as the context. |`string` |`.`
+|`STORAGE_DRIVER` |Set the Buildah storage driver to reflect the settings of the current cluster node settings. |`string` |`vfs`
+|`FORMAT` |The format of the container to build, either `oci` or `docker`. |`string` |`oci`
+|`BUILD_EXTRA_ARGS` |Extra parameters for the `build` command when building the image. |`string` |
+|`PUSH_EXTRA_ARGS` |Extra parameters for the `push` command when pushing the image. |`string` |
+|`SKIP_PUSH` |Skip pushing the image to the container registry. |`string` |`false`
+|`TLS_VERIFY` |The TLS verification flag, normally `true`. |`string` |`true`
+|`VERBOSE` |Turn on verbose logging. The task adds all executed commands to the log. |`string` |`false`
+|`VERSION` |The tag of the image stream, which corresponds to the language version. |`string` |`latest`
+|===
+
+.Supported workspaces for the `s2i-{lang}` task
+[cols="1,3",options="header"]
+|===
+| Workspace | Description
+|`source` |The application source code, which is the build context for the S2I workflow.
+|`dockerconfig` |An optional workspace for providing a `.docker/config.json` file that Buildah uses to access the container registry. Place the file at the root of the workspace with the name `config.json` or `.dockerconfigjson`.
+|===
+
+.Results that the `s2i-{lang}` task returns
+[cols="1,1,2",options="header"]
+|===
+| Result | Type | Description
+|`IMAGE_URL` |`string` |The fully qualified name of the built image.
+|`IMAGE_DIGEST` |`string` |Digest of the built image.
+|===
+
+:!lang:
+
+[id="op-taskref-skopeo-copy_{context}"]
+== skopeo-copy
+
+The `skopeo-copy` task executes the `skopeo copy` command.
+
+Skopeo is a command-line tool for working with remote container image registries without requiring a local container engine or daemon. The `skopeo-copy` command copies an image from one remote registry to another, for example, from an internal registry to a production registry. Skopeo supports authorization on image registries by using credentials that you give.
+
+.Example usage of the `skopeo-copy` task
+[source,yaml,subs="attributes+"]
+----
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: build-deploy-image
+spec:
+# ...
+  tasks:
+  - name: copy-image
+    taskRef:
+      resolver: cluster
+      params:
+      - name: kind
+        value: task
+      - name: name
+        value: skopeo-copy
+      - name: namespace
+        value: openshift-pipelines
+    params:
+    - name: SOURCE_IMAGE_URL
+      value: "docker://internal.registry/myimage:latest"
+    - name: DESTINATION_IMAGE_URL
+      value: "docker://production.registry/myimage:v1.0"
+    workspaces:
+    - name: output
+      workspace: shared-workspace
+----
+
+
+.Supported parameters for the `skopeo-copy` task
+[cols="1,2,1,1",options="header"]
+|===
+| Parameter | Description | Type | Default value
+|`SOURCE_IMAGE_URL` |Fully qualified name, including tag, of the source container image. |`string` |
+|`DESTINATION_IMAGE_URL` |Fully qualified name, including tag, of the destination image to which Skopeo copies the source image. |`string` |
+|`SRC_TLS_VERIFY` |The TLS verification flag for the source registry, normally `true`. |`string` |`true`
+|`DEST_TLS_VERIFY` |The TLS verification flag for the destination registry, normally `true` |`string` |`true`
+|`VERBOSE` |Output debug information to the log. |`string` |`false`
+|===
+
+.Supported workspaces for the `skopeo-copy` task
+[cols="1,3",options="header"]
+|===
+| Workspace | Description
+|`images_url` |If you want to copy more than one image, use this workspace to give the image URLs.
+|===
+
+.Results that the `skopeo-copy` task returns
+[cols="1,1,2",options="header"]
+|===
+| Result | Type | Description
+|`SOURCE_DIGEST` |`string` |The SHA256 digest of the source image.
+|`DESTINATION_DIGEST` |`string` |The SHA256 digest of the destination image.
+|===
+
+*Changes from the `skopeo-copy` `ClusterTask`*
+
+* All parameter names changed to uppercase.
+* The `VERBOSE` parameter was added.
+* The workspace name changed from `images-url` to `images_url`.
+* The `SOURCE_DIGEST` and `DESTINATION_DIGEST` results were added.
+
+[id="op-taskref-tkn_{context}"]
+== tkn
+
+The `tkn` task performs operations on Tekton resources by using the `tkn` CLI.
+
+.Example usage of the `tkn` task
+[source,yaml,subs="attributes+"]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+ name: tkn-run
+spec:
+ pipelineSpec:
+   tasks:
+   - name: tkn-run
+     taskRef:
+       resolver: cluster
+       params:
+       - name: kind
+         value: task
+       - name: name
+         value: tkn
+       - name: namespace
+         value: openshift-pipelines
+     params:
+     - name: ARGS
+----
+
+.Supported parameters for the `tkn` task
+[cols="1,2,1,1",options="header"]
+|===
+| Parameter | Description | Type | Default value
+|`SCRIPT` |The `tkn` CLI script to run. |`string` |`tkn $@`
+|`ARGS` |The `tkn` CLI arguments to run. |`array` |`- --help`
+|===
+
+.Supported workspaces for the `tkn` task
+[cols="1,3",options="header"]
+|===
+| Workspace | Description
+|`kubeconfig_dir` |An optional workspace in which you can give a `.kube/config` file that has credentials for accessing the cluster. Place this file at the root of the workspace and name it `kubeconfig`.
+|===
+
+*Changes from the `tkn` `ClusterTask`*
+
+* The `TKN_IMAGE` parameter was removed.
+* The workspace name changed from `kubeconfig` to `kubeconfig_dir`.
+
+[id="op-opc-task_{context}"]
+== opc task
+
+The `opc` task simplifies interaction with Tekton resources in {pipelines-title} by enabling you to run `opc` CLI commands directly in your Pipelines. You can use the `opc` task to perform various operations on Tekton resources, such as listing pipelines, viewing pipeline runs, or managing tasks. The following example shows how to start the `opc` task in a `PipelineRun`:
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: opc-task-pipeline
+spec:
+  pipelineRef:
+    name: task-opc
+  params:
+    - name: SCRIPT
+      value: "opc $@"
+    - name: ARGS
+      value: opc-command-you-want-to-execute
+----
+Replace `opc-command-you-want-to-execute` with the `opc` CLI command you want to run.
+
+The following example shows how to use the `opc` task to list pipelines in your cluster.
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: opc-task-pipeline
+spec:
+  tasks:
+    - name: opc-pipeline-list
+      taskRef:
+        resolver: cluster
+        params:
+          - name: kind
+            value: task
+          - name: name
+            value: opc
+          - name: namespace
+            value: openshift-pipelines
+      params:
+        - name: SCRIPT
+          value: "opc $@"
+        - name: ARGS
+          value:
+            - pipeline
+            - list
+            - -n
+            - $(context.pipelineRun.namespace)
+----
+
+To run the workflow defined in the `opc-task-pipeline` task, create and apply the following `PipelineRun` resource.
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: opc-task-run
+spec:
+  pipelineRef:
+    name: opc-task-pipeline
+----
+
+As a result, you see the following output:
+
+[source]
+----
+[opc-pipeline-list : opc] Running Script /scripts/opc-client.sh
+[opc-pipeline-list : opc] NAME                AGE              LAST RUN       STARTED         DURATION   STATUS
+[opc-pipeline-list : opc] opc-task-pipeline   15 minutes ago   opc-task-run   5 seconds ago   ---        Running
+----
+
+If your container registry requires authentication, create a Kubernetes Secret that describes the following attributes:
+
+[source,terminal]
+----
+kubectl create secret docker-registry imagestreams \
+  --docker-server="image-registry.openshift-image-registry.svc:5000" \
+  --docker-username="${REGISTRY_USERNAME}" \
+  --docker-password="${REGISTRY_TOKEN}"
+----
+[NOTE]
+====
+Ensure that you link the `Secret` to the `ServiceAccount` that runs the `TaskRun` or `PipelineRun`.
+====
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * create/remote-pipelines-tasks-resolvers.adoc
+
+// // *openshift_pipelines/remote-pipelines-tasks-resolvers.adoc
+:_mod-docs-content-type: REFERENCE
+[id="resolver-community-tasks-ref_{context}"]
+= Community tasks provided in the {pipelines-shortname} namespace
+
+By default, an {pipelines-shortname} installation includes a set of community tasks that you can use in your pipelines. {pipelines-shortname} stores these tasks in the installation namespace, which is normally the `openshift-pipelines` namespace.
+[role="_abstract"]
+By default, an {pipelines-shortname} installation includes a set of community tasks that you can use in your pipelines. {pipelines-shortname} stores these tasks in the installation namespace, which is normally the `openshift-pipelines` namespace.
+
+[id="op-ctaskref-argocd-task-sync-and-wait_{context}"]
+== argocd-task-sync-and-wait
+The `argocd-task-sync-and-wait` community task deploys an Argo CD application and waits for it to be healthy.
+
+To do so, it requires the following configurations:
+* The address of the Argo CD server configured in the `argocd-env-configmap` config map.
+* The authentication information configured in the `argocd-env-secret` secret.
+
+.Example config map with the address information
+[source,yaml]
+----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-env-configmap
+data:
+  ARGOCD_SERVER: https://argocd.example.com
+# ...
+----
+
+.Example secret with the authentication information
+[source,yaml]
+----
+apiVersion: v1
+kind: Secret
+metadata:
+  name: argocd-env-secret
+data:
+  # Option 1
+  ARGOCD_USERNAME: example_username
+  ARGOCD_PASSWORD: example_password
+  # Option 2
+  ARGOCD_AUTH_TOKEN: exmaple_token
+----
+`ARGOCD_USERNAME`:: Configure either a username and password or an authentication token.
+
+.Example usage of the `argocd-task-sync-and-wait` community task
+[source,yaml,subs="attributes+"]
+----
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: argocd-task-sync-and-wait
+spec:
+  tasks:
+    - name: argocd-task-sync-and-wait
+      params:
+        - name: application-name
+          value: example_app_name
+        - name: revision
+          value: HEAD
+        - name: flags
+          value: '--'
+        - name: argocd-version
+          value: v2.2.2
+      taskRef:
+        kind: Task
+        name: argocd-task-sync-and-wait
+----
+
+.Supported parameters for the `argocd-task-sync-and-wait` community task
+[cols="1,2,1",options="header"]
+|===
+| Parameter | Description | Default value
+|`application-name` |Name of the application to deploy.|
+|`revision` |Revision to deploy. | `HEAD`
+|`flags` |  | `--`
+|`argocd-version` |Version of Argo CD. |`v2.2.2`
+|===
+
+[id="op-ctaskref-helm-upgrade-from-repo_{context}"]
+== helm-upgrade-from-repo
+
+The `helm-upgrade-from-repo` community task installs or upgrades a Helm chart in your {OCP} cluster based on the given Helm repository and chart.
+
+.Example usage of the `helm-upgrade-from-repo` community task
+[source,yaml,subs="attributes+"]
+----
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: helm-upgrade-from-repo
+spec:
+  tasks:
+    - name: helm-upgrade-from-repo
+      params:
+        - name: helm_repo
+          value: example_helm_repository
+        - name: chart_name
+          value: example_chart_name
+        - name: release_version
+          value: v1.0.0
+        - name: release_name
+          value: helm-release
+        - name: release_namespace
+          value: ''
+        - name: overwrite_values
+          value: ''
+        - name: helm_image
+          value: 'docker.io/lachlanevenson/k8s-helm@sha256:5c792f29950b388de24e7448d378881f68b3df73a7b30769a6aa861061fd08ae'
+      taskRef:
+        kind: Task
+        name: helm-upgrade-from-repo
+----
+
+.Supported parameters for the `helm-upgrade-from-repo` community task
+[cols="1,2,1",options="header"]
+|===
+| Parameter | Description | Default value
+|`helm_repo` |Helm repository. |
+|`chart_name` |Helm chart name to deploy. |
+|`release_version` |Helm release version in semantic versioning format. |`v1.0.0`
+|`release_name` |Helm release name. |`helm-release`
+|`release_namespace` |Helm release namespace. |`""`
+|`overwrite_values` |Configuration parameters to overwrite, comma-separated. For example: `autoscaling.enabled=true,replicas=1`|`""`
+|`helm_image` |Helm image to use. |`docker.io/lachlanevenson/k8s-helm@sha256:5c792f29950b388de24e7448d378881f68b3df73a7b30769a6aa861061fd08ae`
+|===
+
+[id="op-ctaskref-helm-upgrade-from-source_{context}"]
+== helm-upgrade-from-source
+
+The `helm-upgrade-from-source` community task installs and upgrades a Helm chart in your {OCP} cluster based on the given chart and source workspace.
+
+.Example usage of the `helm-upgrade-from-source` community task
+[source,yaml,subs="attributes+"]
+----
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: helm-upgrade-from-source
+spec:
+  tasks:
+    - name: helm-upgrade-from-source
+      params:
+        - name: charts_dir
+          value: example_directory_path
+        - name: release_version
+          value: v1.0.0
+        - name: release_name
+          value: helm-release
+        - name: release_namespace
+          value: ''
+        - name: overwrite_values
+          value: ''
+        - name: values_file
+          value: values.yaml
+        - name: helm_image
+          value: 'docker.io/lachlanevenson/k8s-helm@sha256:5c792f29950b388de24e7448d378881f68b3df73a7b30769a6aa861061fd08ae'
+        - name: upgrade_extra_params
+          value: ''
+      taskRef:
+        kind: Task
+        name: helm-upgrade-from-source
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+  #...
+----
+
+.Supported parameters for the `helm-upgrade-from-source` community task
+[cols="1,2,1",options="header"]
+|===
+| Parameter | Description | Default value
+|`charts_dir` |Directory in the source workspace that has the Helm chart. |
+|`release_version` |Helm release version in semantic versioning format. | `v1.0.0`
+|`release_name` |Helm release name. |`helm-release`
+|`release_namespace` |Helm release namespace. |`""`
+|`overwrite_values` |Configuration parameters to overwrite, comma-separated. For example: `autoscaling.enabled=true,replicas=1`|`""`
+|`values_file` |File with configuration parameters for Helm. |`values.yaml`
+|`helm_image` |Helm image to use. |`docker.io/lachlanevenson/k8s-helm@sha256:5c792f29950b388de24e7448d378881f68b3df73a7b30769a6aa861061fd08ae`
+|`upgrade_extra_params` |Extra parameters passed for the Helm upgrade command.|`""`
+|===
+
+.Supported workspaces for the `helm-upgrade-from-source` community task
+[cols="1,3",options="header"]
+|===
+| Workspace | Description
+| `source` | The workspace that has the Helm chart.
+|===
+
+[id="op-ctaskref-jib-maven_{context}"]
+== jib-maven
+
+The `jib-maven` community task builds Java, Kotlin, Groovy, and Scala sources into a container image by using the Jib tool for Maven projects.
+
+.Example usage of the `jib-maven` community task
+[source,yaml,subs="attributes+"]
+----
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: jib-maven
+spec:
+  tasks:
+    - name: jib-maven
+      params:
+        - name: IMAGE
+          value: example_image
+        - name: MAVEN_IMAGE
+          value: 'registry.redhat.io/ubi9/openjdk-17@sha256:78613bdf887530100efb6ddf92d2a17f6176542740ed83e509cdc19ee7c072d6'
+        - name: DIRECTORY
+          value: .
+        - name: CACHE
+          value: empty-dir-volume
+        - name: INSECUREREGISTRY
+          value: 'false'
+        - name: CACERTFILE
+          value: service-ca.crt
+      taskRef:
+        kind: Task
+        name: jib-maven
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+  #...
+----
+
+.Supported parameters for the `jib-maven` community task
+[cols="1,2,1",options="header"]
+|===
+| Parameter | Description | Default value
+|`IMAGE` |Name of the image to build. |
+|`MAVEN_IMAGE` |Maven base image. |`registry.redhat.io/ubi9/openjdk-17@sha256:78613bdf887530100efb6ddf92d2a17f6176542740ed83e509cdc19ee7c072d6`
+|`DIRECTORY` |Directory{nbsp}containing{nbsp}the{nbsp}app,{nbsp}relative{nbsp}to the source repository root. |`.`
+|`CACHE` |Name of the volume for caching Maven artifacts and base image layers. |`empty-dir-volume`
+|`INSECUREREGISTRY` |Allow an insecure registry. |`false`
+|`CACERTFILE` |Certificate authority (CA) bundle file name for an insecure registry service. |`service-ca.crt`
+|===
+
+.Supported workspaces for the `jib-maven` community task
+[cols="1,3",options="header"]
+|===
+| Workspace | Description
+| `source` | Workspace that has the Maven project.
+|`sslcertdir` | Optional workspace that has SSL/TLS certificates.
+|===
+
+.Results that the `jib-maven` task returns
+[cols="1,1,2",options="header"]
+|===
+| Result | Type | Description
+|`IMAGE_DIGEST` |`string` |Digest of the built image.
+|===
+
+*Changes from the `jib-maven` community cluster task*
+
+* The default values for the `IMAGE` and `MAVEN_IMAGE` parameters changed.
+
+[id="op-ctaskref-kubeconfig-creator_{context}"]
+== kubeconfig-creator
+The `kubeconfig-creator` community task creates a `kubeconfig` file that other tasks in the pipeline can use for accessing different clusters.
+
+.Example usage of the `kubeconfig-creator` community task
+[source,yaml,subs="attributes+"]
+----
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: kubeconfig-creator
+spec:
+  tasks:
+    - name: kubeconfig-creator
+      params:
+        - name: name
+          value: example_cluster
+        - name: url
+          value: https://cluster.example.com
+        - name: username
+          value: example_username
+        - name: password
+          value: example_password
+        - name: cadata
+          value: ''
+        - name: clientKeyData
+          value: ''
+        - name: clientCertificateData
+          value: ''
+        - name: namespace
+          value: ''
+        - name: token
+          value: ''
+        - name: insecure
+          value: 'false'
+      taskRef:
+        kind: Task
+        name: kubeconfig-creator
+      workspaces:
+        - name: output
+          workspace: shared-workspace
+  #...
+----
+
+.Supported parameters for the `kubeconfig-creator` community task
+[cols="1,2,1",options="header"]
+|===
+| Parameter | Description | Default value
+|`name` |Name of the cluster to access. |
+|`url` |Address of the cluster to access. |
+|`username` |Username for Basic HTTP authentication to the cluster. |
+|`password` |Password for Basic HTTP authentication to the cluster. |`""`
+|`cadata` |Privacy Enhanced Mail (PEM)-encoded CA certificates. |`""`
+|`clientKeyData` |Privacy Enhanced Mail (PEM)-encoded data from a client key file for TLS. |`""`
+|`clientCertificateData` |Privacy Enhanced Mail (PEM)-encoded data from a client certification file for TLS. |`""`
+|`namespace` |Default namespace to use on unspecified requests. |`""`
+|`token` |Bearer token for authentication to the cluster. |`""`
+|`insecure` |To indicate whether to access a server without verifying the TLS certificate. |`false`
+|===
+
+.Supported workspaces for the `kubeconfig-creator` community task
+[cols="1,3",options="header"]
+|===
+| Workspace | Description
+| `output` | The workspace where the `kubeconfig-creator` task stores the `kubeconfig` file.
+|===
+
+[id="op-ctaskref-pull-request_{context}"]
+== pull-request
+
+You can use the `pull-request` community task to interact with a source control management (SCM) system through an abstracted interface.
+
+This community task works with both public SCM instances and self-hosted or enterprise GitHub or GitLab instances.
+
+In download mode, this task populates the `pr` workspace with the state of the existing pull request, including the `.MANIFEST` file.
+
+In upload mode, this task compares the contents of the `pr` workspace, including the `.MANIFEST` file, with the content of the pull request. If the content is different, the task updates the pull request to match the `pr` workspace.
+
+.Example usage of the `pull-request` community task
+[source,yaml,subs="attributes+"]
+----
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: pull-request
+spec:
+spec:
+  tasks:
+    - name: pull-request
+      params:
+        - name: mode
+          value: upload
+        - name: url
+          value: https://github.com/example/pull/xxxxx
+        - name: provider
+          value: github
+        - name: secret-key-ref
+          value: example_secret
+        - name: insecure-skip-tls-verify
+          value: 'false'
+      taskRef:
+        kind: Task
+        name: pull-request
+      workspaces:
+        - name: pr
+          workspace: shared-workspace
+  #...
+----
+
+.Supported parameters for the `pull-request` community task
+[cols="1,2,1",options="header"]
+|===
+| Parameter | Description | Default value
+|`mode` |If set to `download`, the task fetches the state of the pull request at `url`. If set to `upload`, the task updates the pull request at `url`. |
+|`url` |URL of the pull request. |
+|`provider` |Type of the SCM system. The supported values are `github` or `gitlab`. |
+|`secret-key-ref` |Name of a `Secret` object of `Opaque` type that has a key called `token` with a base64 encoded SCM token.|
+|`insecure-skip-tls-verify` |If set to `true`, the task disables the certificate validation. |`false`
+|===
+
+.Supported workspaces for the `pull-request` community task
+[cols="1,3",options="header"]
+|===
+| Workspace | Description
+| `pr` | The workspace that has the state of the pull request.
+|===
+
+[id="op-ctaskref-trigger-jenkins-job_{context}"]
+== trigger-jenkins-job
+
+You can use the `trigger-jenkins-job` community task to trigger a Jenkins job by using a `curl` request.
+
+.Example usage of the `trigger-jenkins-job` community task
+[source,yaml,subs="attributes+"]
+----
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: trigger-jenkins-job
+spec:
+  tasks:
+    - name: trigger-jenkins-job
+      params:
+        - name: JENKINS_HOST_URL
+          value: example_host_URL
+        - name: JOB_NAME
+          value: example_job_name
+        - name: JENKINS_SECRETS
+          value: jenkins-credentials
+        - name: JOB_PARAMS
+          value:
+            - example_param
+      taskRef:
+        kind: Task
+        name: trigger-jenkins-job
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+  # ...
+----
+
+.Supported parameters for the `trigger-jenkins-job` community task
+[cols="1,2,1",options="header"]
+|===
+| Parameter | Description | Default value
+|`JENKINS_HOST_URL` |Server URL on which Jenkins is running. |
+|`JOB_NAME` |Jenkins Job to trigger. |
+|`JENKINS_SECRETS` |Jenkins secret containing credentials. |`jenkins-credentials`
+|`JOB_PARAMS` |Extra arguments to append as a part of the `curl` request. |`""`
+|===
+
+
+.Supported workspaces for the `trigger-jenkins-job` community task
+[cols="1,3",options="header"]
+|===
+| Workspace | Description
+|`source` | The workspace to mount files to send through the `curl` request to the Jenkins job.
+|===
+
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * create/remote-pipelines-tasks-resolvers.adoc
+
+// // *openshift_pipelines/remote-pipelines-tasks-resolvers.adoc
+:_mod-docs-content-type: REFERENCE
+[id="resolver-stepactions-ref_{context}"]
+= Step action definitions provided with {pipelines-shortname}
+
+{pipelines-shortname} provides standard `StepAction` definitions that you can use in your tasks. Use the cluster resolver to reference these definitions.
+[role="_abstract"]
+{pipelines-shortname} provides standard `StepAction` definitions that you can use in your tasks. Use the cluster resolver to reference these definitions.
+
+
+[id="op-stepaction-git-clone_{context}"]
+== git-clone
+
+The `git-clone` step action uses Git to initialize and clone a remote repository on a workspace. You can use this step action to define a task that clones a repository at the start of a pipeline that builds or otherwise processes this source code.
+
+
+.Example usage of the `git-clone` step action in a task
+[source,yaml,subs="attributes+"]
+----
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: clone-repo-anon
+spec:
+# ...
+  steps:
+  - name: clone-repo-step
+    ref:
+      resolver: cluster
+      params:
+      - name: name
+        value: git-clone
+      - name: namespace
+        value: openshift-pipelines
+      - name: kind
+        value: stepaction
+    params:
+    - name: URL
+      value: $(params.url)
+    - name: OUTPUT_PATH
+      value: $(workspaces.output.path)
+----
+
+.Supported parameters for the `git-clone` step action
+[cols="1,2,1,1",options="header"]
+|===
+| Parameter | Description | Type | Default value
+|`OUTPUT_PATH` | A directory for the fetched Git repository. The step action places cloned repository data in the root of the directory or in the relative path defined by the `SUBDIRECTORY` parameter. |`string` |
+|`SSH_DIRECTORY_PATH` |A `.ssh` directory with the private key, `known_hosts`, `config`, and other files as necessary. If you give this directory, the task uses it for authentication to the Git repository. Bind the workspace providing this directory to a `Secret` resource for secure storage of authentication information. |`string` |
+|`BASIC_AUTH_PATH` |A directory containing a `.gitconfig` and `.git-credentials` files. If you give this directory, the task uses it for authentication to the Git repository. Use a `SSH_DIRECTORY_PATH` directory for authentication instead of `BASIC_AUTH_PATH` whenever possible. Bind the workspace providing this directory to a `Secret` resource for secure storage of authentication information. |`string` |
+|`SSL_CA_DIRECTORY_PATH` |A workspace containing CA certificates. If you give this workspace, Git uses these certificates to verify the peer when interacting with remote repositories using HTTPS. |`string` |
+|`CRT_FILENAME` |Certificate authority (CA) bundle filename in the `ssl-ca-directory` workspace. |`string` |`ca-bundle.crt`
+|`HTTP_PROXY` |HTTP proxy server (non-TLS requests). |`string` |
+|`HTTPS_PROXY` |HTTPS proxy server (TLS requests). |`string` |
+|`NO_PROXY` |Opt out of proxying HTTP/HTTPS requests. |`string` |
+|`SUBDIRECTORY` |Relative path in the `output` workspace where the task places the Git repository. |`string` |
+|`USER_HOME` |Absolute path to the Git user home directory in the pod. |`string` |`/home/git`
+|`DELETE_EXISTING` |Delete the contents of the default workspace, if they exist, before running the Git operations. |`string` |`true`
+|`VERBOSE` |Log the executed commands. |`string` |`false`
+|`SSL_VERIFY` |The global `http.sslVerify` value. Do not set this parameter to `false` unless you trust the remote repository. |`string` |`true`
+|`URL` |Git repository URL. |`string` |
+|`REVISION` |The revision to check out, for example, a branch or tag. |`string` |`main`
+|`REFSPEC` |The `refspec` string for the repository that the task fetches before checking out the revision. |`string` |
+|`SUBMODULES` |Initialize and fetch Git submodules. |`string` |`true`
+|`DEPTH` |Number of commits to fetch, a "shallow clone" is a single commit. |`string` |`1`
+|`SPARSE_CHECKOUT_DIRECTORIES` |List of directory patterns, separated by commas, for performing a  "sparse checkout". |`string` |
+|===
+
+.Results that the `git-clone` step action returns
+[cols="1,1,2",options="header"]
+|===
+| Result | Type | Description
+|`COMMIT` |`string` |The SHA digest of the commit that is at the `HEAD` of the current branch in the cloned Git repository.
+|`URL` |`string` |The URL of the cloned repository.
+|`COMMITTER_DATE` |`string` |The epoch timestamp of the commit that is at the `HEAD` of the current branch in the cloned Git repository.
+|===
+
+
+[id="op-stepaction-cache-{context}"]
+== cache-upload and cache-fetch
+
+:FeatureName: Using the `cache-upload` and `cache-fetch` step actions
+:_mod-docs-content-type: SNIPPET
+// When including this file, ensure that {FeatureName} is set immediately before
+// the include. Otherwise it will result in an incorrect replacement.
+
+[IMPORTANT]
+====
+[subs="attributes+"]
+{FeatureName} is a Technology Preview feature only. Technology Preview features are not supported with Red Hat production service level agreements (SLAs) and might not be functionally complete. Red Hat does not recommend using them in production. These features provide early access to upcoming product features, enabling customers to test functionality and provide feedback during the development process.
+
+For more information about the support scope of Red Hat Technology Preview features, see link:https://access.redhat.com/support/offerings/techpreview/[Technology Preview Features Support Scope].
+====
+// Undefine {FeatureName} attribute, so that any mistakes are easily spotted
+:!FeatureName:
+
+Use the `cache-upload` and `cache-fetch` step actions to preserve the cache directory where a build process keeps its dependencies. You can store the cache in an Amazon Simple Storage Service (S3) bucket, Google Cloud Services (GCS) bucket, or an Open Container Initiative (OCI) repository.
+
+When you use the `cache-upload` step action, the step action calculates a hash based on certain files in your build. You must give a regular expression to select these files. The `cache-upload` step action stores an image that has the content of your cache directory, indexed with the hash.
+
+When you use the `cache-fetch` step action, the step action calculates the same hash. Then it checks whether a cached image for this hash is already available. If the image is available, the step action populates your cache directory with the cached content. If the image is not available, the directory remains as it was.
+
+After using the `cache-fetch` step action, you can run the build process. If the cache is successfully fetched, it includes the dependencies that the build process downloaded earlier. If the cache was not fetched, the build process downloads dependencies through its normal procedure.
+
+The result of `cache-fetch` indicates whether it fetched a cached image. The later `cache-upload` step action can use the result and skip uploading a new cache image if the cache for the current hash was already available.
+
+The following example task retrieves the source from a repository and fetches the cache if available. It then runs a Maven build. If the cache was not fetched, it uploads the new cached image of the build directory.
+
+.Example usage of the `cache-fetch` and `cache-upload` step actions in a task
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: java-demo-task
+spec:
+  workspaces:
+  - name: source
+  params:
+  - name: repo_url
+    type: string
+    default: https://github.com/sample-organization/sample-java-project.git
+  - name: revision
+    type: string
+    default: main
+  - name: registry
+    type: string
+    default: image-registry.openshift-image-registry.svc:5000/sample-project/mvn-cache
+  - name: image
+    type: string
+    default: openjdk:latest
+  - name: buildCommand
+    type: string
+    default: "maven -Dmaven.repo.local=${LOCAL_CACHE_REPO} install"
+  - name: cachePatterns
+    type: array
+    default: ["**pom.xml"]
+  - name: force-cache-upload
+    type: string
+    default: "false"
+  steps:
+   - name: create-repo
+     image: $(params.image)
+     script: |
+       mkdir -p $(workspaces.source.path)/repo
+       chmod 777 $(workspaces.source.path)/repo
+   - name: fetch-repo
+     ref:
+       resolver: cluster
+       params:
+       - name: name
+         value: git-clone
+       - name: namespace
+         value: openshift-pipelines
+       - name: kind
+         value: stepaction
+     params:
+       - name: OUTPUT_PATH
+         value: $(workspaces.source.path)/repo
+       - name: URL
+         value: $(params.repo_url)
+       - name: REVISION
+         value: $(params.revision)
+   - name: cache-fetch
+     ref:
+       resolver: cluster
+       params:
+       - name: name
+         value: cache-fetch
+       - name: namespace
+         value: openshift-pipelines
+       - name: kind
+         value: stepaction
+     params:
+     - name: PATTERNS
+       value: $(params.cachePatterns)
+     - name: SOURCE
+       value: oci://$(params.registry):{{hash}}
+     - name: CACHE_PATH
+       value: $(workspaces.source.path)/cache
+     - name: WORKING_DIR
+       value: $(workspaces.source.path)/repo
+   - name: run-build
+     image: $(params.image)
+     workingDir: $(workspaces.source.path)/repo
+     env:
+       - name: LOCAL_CACHE_REPO
+         value: $(workspaces.source.path)/cache/repo
+     script: |
+       set -x
+       $(params.buildCommand)
+       echo "Cache size is $(du -sh $(workspaces.source.path)/cache)"
+   - name: cache-upload
+     ref:
+       resolver: cluster
+       params:
+       - name: name
+         value: cache-upload
+       - name: namespace
+         value: openshift-pipelines
+       - name: kind
+         value: stepaction
+     params:
+       - name: PATTERNS
+         value: $(params.cachePatterns)
+       - name: TARGET
+         value: oci://$(params.registry):{{hash}}
+       - name: CACHE_PATH
+         value: $(workspaces.source.path)/cache
+       - name: WORKING_DIR
+         value: $(workspaces.source.path)/repo
+       - name: FORCE_CACHE_UPLOAD
+         value: $(params.force-cache-upload)
+----
+
+.Supported parameters for the `cache-fetch` step action
+[cols="1,2,1,1",options="header"]
+|===
+| Parameter | Description | Type | Default value
+|`PATTERNS` |Regular expression for selecting files to compute the hash. For example, for a Go project, you can use `go.mod` files to compute the cache, and then the value of this parameter is `pass:[**]/go.sum` (where `pass:[**]` accounts for subdirectories of any depth). | `array` |
+|`SOURCE` |Source URI for fetching the cache; use `{{hash}}` to specify the cache hash. The supported types are `oci` (example: `oci://quay.io/example-user/go-cache:{{hash}}`) and `s3` (example: `s3://example-bucket/{{hash}}`) | `string` |
+|`CACHE_PATH` |Path for extracting the cache content. Normally this path is in a workspace. | `string` |
+|`WORKING_DIR` |Path to the files for calculating the hash. | `string` |
+|`INSECURE` |If `"true"`, use insecure mode for fetching the cache. | `string` |`"false"`
+|`GOOGLE_APPLICATION_CREDENTIALS` |The path for Google credentials. Ignored if empty. | `string` |
+|`AWS_CONFIG_FILE` |Path to the AWS configuration file. Ignored if empty. | `string` |
+|`AWS_SHARED_CREDENTIALS_FILE` |Path to the AWS credentials file. Ignored if empty. | `string` |
+|`BLOB_QUERY_PARAMS` |Blob query parameters for configuring S3, GCS, or Azure. Use these optional parameters for additional features such as S3 acceleration, Federal Information Processing Standards (FIPS), or path-style addressing. | `string` |
+|===
+
+.Results that the `cache-fetch` step action returns
+[cols="1,1,2",options="header"]
+|===
+| Result | Type | Description
+|`fetched` |`string` |`"true"` if the step has fetched the cache or `"false"` if the step has not fetched the cache.
+|===
+
+
+.Supported parameters for the `cache-upload` step action
+[cols="1,2,1,1",options="header"]
+|===
+| Parameter | Description | Type | Default value
+|`PATTERNS` |Regular expression for selecting files to compute the hash. For example, for a Go project, you can use `go.mod` files to compute the cache, and then the value of this parameter is `pass:[**]/go.sum` (where `pass:[**]` accounts for subdirectories of any depth). | `array` |
+|`TARGET` |Target URI for uploading the cache; use `{{hash}}` to specify the cache hash. The supported types are `oci` (example: `oci://quay.io/example-user/go-cache:{{hash}}`) and `s3` (example: `s3://example-bucket/{{hash}}`) | `string` |
+|`CACHE_PATH` |Path for cache content, which the step packs into the image. Normally this path is in a workspace. | `string` |
+|`WORKING_DIR` |Path to the files for calculating the hash. | `string` |
+|`INSECURE` |If `"true"`, use insecure mode for uploading the cache. | `string` |`"false"`
+|`FETCHED` |If `"true"`, the cache for this hash was already fetched. | `string` |`"false"`
+|`FORCE_CACHE_UPLOAD` |If `"true"`, the step uploads the cache even if `cache-fetch` fetched it earlier. | `string` |`"false"`
+|`GOOGLE_APPLICATION_CREDENTIALS` |The path for Google credentials. Ignored if empty. | `string` |
+|`AWS_CONFIG_FILE` |Path to the AWS configuration file. Ignored if empty. | `string` |
+|`AWS_SHARED_CREDENTIALS_FILE` |Path to the AWS credentials file. Ignored if empty. | `string` |
+|`BLOB_QUERY_PARAMS` |Blob query parameters for configuring S3, GCS, or Azure. Use these optional parameters for additional features such as S3 acceleration, Federal Information Processing Standards (FIPS), or path-style addressing. | `string` |
+|===
+
+The `cache-upload` step action returns no results.
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * create/remote-pipelines-tasks-resolvers.adoc
+
+// // *openshift_pipelines/remote-pipelines-tasks-resolvers.adoc
+:_mod-docs-content-type: CONCEPT
+[id="resolver-tasks-step-actions-about_{context}"]
+
+= About non-versioned and versioned tasks and step actions
+
+[role="_abstract"]
+The `openshift-pipelines` namespace includes versioned tasks and step actions alongside standard non-versioned tasks and step actions. For example, installing the {pipelines-title} Operator version 1.18 creates the following items:
+
+* `buildah-1-18-0` versioned task
+* `buildah` non-versioned task
+* `git-clone-1-18-0` versioned `StepAction` definition
+* `git-clone` non-versioned `StepAction` definition
+
+Non-versioned and versioned tasks share the same metadata, behavior, and specifications. However, they behave differently during Operator upgrades and when disabled.
+
+Before adopting either type in production, consider the following advantages and disadvantages.
+
+.Advantages and disadvantages of non-versioned and versioned tasks and step actions
+[options="header"]
+|===
+
+|  | Advantages | Disadvantages
+
+s| Non-versioned tasks and step actions
+a|
+* Use non-versioned tasks and step actions to deploy pipelines with the latest updates and bug fixes.
+* Upgrading the Operator upgrades the non-versioned tasks and step actions. This consumes fewer resources than many versioned tasks and step actions.
+a|
+* Pipelines that use non-versioned tasks and step actions might break after an Operator upgrade. This happens if the upgraded tasks and step actions are not backward-compatible.
+
+s| Versioned tasks and step actions
+a|
+* Use versioned tasks and step actions for production pipelines that do not change after a version update.
+* When you install a new version of the Operator, the Operator retains the versioned tasks and step actions from the current minor version and the earlier minor version.
+a|
+* If you continue using the earlier versions, you might miss the latest features and critical security updates.
+* After an upgrade, the Operator cannot manage the earlier versioned tasks and step actions. If you delete the earlier versions manually, you cannot restore them.
+* After an upgrade, the Operator can delete versioned tasks and step actions from versions earlier than the earlier minor release. If the Operator deletes versioned tasks or step actions that your pipelines use, those pipelines stop working.
+|===
+
+Non-versioned and versioned tasks and step actions have different naming conventions, and the {pipelines-title} Operator upgrades them differently.
+
+.Differences between non-versioned and versioned tasks and step actions
+[options="header"]
+|===
+
+| | Nomenclature   | Upgrade
+
+s| Non-versioned tasks and step actions
+
+| Non-versioned tasks and step actions only contain the name of the task or step action. For example, the name of the non-versioned task of Buildah installed with Operator v1.18 is `buildah`.
+| When you upgrade the Operator, it updates the non-versioned tasks and step actions with the latest changes. The name remains unchanged.
+
+s| Versioned tasks and step actions
+
+| Versioned tasks and step actions contain the name, followed by the version as a suffix. For example, the name of the versioned task of Buildah installed with Operator v1.18 is `buildah-1-18-0`.
+| Upgrading the Operator installs the latest versioned tasks and step actions, retains the earlier version, and deletes older versions. For example, installing Operator 1.18 installs `buildah-1-18-0`, retains `buildah-1-17-0`, and deletes older versions such as `buildah-1-16-0`.
+|===
+
+:leveloffset!:
+
+[role="_additional-resources"]
+== Additional resources
+
+* xref:../hub/using-tekton-hub-with-openshift-pipelines.adoc#using-tekton-hub-with-openshift-pipelines[Using {tekton-hub} with {pipelines-shortname}]

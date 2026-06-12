@@ -1,0 +1,35 @@
+{
+  "assembly": "op-release-notes-1-17.adoc",
+  "variant": "self-managed",
+  "description": "Release notes assembly for OpenShift Pipelines 1.17 - includes compatibility matrix and release notes reference module",
+  "includes": [
+    {
+      "path": "_attributes/common-attributes.adoc",
+      "line": 3,
+      "module_type": "snippet",
+      "attributes": "",
+      "description": "Common attributes file with product names and versions"
+    },
+    {
+      "path": "modules/op-tkn-pipelines-compatibility-support-matrix.adoc",
+      "line": 29,
+      "module_type": "reference",
+      "attributes": "leveloffset=+1",
+      "description": "Compatibility and support matrix showing component versions and support status"
+    },
+    {
+      "path": "modules/op-release-notes-1-17.adoc",
+      "line": 33,
+      "module_type": "reference",
+      "attributes": "leveloffset=+1",
+      "description": "Release notes for Pipelines 1.17 including new features, breaking changes, and fixed issues"
+    }
+  ],
+  "metadata": {
+    "total_includes": 3,
+    "module_breakdown": {
+      "reference": 2,
+      "snippet": 1
+    }
+  }
+}

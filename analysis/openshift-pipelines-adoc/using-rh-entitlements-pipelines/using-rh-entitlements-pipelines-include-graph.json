@@ -1,0 +1,29 @@
+{
+  "document": "using-rh-entitlements-pipelines.adoc",
+  "variant": "self-managed",
+  "includes": [
+    {
+      "assembly": "using-rh-entitlements-pipelines.adoc",
+      "module": "_attributes/common-attributes.adoc",
+      "type": "SNIPPET",
+      "leveloffset": null,
+      "line": 2
+    },
+    {
+      "assembly": "using-rh-entitlements-pipelines.adoc",
+      "module": "modules/op-entitlements-manual-copying.adoc",
+      "type": "PROCEDURE",
+      "leveloffset": "+1",
+      "line": 57,
+      "section_title": "Using Red Hat entitlements by manually copying the etc-pki-entitlement secret"
+    },
+    {
+      "assembly": "using-rh-entitlements-pipelines.adoc",
+      "module": "modules/op-entitlements-shared-csi-driver.adoc",
+      "type": "PROCEDURE",
+      "leveloffset": "+1",
+      "line": 58,
+      "section_title": "Using Red Hat entitlements by sharing the secret using the Shared Resources CSI driver operator"
+    }
+  ]
+}

@@ -1,0 +1,333 @@
+:_mod-docs-content-type: ASSEMBLY
+:_mod-docs-content-type: SNIPPET
+// The {product-title} attribute provides the context-sensitive name of the relevant OpenShift distribution, for example, "OpenShift Container Platform" or "OKD". The {product-version} attribute provides the product version relative to the distribution, for example "4.9".
+// {product-title} and {product-version} are parsed when AsciiBinder queries the _distro_map.yml file in relation to the base branch of a pull request.
+// See https://github.com/openshift/openshift-docs/blob/main/contributing_to_docs/doc_guidelines.adoc#product-name-and-version for more information on this topic.
+// Other common attributes are defined in the following lines:
+:data-uri:
+:icons:
+:experimental:
+:toc: macro
+:toc-title:
+:imagesdir: images
+:prewrap!:
+
+:pipelines-title: Red Hat OpenShift Pipelines
+:pipelines-shortname: OpenShift Pipelines
+:pipelines-ver: pipelines-1.22
+:pipelines-version-number: 1.22
+:osp-version-patch: 0
+:tekton-cache: Tekton Cache
+:tekton-chains: Tekton Chains
+:tekton-results: Tekton Results
+:tekton-triggers: Tekton Triggers
+:tekton-hub: Tekton Hub
+:artifact-hub: Artifact Hub
+:pac: Pipelines as Code
+:product-registry: OpenShift image registry
+// IBM Power
+:ibmpowerProductName: IBM Power
+// IBM zSystems
+:ibmzProductName: IBM zSystems
+:linuxoneProductName: IBM(R) LinuxONE
+:kebab: image:kebab.png[title="Options menu"]
+
+:op-system-base: RHEL
+:op-system-base-full: Red Hat Enterprise Linux (RHEL)
+
+:cluster-manager-first: Red Hat OpenShift Cluster Manager
+:cluster-manager: OpenShift Cluster Manager
+:cluster-manager-url: link:https://console.redhat.com/openshift[OpenShift Cluster Manager Hybrid Cloud Console]
+:cluster-manager-url-pull: link:https://console.redhat.com/openshift/install/pull-secret[pull secret from the Red Hat OpenShift Cluster Manager]
+
+:oc-first: pass:quotes[OpenShift CLI (`oc`)]
+
+// Attributes not present in the main branch
+:OCP: OpenShift Container Platform
+
+//We should use lowercase like regular OCP docs and deprecate the above.
+:ocp: OpenShift Container Platform
+
+
+:ols-official: Red{nbsp}Hat OpenShift Lightspeed
+:ols: OpenShift Lightspeed
+
+// Attributes not present in the main branch
+:rhosp: Red Hat OpenStack Platform
+[id="install-config-pipelines-as-code"]
+= Installing and configuring {pac}
+:context: install-config-pipelines-as-code
+
+toc::[]
+
+
+// :FeatureName: Pipelines as Code
+[role="_abstract"]
+You can install {pac} as a part of {pipelines-title} installation.
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/install-config-pipelines-as-code.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="installing-pipelines-as-code-on-an-openshift-cluster_{context}"]
+= Installing {pac} on an {OCP}
+
+[role="_abstract"]
+When you install the {pipelines-title} Operator, the system installs {pac} in the `openshift-pipelines` namespace. For more details, see _Installing {pipelines-shortname}_ in the _Additional resources_ section.
+
+.Procedure
+
+. To disable the default installation of {pac} with the Operator, set the value of the `enable` parameter to `false` in the `TektonConfig` custom resource:
++
+[source,yaml]
+----
+apiVersion: operator.tekton.dev/v1alpha1
+kind: TektonConfig
+metadata:
+  name: config
+spec:
+  platforms:
+    openshift:
+      pipelinesAsCode:
+        enable: false
+        settings:
+          application-name: {pac} CI
+          auto-configure-new-github-repo: "false"
+          bitbucket-cloud-check-source-ip: "true"
+          hub-catalog-name: tekton
+          hub-url: https://api.hub.tekton.dev/v1
+          remote-tasks: "true"
+          secret-auto-create: "true"
+# ...
+----
+
+. Optionally, you can run the following command:
++
+[source,terminal]
+----
+$ oc patch tektonconfig config --type="merge" \
+     -p '{"spec": {"platforms": {"openshift":{"pipelinesAsCode": {"enable": false}}}}}'
+----
+
+. To enable the default installation of {pac} with the {pipelines-title} Operator, set the value of the `enable` parameter to `true` in the `TektonConfig` custom resource:
++
+[source,yaml]
+----
+apiVersion: operator.tekton.dev/v1alpha1
+kind: TektonConfig
+metadata:
+  name: config
+spec:
+  platforms:
+    openshift:
+      pipelinesAsCode:
+        enable: true
+        settings:
+          application-name: {pac} CI
+          auto-configure-new-github-repo: "false"
+          bitbucket-cloud-check-source-ip: "true"
+          hub-catalog-name: tekton
+          hub-url: https://api.hub.tekton.dev/v1
+          remote-tasks: "true"
+          secret-auto-create: "true"
+# ...
+----
+
+. Optionally, you can run the following command:
++
+[source,terminal]
+----
+$ oc patch tektonconfig config --type="merge" \
+     -p '{"spec": {"platforms": {"openshift":{"pipelinesAsCode": {"enable": true}}}}}'
+----
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/install-config-pipelines-as-code.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id="installing-pipelines-as-code-cli_{context}"]
+= Installing {pac} CLI
+
+[role="_abstract"]
+Cluster administrators can use the `tkn pac` and `opc` CLI tools on local machines or as containers for testing. Installing the `tkn` CLI for {pipelines-title} automatically installs the `tkn pac` and `opc` CLI tools.
+
+You can install the `tkn pac` and `opc` version `{pipelines-version-number}.{osp-version-patch}` binaries for the supported platforms:
+
+* link:https://mirror.openshift.com/pub/cgw/pipelines/{pipelines-version-number}.{osp-version-patch}/tkn-linux-amd64.tar.gz[Linux (x86_64, amd64)]
+* link:https://mirror.openshift.com/pub/cgw/pipelines/{pipelines-version-number}.{osp-version-patch}/tkn-linux-s390x.tar.gz[Linux on {ibmzProductName} and {linuxoneProductName} (s390x)]
+* link:https://mirror.openshift.com/pub/cgw/pipelines/{pipelines-version-number}.{osp-version-patch}/tkn-linux-ppc64le.tar.gz[Linux on {ibmpowerProductName} (ppc64le)]
+* link:https://mirror.openshift.com/pub/cgw/pipelines/{pipelines-version-number}.{osp-version-patch}/tkn-linux-arm64.tar.gz[Linux on ARM (aarch64, arm64)]
+* link:https://mirror.openshift.com/pub/cgw/pipelines/{pipelines-version-number}.{osp-version-patch}/tkn-macos-amd64.tar.gz[macOS]
+* link:https://mirror.openshift.com/pub/cgw/pipelines/{pipelines-version-number}.{osp-version-patch}/tkn-windows-amd64.zip[Windows]
+
+// Binaries also need to be updated in the following modules:
+// op-installing-tkn-on-linux.adoc
+// op-installing-tkn-on-windows.adoc
+// op-installing-tkn-on-macos.adoc
+
+// In addition, you can install `tkn pac` using the following methods:
+
+// [CAUTION]
+// ====
+// The `tkn pac` CLI tool available using these methods is _not updated regularly_.
+// ====
+
+// * Install on Linux or Mac OS using the `brew` package manager:
+// +
+// [source,terminal]
+// ----
+// $ brew install openshift-pipelines/pipelines-as-code/tektoncd-pac
+// ----
+// +
+// You can upgrade the package by running the following command:
+// +
+// [source,terminal]
+// ----
+// $ brew upgrade openshift-pipelines/pipelines-as-code/tektoncd-pac
+// ----
+
+// * Install as a container using `podman`:
+// +
+// [source,terminal]
+// ----
+// $ podman run -e KUBECONFIG=/tmp/kube/config -v ${HOME}/.kube:/tmp/kube \
+//      -it quay.io/openshift-pipeline/pipelines-as-code tkn pac help
+// ----
+// +
+// You can also use `docker` as a substitute for `podman`.
+
+// * Install from the GitHub repository using `go`:
+// +
+// [source,terminal]
+// ----
+// $ go install github.com/openshift-pipelines/pipelines-as-code/cmd/tkn-pac
+// ----
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/install-config-pipelines-as-code.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="customizing-pipelines-as-code-configuration_{context}"]
+= Customizing {pac} configuration
+
+[role="_abstract"]
+To customize {pac}, cluster administrators can configure the following parameters in the `TektonConfig` custom resource, in the `platforms.openshift.pipelinesAsCode.settings` spec:
+
+.Customizing {pac} configuration
+[options="header"]
+|===
+
+| Parameter | Description | Default
+
+| `application-name` | The name of the application. For example, the name displayed in the GitHub Checks labels. | `"Pipelines as Code CI"`
+
+| `secret-auto-create` | When enabled, {pac} automatically creates a secret by using the token from the GitHub application. You can use this secret with private repositories. | `enabled`
+
+| `remote-tasks` | When enabled, allows remote tasks from pipeline run annotations. | `enabled`
+
+| `hub-url` | The base URL for the link:https://artifacthub.io[{artifact-hub}]. | `https://artifacthub.io`
+
+| `hub-catalog-name` | The {tekton-hub} catalog name. | `tekton`
+
+| `tekton-dashboard-url` | The URL of the {tekton-hub} dashboard. {pac} uses this URL to generate a `PipelineRun` URL on the {tekton-hub} dashboard.  | NA
+
+| `bitbucket-cloud-check-source-ip` | When enabled, secures the service requests by querying IP ranges for a public Bitbucket. Changing this value might create a security risk. | `enabled`
+
+| `bitbucket-cloud-additional-source-ip` | Additional IP ranges or networks, separated by commas. | NA
+
+| `max-keep-run-upper-limit` | A maximum limit for the `max-keep-run` value for a pipeline run. | NA
+
+| `default-max-keep-runs` | A default limit for the `max-keep-run` value for a pipeline run. If defined, {pac} applies the value to all pipeline runs that do not have a `max-keep-run` annotation. | NA
+
+| `auto-configure-new-github-repo` | Configures new GitHub repositories automatically. {pac} sets up a namespace and creates a custom resource for your repository. This parameter is only supported with GitHub applications. | `disabled`
+
+| `auto-configure-repo-namespace-template` | Configures a template to automatically generate the namespace for your new repository, if you enable `auto-configure-new-github-repo`. | `{repo_name}-pipelines`
+
+| `auto-configure-repo-repository-template` | Configures a template to automatically generate the name for your new `Repository` custom resource (CR), if you enable `auto-configure-new-github-repo`. | `{{repo_name}}-repo-cr`
+
+| `error-log-snippet` | Enables or disables log snippets for failed tasks in a pipeline. Disable this parameter to prevent data leakage. {pipelines-shortname} truncates snippets to 65,000 characters. | `true`
+
+| `error-log-snippet-number-of-lines` | Configures the number of lines displayed in error log snippets. | `3`
+
+| `error-detection-from-container-logs` | Enables or disables inspecting container logs for error messages and exposing them as pull request annotations. Applies only with the GitHub app. | `true`
+
+| `error-detection-max-number-of-lines` | The maximum number of lines inspected in the container logs to search for error messages. Set to `-1` to inspect an unlimited number of lines. | 50
+
+| `secret-github-app-token-scoped` | When `true`, {pac} scopes the GitHub access token to only the repository with the pipeline definition. When `false`, you can use the `TektonConfig` CR and the `Repository` CR to scope the token to additional repositories. | `true`
+
+| `secret-github-app-scope-extra-repos` | Additional repositories for scoping the generated GitHub access token. |
+
+| `enable-cancel-in-progress-on-pull-requests` | Cancels in-progress pipeline runs when a user pushes a new commit to a pull request. {pac} cancels the old run only after the new one starts. The `cancel-in-progress` annotation on individual runs overrides this setting. | `false`
+
+| `enable-cancel-in-progress-on-push` | Cancels in-progress pipeline runs when a user pushes a new commit. {pac} cancels the old run only after the new one starts. The `cancel-in-progress` annotation on individual runs overrides this setting. | `false`
+
+|===
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/install-config-pipelines-as-code.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="pac-additional-controller_{context}"]
+= Configuring additional {pac} controllers to support additional GitHub apps
+
+[role="_abstract"]
+By default, you can configure {pac} to interact with one GitHub app. In some cases you might need to use more than one GitHub app. For example, you might use different GitHub accounts or different GitHub instances such as GitHub Enterprise or GitHub SaaS. To use more than one GitHub app, you must configure an additional {pac} controller for every additional GitHub app.
+
+.Procedure
+
+. In the `TektonConfig` custom resource, add the `additionalPACControllers` section to the `platforms.openshift.pipelinesAsCode` spec, as in the following example:
++
+.Example `additionalPACControllers` section
+[source,yaml]
+----
+apiVersion: operator.tekton.dev/v1
+kind: TektonConfig
+metadata:
+  name: config
+spec:
+  platforms:
+    openshift:
+      pipelinesAsCode:
+        additionalPACControllers:
+          pac_controller_2:
+            enable: true
+            secretName: pac_secret_2
+            settings:
+# ...
+----
+`pac_controller_2`:: The name of the controller. This name must be unique and not exceed 25 characters in length.
+`enable`:: This parameter is optional. Set this parameter to `true` to enable the additional controller or to `false` to disable the additional controller. The default value is `true`.
+`secretName`:: Set this parameter to the name of a secret that you must create for the GitHub app.
+`settings`:: Optional. Use the `settings` block to configure any {pac} settings for the additional controller when the settings must be different from the main {pac} controller.
+
+. Optional: If you want to use more than two GitHub apps, create additional sections under the `pipelinesAsCode.additionalPACControllers` spec to configure a {pac} controller for every GitHub instance. Use a unique name for every controller.
+
+:leveloffset!:
+
+[role="_additional-resources"]
+.Additional resources
+
+* xref:../pac/install-config-pipelines-as-code.adoc#customizing-pipelines-as-code-configuration_install-config-pipelines-as-code[Customizing {pac} configuration]
+
+* xref:../pac/using-pipelines-as-code-repos.adoc#pac-configuring-github-app-manually_using-pipelines-as-code-repos[Configuring a GitHub App manually and creating a secret for {pac}]
+
+[role="_additional-resources"]
+== Additional resources
+
+* xref:../install_config/installing-pipelines.adoc#installing-pipelines[Installing {pipelines-shortname}]
+* xref:../tkn_cli/installing-tkn.adoc#installing-tkn[Installing tkn]
+* xref:../release_notes/op-release-notes-1-22.adoc#op-release-notes-1-22[{pipelines-title} release notes]

@@ -1,0 +1,122 @@
+{
+  "metadata": {
+    "document": "viewing-pipeline-logs-using-the-openshift-logging-operator",
+    "variant": "self-managed",
+    "extraction_date": "2026-06-12",
+    "total_records": 7
+  },
+  "jtbd_records": [
+    {
+      "job_id": 1,
+      "job_statement": "View pipeline logs for troubleshooting and audits",
+      "context": "When I need to review and analyze pipeline activity",
+      "outcome": "So I can troubleshoot issues and conduct audits without depending on pod retention",
+      "job_type": "main",
+      "topic_type": "concept",
+      "source_module": "assembly",
+      "source_file": "records/viewing-pipeline-logs-using-the-openshift-logging-operator.adoc",
+      "line_reference": "→ Lines 64-69: Abstract section",
+      "current_heading": "Viewing pipeline logs by using the OpenShift Logging Operator",
+      "evidence": {
+        "direct_quote": "Pipeline runs, task runs, and event listeners store their logs in their pods. It is useful to review and analyze logs for troubleshooting and audits.",
+        "signal_type": "problem_statement"
+      }
+    },
+    {
+      "job_id": 2,
+      "job_statement": "Avoid resource waste from indefinite pod retention",
+      "context": "When I need to retain logs but don't want to keep pods running",
+      "outcome": "So I can reduce unnecessary resource consumption and avoid cluttered namespaces",
+      "job_type": "main",
+      "topic_type": "concept",
+      "source_module": "assembly",
+      "source_file": "records/viewing-pipeline-logs-using-the-openshift-logging-operator.adoc",
+      "line_reference": "→ Lines 67-68: Problem statement",
+      "current_heading": "Viewing pipeline logs by using the OpenShift Logging Operator",
+      "evidence": {
+        "direct_quote": "However, retaining the pods indefinitely leads to unnecessary resource consumption and cluttered namespaces.",
+        "signal_type": "problem_statement"
+      }
+    },
+    {
+      "job_id": 3,
+      "job_statement": "View pipeline logs using Elasticsearch Kibana stack",
+      "context": "When I need to access pipeline logs after pods are deleted",
+      "outcome": "So I can review logs without dependency on pod availability",
+      "job_type": "main",
+      "topic_type": "concept",
+      "source_module": "assembly",
+      "source_file": "records/viewing-pipeline-logs-using-the-openshift-logging-operator.adoc",
+      "line_reference": "→ Lines 69-69: Solution overview",
+      "current_heading": "Viewing pipeline logs by using the OpenShift Logging Operator",
+      "evidence": {
+        "direct_quote": "To remove any dependency on the pods for viewing pipeline logs, you can use the OpenShift Elasticsearch Operator and the OpenShift Logging Operator. These Operators help you to view pipeline logs by using the Elasticsearch Kibana stack, even after you have deleted the pods that contained the logs.",
+        "signal_type": "solution_statement"
+      }
+    },
+    {
+      "job_id": 4,
+      "job_statement": "Access pipeline logs in Kibana web console",
+      "context": "When I prefer a graphical interface over command-line",
+      "outcome": "So I can view and analyze pipeline logs through a visual interface",
+      "job_type": "task",
+      "topic_type": "procedure",
+      "source_module": "modules/op-viewing-pipeline-logs-in-kibana.adoc",
+      "source_file": "modules/op-viewing-pipeline-logs-in-kibana.adoc",
+      "line_reference": "→ Lines 79-83: Procedure title and abstract",
+      "current_heading": "Viewing pipeline logs in Kibana",
+      "evidence": {
+        "direct_quote": "You can view pipeline logs by using the Kibana web console instead of the command-line interface. Use the following procedure to access the logs.",
+        "signal_type": "procedural_goal"
+      }
+    },
+    {
+      "job_id": 5,
+      "job_statement": "Create an index pattern in Kibana",
+      "context": "When I need to set up Kibana to display pipeline logs",
+      "outcome": "So I can configure the time-based index for log viewing",
+      "job_type": "task",
+      "topic_type": "procedure",
+      "source_module": "modules/op-viewing-pipeline-logs-in-kibana.adoc",
+      "source_file": "modules/op-viewing-pipeline-logs-in-kibana.adoc",
+      "line_reference": "→ Lines 101-105: Create index pattern step",
+      "current_heading": "Viewing pipeline logs in Kibana",
+      "evidence": {
+        "direct_quote": "Create an index pattern: On the left navigation panel of the Kibana web console, click Management. Click Create index pattern. Under Step 1 of 2: Define index pattern → Index pattern, enter a * pattern and click Next Step. Under Step 2 of 2: Configure settings → Time filter field name, select @timestamp from the drop-down menu, and click Create index pattern.",
+        "signal_type": "procedural_step"
+      }
+    },
+    {
+      "job_id": 6,
+      "job_statement": "Filter pipeline-related logs in Kibana",
+      "context": "When I need to narrow down logs to specific pipelines or components",
+      "outcome": "So I can focus on relevant pipeline execution logs",
+      "job_type": "task",
+      "topic_type": "procedure",
+      "source_module": "modules/op-viewing-pipeline-logs-in-kibana.adoc",
+      "source_file": "modules/op-viewing-pipeline-logs-in-kibana.adoc",
+      "line_reference": "→ Lines 107-170: Add filter steps with examples",
+      "current_heading": "Viewing pipeline logs in Kibana",
+      "evidence": {
+        "direct_quote": "Add a filter: On the left navigation panel of the Kibana web console, click Discover. Click Add a filter + → Edit Query DSL.",
+        "signal_type": "procedural_step"
+      }
+    },
+    {
+      "job_id": 7,
+      "job_statement": "Display and read pipeline log messages",
+      "context": "When I need to view the actual log content",
+      "outcome": "So I can read and analyze specific log messages from pipeline runs",
+      "job_type": "task",
+      "topic_type": "procedure",
+      "source_module": "modules/op-viewing-pipeline-logs-in-kibana.adoc",
+      "source_file": "modules/op-viewing-pipeline-logs-in-kibana.adoc",
+      "line_reference": "→ Lines 173-179: Select fields and view messages",
+      "current_heading": "Viewing pipeline logs in Kibana",
+      "evidence": {
+        "direct_quote": "From the Available fields list, select the following fields: kubernetes.flat_labels, message. Ensure that the selected fields appear under the Selected fields list. The message field displays the logs.",
+        "signal_type": "procedural_step"
+      }
+    }
+  ]
+}

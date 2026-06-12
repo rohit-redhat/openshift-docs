@@ -1,0 +1,39 @@
+{
+  "assembly": "/Users/roparmar/git/openshift-docs/release_notes/op-release-notes-1-18.adoc",
+  "variant": "self-managed",
+  "includes": [
+    {
+      "path": "_attributes/common-attributes.adoc",
+      "type": "snippet",
+      "line": 3,
+      "module_type": "attribute",
+      "resolved_path": "/Users/roparmar/git/openshift-docs/_attributes/common-attributes.adoc"
+    },
+    {
+      "path": "modules/op-tkn-pipelines-compatibility-support-matrix.adoc",
+      "type": "module",
+      "line": 29,
+      "leveloffset": "+1",
+      "module_type": "reference",
+      "resolved_path": "/Users/roparmar/git/openshift-docs/modules/op-tkn-pipelines-compatibility-support-matrix.adoc"
+    },
+    {
+      "path": "modules/op-release-notes-1-18.adoc",
+      "type": "module",
+      "line": 33,
+      "leveloffset": "+1",
+      "module_type": "reference",
+      "resolved_path": "/Users/roparmar/git/openshift-docs/modules/op-release-notes-1-18.adoc"
+    }
+  ],
+  "statistics": {
+    "total_includes": 3,
+    "modules": 2,
+    "snippets": 1,
+    "module_types": {
+      "reference": 2,
+      "attribute": 1
+    }
+  },
+  "note": "This assembly includes the compatibility matrix module and the main 1.18 release notes module, both at leveloffset +1"
+}

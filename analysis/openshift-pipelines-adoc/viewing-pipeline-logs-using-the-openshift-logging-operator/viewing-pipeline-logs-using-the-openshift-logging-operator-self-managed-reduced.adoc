@@ -1,0 +1,194 @@
+:_mod-docs-content-type: ASSEMBLY
+:_mod-docs-content-type: SNIPPET
+// The {product-title} attribute provides the context-sensitive name of the relevant OpenShift distribution, for example, "OpenShift Container Platform" or "OKD". The {product-version} attribute provides the product version relative to the distribution, for example "4.9".
+// {product-title} and {product-version} are parsed when AsciiBinder queries the _distro_map.yml file in relation to the base branch of a pull request.
+// See https://github.com/openshift/openshift-docs/blob/main/contributing_to_docs/doc_guidelines.adoc#product-name-and-version for more information on this topic.
+// Other common attributes are defined in the following lines:
+:data-uri:
+:icons:
+:experimental:
+:toc: macro
+:toc-title:
+:imagesdir: images
+:prewrap!:
+
+:pipelines-title: Red Hat OpenShift Pipelines
+:pipelines-shortname: OpenShift Pipelines
+:pipelines-ver: pipelines-1.22
+:pipelines-version-number: 1.22
+:osp-version-patch: 0
+:tekton-cache: Tekton Cache
+:tekton-chains: Tekton Chains
+:tekton-results: Tekton Results
+:tekton-triggers: Tekton Triggers
+:tekton-hub: Tekton Hub
+:artifact-hub: Artifact Hub
+:pac: Pipelines as Code
+:product-registry: OpenShift image registry
+// IBM Power
+:ibmpowerProductName: IBM Power
+// IBM zSystems
+:ibmzProductName: IBM zSystems
+:linuxoneProductName: IBM(R) LinuxONE
+:kebab: image:kebab.png[title="Options menu"]
+
+:op-system-base: RHEL
+:op-system-base-full: Red Hat Enterprise Linux (RHEL)
+
+:cluster-manager-first: Red Hat OpenShift Cluster Manager
+:cluster-manager: OpenShift Cluster Manager
+:cluster-manager-url: link:https://console.redhat.com/openshift[OpenShift Cluster Manager Hybrid Cloud Console]
+:cluster-manager-url-pull: link:https://console.redhat.com/openshift/install/pull-secret[pull secret from the Red Hat OpenShift Cluster Manager]
+
+:oc-first: pass:quotes[OpenShift CLI (`oc`)]
+
+// Attributes not present in the main branch
+:OCP: OpenShift Container Platform
+
+//We should use lowercase like regular OCP docs and deprecate the above.
+:ocp: OpenShift Container Platform
+
+
+:ols-official: Red{nbsp}Hat OpenShift Lightspeed
+:ols: OpenShift Lightspeed
+
+// Attributes not present in the main branch
+:rhosp: Red Hat OpenStack Platform
+:context: viewing-pipeline-logs-using-the-openshift-logging-operator
+
+[id="viewing-pipeline-logs-using-the-openshift-logging-operator_{context}"]
+= Viewing pipeline logs by using the OpenShift Logging Operator
+
+toc::[]
+
+[role="_abstract"]
+Pipeline runs, task runs, and event listeners store their logs in their pods. It is useful to review and analyze logs for troubleshooting and audits.
+
+However, retaining the pods indefinitely leads to unnecessary resource consumption and cluttered namespaces.
+
+To remove any dependency on the pods for viewing pipeline logs, you can use the OpenShift Elasticsearch Operator and the OpenShift Logging Operator. These Operators help you to view pipeline logs by using the link:https://www.elastic.co/guide/en/kibana/6.8/connect-to-elasticsearch.html[Elasticsearch Kibana] stack, even after you have deleted the pods that contained the logs.
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * records/viewing-pipeline-logs-using-the-openshift-logging-operator.adoc
+
+// cicd/pipelines/viewing-pipeline-logs-using-the-openshift-logging-operator.adoc
+:_mod-docs-content-type: PROCEDURE
+[id="op-viewing-pipeline-logs-in-kibana_{context}"]
+= Viewing pipeline logs in Kibana
+
+To view pipeline logs in the Kibana web console:
+[role="_abstract"]
+You can view pipeline logs by using the Kibana web console instead of the command-line interface. Use the following procedure to access the logs.
+
+.Prerequisites
+
+Before trying to view pipeline logs in a Kibana dashboard, ensure the following:
+
+* A cluster administrator performs these steps.
+
+* Logs for pipeline runs and task runs are available.
+
+* The OpenShift Elasticsearch Operator and the OpenShift Logging Operator are installed.
+
+.Procedure
+
+. Log in to {OCP} web console as a cluster administrator.
+
+. In the top right of the menu bar, click the *grid* icon → *Observability* → *Logging*. The Kibana web console opens.
+
+. Create an index pattern:
+.. On the left navigation panel of the *Kibana* web console, click *Management*.
+.. Click *Create index pattern*.
+.. Under *Step 1 of 2: Define index pattern* → *Index pattern*, enter a *`pass:[*]`* pattern and click *Next Step*.
+.. Under *Step 2 of 2: Configure settings* → *Time filter field name*, select *@timestamp* from the drop-down menu, and click *Create index pattern*.
+
+. Add a filter:
+.. On the left navigation panel of the *Kibana* web console, click *Discover*.
+.. Click *Add a filter +* → *Edit Query DSL*.
++
+[NOTE]
+====
+* For each of the example filters that follows, edit the query and click *Save*.
+* Kibana applies the filters one after another.
+====
++
+... Filter the containers related to pipelines:
++
+.Example query to filter pipelines containers
+[source,json]
+----
+{
+  "query": {
+	"match": {
+  	"kubernetes.flat_labels": {
+    	"query": "app_kubernetes_io/managed-by=tekton-pipelines",
+    	"type": "phrase"
+  	}
+	}
+  }
+}
+----
++
+... Filter all containers that are not `place-tools` container. As an illustration of using the graphical drop-down menus instead of editing the query DSL, consider the following approach:
++
+.Example of filtering using the drop-down fields
+image::not-placetools.png[Not place-tools]
++
+... Filter `pipelinerun` in labels for highlighting:
++
+.Example query to filter `pipelinerun` in labels for highlighting
+[source,json]
+----
+{
+  "query": {
+	"match": {
+  	"kubernetes.flat_labels": {
+    	"query": "tekton_dev/pipelineRun=",
+    	"type": "phrase"
+  	}
+	}
+  }
+}
+----
++
+... Filter `pipeline` in labels for highlighting:
++
+.Example query to filter `pipeline` in labels for highlighting
+[source,json]
+----
+{
+  "query": {
+	"match": {
+  	"kubernetes.flat_labels": {
+    	"query": "tekton_dev/pipeline=",
+    	"type": "phrase"
+  	}
+	}
+  }
+}
+----
++
+.. From the *Available fields* list, select the following fields:
+* `kubernetes.flat_labels`
+* `message`
++
+Ensure that the selected fields appear under the *Selected fields* list.
++
+.. The *message* field displays the logs.
++
+.Filtered messages
+image::filtered-messages.png[Filtered messages]
+
+:leveloffset!:
+
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://docs.openshift.com/container-platform/latest/logging/cluster-logging-deploying.html[Installing OpenShift Logging]
+
+* link:https://docs.openshift.com/container-platform/latest/logging/viewing-resource-logs.html[Viewing logs for a resource]
+
+* link:https://docs.openshift.com/container-platform/latest/logging/cluster-logging-visualizer.html[Viewing cluster logs by using Kibana]

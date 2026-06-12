@@ -1,0 +1,78 @@
+{
+  "assembly": "understanding-openshift-pipelines.adoc",
+  "title": "Understanding OpenShift Pipelines",
+  "includes": [
+    {
+      "module": "modules/op-key-features.adoc",
+      "type": "CONCEPT",
+      "leveloffset": "+1",
+      "title": "Key features"
+    },
+    {
+      "module": "modules/op-pipelines-concepts.adoc",
+      "type": "CONCEPT",
+      "leveloffset": "+1",
+      "title": "OpenShift Pipelines concepts"
+    },
+    {
+      "module": "modules/op-about-tasks.adoc",
+      "type": "CONCEPT",
+      "leveloffset": "+2",
+      "title": "Tasks"
+    },
+    {
+      "module": "modules/op-about-whenexpression.adoc",
+      "type": "CONCEPT",
+      "leveloffset": "+2",
+      "title": "When expression"
+    },
+    {
+      "module": "modules/op-about-finally_tasks.adoc",
+      "type": "CONCEPT",
+      "leveloffset": "+2",
+      "title": "Finally tasks"
+    },
+    {
+      "module": "modules/op-about-taskrun.adoc",
+      "type": "CONCEPT",
+      "leveloffset": "+2",
+      "title": "Task run"
+    },
+    {
+      "module": "modules/op-about-pipelines.adoc",
+      "type": "CONCEPT",
+      "leveloffset": "+2",
+      "title": "Pipelines"
+    },
+    {
+      "module": "modules/op-about-pipelinerun.adoc",
+      "type": "CONCEPT",
+      "leveloffset": "+2",
+      "title": "Pipeline run"
+    },
+    {
+      "module": "modules/op-about-podtemplate.adoc",
+      "type": "CONCEPT",
+      "leveloffset": "+2",
+      "title": "Pod templates"
+    },
+    {
+      "module": "modules/op-about-workspace.adoc",
+      "type": "CONCEPT",
+      "leveloffset": "+2",
+      "title": "Workspaces"
+    },
+    {
+      "module": "modules/op-about-stepactions.adoc",
+      "type": "CONCEPT",
+      "leveloffset": "+2",
+      "title": "Step actions"
+    },
+    {
+      "module": "modules/op-about-triggers.adoc",
+      "type": "CONCEPT",
+      "leveloffset": "+2",
+      "title": "Triggers"
+    }
+  ]
+}

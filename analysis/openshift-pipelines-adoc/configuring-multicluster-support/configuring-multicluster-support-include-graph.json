@@ -1,0 +1,77 @@
+{
+  "assembly": "/Users/roparmar/git/openshift-docs/resource/configuring-multicluster-support.adoc",
+  "includes": [
+    {
+      "path": "modules/op-about-multicluster-support.adoc",
+      "full_path": "/Users/roparmar/git/openshift-docs/modules/op-about-multicluster-support.adoc",
+      "type": "CONCEPT",
+      "leveloffset": "+1",
+      "section_title": "About multicluster support in {pipelines-shortname}",
+      "start_line": 90,
+      "end_line": 116
+    },
+    {
+      "path": "modules/op-multicluster-architecture.adoc",
+      "full_path": "/Users/roparmar/git/openshift-docs/modules/op-multicluster-architecture.adoc",
+      "type": "CONCEPT",
+      "leveloffset": "+1",
+      "section_title": "Multicluster architecture",
+      "start_line": 126,
+      "end_line": 174
+    },
+    {
+      "path": "modules/op-configuring-hub-cluster-multicluster.adoc",
+      "full_path": "/Users/roparmar/git/openshift-docs/modules/op-configuring-hub-cluster-multicluster.adoc",
+      "type": "PROCEDURE",
+      "leveloffset": "+1",
+      "section_title": "Configuring the hub cluster for multicluster",
+      "start_line": 184,
+      "end_line": 476
+    },
+    {
+      "path": "modules/op-configuring-spoke-clusters-multicluster.adoc",
+      "full_path": "/Users/roparmar/git/openshift-docs/modules/op-configuring-spoke-clusters-multicluster.adoc",
+      "type": "PROCEDURE",
+      "leveloffset": "+1",
+      "section_title": "Configuring spoke clusters for multicluster",
+      "start_line": 486,
+      "end_line": 796
+    },
+    {
+      "path": "modules/op-verifying-multicluster-setup.adoc",
+      "full_path": "/Users/roparmar/git/openshift-docs/modules/op-verifying-multicluster-setup.adoc",
+      "type": "PROCEDURE",
+      "leveloffset": "+1",
+      "section_title": "Verifying multicluster setup",
+      "start_line": 806,
+      "end_line": 899
+    },
+    {
+      "path": "modules/op-creating-pipeline-runs-multicluster.adoc",
+      "full_path": "/Users/roparmar/git/openshift-docs/modules/op-creating-pipeline-runs-multicluster.adoc",
+      "type": "PROCEDURE",
+      "leveloffset": "+1",
+      "section_title": "Creating pipeline runs in a multicluster environment",
+      "start_line": 909,
+      "end_line": 1073
+    },
+    {
+      "path": "modules/op-multicluster-limitations.adoc",
+      "full_path": "/Users/roparmar/git/openshift-docs/modules/op-multicluster-limitations.adoc",
+      "type": "REFERENCE",
+      "leveloffset": "+1",
+      "section_title": "Known limitations for multicluster pipeline runs",
+      "start_line": 1083,
+      "end_line": 1162
+    },
+    {
+      "path": "modules/op-multicluster-kueue-resources-reference.adoc",
+      "full_path": "/Users/roparmar/git/openshift-docs/modules/op-multicluster-kueue-resources-reference.adoc",
+      "type": "REFERENCE",
+      "leveloffset": "+1",
+      "section_title": "Kueue resources for multicluster configuration",
+      "start_line": 1172,
+      "end_line": 1309
+    }
+  ]
+}

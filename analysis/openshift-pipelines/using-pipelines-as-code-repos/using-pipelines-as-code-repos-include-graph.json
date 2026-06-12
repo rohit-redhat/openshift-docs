@@ -1,0 +1,90 @@
+{
+  "document": "using-pipelines-as-code-repos.adoc",
+  "variant": "self-managed",
+  "type": "assembly",
+  "includes": [
+    {
+      "path": "_attributes/common-attributes.adoc",
+      "type": "snippet",
+      "line_in_assembly": 2,
+      "lines_in_reduced": "1-56"
+    },
+    {
+      "path": "modules/op-using-pipelines-as-code-with-a-github-app.adoc",
+      "type": "concept",
+      "line_in_assembly": 24,
+      "lines_in_reduced": "78-104",
+      "heading": "GitHub App integration with Pipelines as Code"
+    },
+    {
+      "path": "modules/op-pac-configuring-github-app-cli.adoc",
+      "type": "procedure",
+      "line_in_assembly": 26,
+      "lines_in_reduced": "106-155",
+      "heading": "Configure a GitHub App using the command line interface"
+    },
+    {
+      "path": "modules/op-creating-a-github-application-in-administrator-perspective.adoc",
+      "type": "procedure",
+      "line_in_assembly": 28,
+      "lines_in_reduced": "157-200",
+      "heading": "Create a GitHub App in administrator perspective"
+    },
+    {
+      "path": "modules/op-pac-configuring-github-app-manually.adoc",
+      "type": "procedure",
+      "line_in_assembly": 30,
+      "lines_in_reduced": "202-310",
+      "heading": "Configure a GitHub App manually and create a secret for Pipelines as Code"
+    },
+    {
+      "path": "modules/op-scoping-github-token.adoc",
+      "type": "procedure",
+      "line_in_assembly": 32,
+      "lines_in_reduced": "312-438",
+      "heading": "Scope the GitHub token to additional repositories"
+    },
+    {
+      "path": "modules/op-using-pipelines-as-code-with-github-webhook.adoc",
+      "type": "procedure",
+      "line_in_assembly": 34,
+      "lines_in_reduced": "440-675",
+      "heading": "Use Pipelines as Code with GitHub Webhook"
+    },
+    {
+      "path": "modules/op-using-pipelines-as-code-with-gitlab.adoc",
+      "type": "procedure",
+      "line_in_assembly": 36,
+      "lines_in_reduced": "677-882",
+      "heading": "Use Pipelines as Code with GitLab"
+    },
+    {
+      "path": "modules/op-using-pipelines-as-code-with-bitbucket-cloud.adoc",
+      "type": "procedure",
+      "line_in_assembly": 38,
+      "lines_in_reduced": "884-1132",
+      "heading": "Use Pipelines as Code with Bitbucket Cloud"
+    },
+    {
+      "path": "modules/op-using-pipelines-as-code-with-bitbucket-server.adoc",
+      "type": "procedure",
+      "line_in_assembly": 40,
+      "lines_in_reduced": "1134-1281",
+      "heading": "Use Pipelines as Code with Bitbucket Data Center"
+    },
+    {
+      "path": "modules/op-interfacing-pipelines-as-code-with-custom-certificates.adoc",
+      "type": "procedure",
+      "line_in_assembly": 42,
+      "lines_in_reduced": "1283-1300",
+      "heading": "Configure custom certificates for Pipelines as Code"
+    },
+    {
+      "path": "modules/op-using-private-repositories-with-pipelines-as-code.adoc",
+      "type": "reference",
+      "line_in_assembly": 44,
+      "lines_in_reduced": "1302-1364",
+      "heading": "Private repository support in Pipelines as Code"
+    }
+  ]
+}

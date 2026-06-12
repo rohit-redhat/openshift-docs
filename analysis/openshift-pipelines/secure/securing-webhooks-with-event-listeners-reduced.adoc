@@ -1,0 +1,256 @@
+:_mod-docs-content-type: ASSEMBLY
+:_mod-docs-content-type: SNIPPET
+// The {product-title} attribute provides the context-sensitive name of the relevant OpenShift distribution, for example, "OpenShift Container Platform" or "OKD". The {product-version} attribute provides the product version relative to the distribution, for example "4.9".
+// {product-title} and {product-version} are parsed when AsciiBinder queries the _distro_map.yml file in relation to the base branch of a pull request.
+// See https://github.com/openshift/openshift-docs/blob/main/contributing_to_docs/doc_guidelines.adoc#product-name-and-version for more information on this topic.
+// Other common attributes are defined in the following lines:
+:data-uri:
+:icons:
+:experimental:
+:toc: macro
+:toc-title:
+:imagesdir: images
+:prewrap!:
+
+:pipelines-title: Red Hat OpenShift Pipelines
+:pipelines-shortname: OpenShift Pipelines
+:pipelines-ver: pipelines-1.22
+:pipelines-version-number: 1.22
+:osp-version-patch: 0
+:tekton-cache: Tekton Cache
+:tekton-chains: Tekton Chains
+:tekton-results: Tekton Results
+:tekton-triggers: Tekton Triggers
+:tekton-hub: Tekton Hub
+:artifact-hub: Artifact Hub
+:pac: Pipelines as Code
+:product-registry: OpenShift image registry
+// IBM Power
+:ibmpowerProductName: IBM Power
+// IBM zSystems
+:ibmzProductName: IBM zSystems
+:linuxoneProductName: IBM(R) LinuxONE
+:kebab: image:kebab.png[title="Options menu"]
+
+:op-system-base: RHEL
+:op-system-base-full: Red Hat Enterprise Linux (RHEL)
+
+:cluster-manager-first: Red Hat OpenShift Cluster Manager
+:cluster-manager: OpenShift Cluster Manager
+:cluster-manager-url: link:https://console.redhat.com/openshift[OpenShift Cluster Manager Hybrid Cloud Console]
+:cluster-manager-url-pull: link:https://console.redhat.com/openshift/install/pull-secret[pull secret from the Red Hat OpenShift Cluster Manager]
+
+:oc-first: pass:quotes[OpenShift CLI (`oc`)]
+
+// Attributes not present in the main branch
+:OCP: OpenShift Container Platform
+
+//We should use lowercase like regular OCP docs and deprecate the above.
+:ocp: OpenShift Container Platform
+
+
+:ols-official: Red{nbsp}Hat OpenShift Lightspeed
+:ols: OpenShift Lightspeed
+
+// Attributes not present in the main branch
+:rhosp: Red Hat OpenStack Platform
+[id="securing-webhooks-with-event-listeners"]
+= Securing webhooks with event listeners
+:context: securing-webhooks-with-event-listeners
+
+toc::[]
+
+[role="_abstract"]
+As an administrator, you can secure webhooks with event listeners. After creating a namespace, you enable HTTPS for the `Eventlistener` resource by adding the `operator.tekton.dev/enable-annotation=enabled` label to the namespace. Then, you create a `Trigger` resource and a secured route using the re-encrypted TLS termination.
+
+Triggers in {pipelines-title} support insecure HTTP and secure HTTPS connections to the `Eventlistener` resource. HTTPS secures connections within and outside the cluster.
+
+{pipelines-title} runs a `tekton-operator-proxy-webhook` pod that watches for the labels in the namespace. When you add the label to the namespace, the webhook sets the `service.beta.openshift.io/serving-cert-secret-name=<secret_name>` annotation on the `EventListener` object. This, in turn, creates secrets and the required certificates.
+
+[source,terminal,subs="attributes+"]
+----
+service.beta.openshift.io/serving-cert-secret-name=<secret_name>
+----
+
+In addition, you can mount the created secret into the `Eventlistener` pod to secure the request.
+
+:leveloffset: +1
+
+:_mod-docs-content-type: PROCEDURE
+// This module is included in the following assemblies:
+// * secure/securing-webhooks-with-event-listeners.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id='op-providing-secure-connection_{context}']
+= Providing secure connection with OpenShift routes
+
+[role="_abstract"]
+You can give a secure connection with OpenShift routes by using re-encrypted TLS termination.
+
+.Procedure
+
+. Create a route with the re-encrypted TLS termination by running the following command:
++
+[source,terminal,subs="attributes+"]
+----
+$ oc create route reencrypt --service=<svc_name> --cert=tls.crt --key=tls.key --ca-cert=ca.crt --hostname=<hostname>
+----
++
+Or, you can create a re-encrypted TLS termination YAML file to create a secure route:
++
+.Example re-encrypt TLS termination YAML to create a secure route
+[source,yaml,subs="attributes+"]
+----
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: route-passthrough-secured
+spec:
+  host: <hostname>
+  to:
+    kind: Service
+    name: frontend
+  tls:
+    termination: reencrypt
+    key: [as in edge termination]
+    certificate: [as in edge termination]
+    caCertificate: [as in edge termination]
+    destinationCACertificate: |-
+      -----BEGIN CERTIFICATE-----
+      [...]
+      -----END CERTIFICATE-----
+----
++
+--
+`name`::
+The name of the object, which {OCP} limits to only 63 characters.
+
+`termination`::
+You must set the termination field to `reencrypt`. This is the only required TLS field.
+
+`destinationCACertificate`::
+Re-encryption requires this field. The `destinationCACertificate` field specifies a CA certificate to validate the endpoint certificate, therefore securing the connection from the router to the destination pods. You can omit this field in either of the following scenarios:
+
+* The service uses a service signing certificate.
+* The administrator specifies a default CA certificate for the router, and the service has a certificate signed by that CA.
+--
+
+. Optional: Display more options by running the following command:
++
+[source,terminal]
+----
+$ oc create route reencrypt --help
+----
+
+
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * secure/securing-webhooks-with-event-listeners.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="op-setting-eventlistener-scc_{context}"]
+= Configuring security context for event listeners
+
+[role="_abstract"]
+You can configure a custom security context directly in your `EventListener` custom resource (CR) to meet your security requirements. A custom security context can help ensure that containers run with restricted privileges and comply with {OCP} security context constraints (SCCs).
+
+.Procedure
+
+* Create a YAML file that defines your `EventListener` CR:
++
+.Example `EventListener` custom resource with configured security context
+[source,yaml,subs="attributes+"]
+----
+apiVersion: triggers.tekton.dev/v1
+kind: EventListener
+metadata:
+#...
+spec:
+  serviceAccountName: tekton-triggers-sa
+  resources:
+    kubernetesResource:
+      spec:
+        template:
+          spec:
+            securityContext:
+              runAsNonRoot: true
+            containers:
+              - resources:
+                  requests:
+                    memory: "64Mi"
+                    cpu: "250m"
+                  limits:
+                    memory: "128Mi"
+                    cpu: "500m"
+                securityContext:
+                  readOnlyRootFilesystem: true
+#...
+----
++
+`runAsNonRoot`:: Specify the pod-level security context settings. The example setting sets the pod-level security context to prevent the containers from running as the root user.
+`readOnlyRootFilesystem`:: Specify the container-level security context settings. The example setting restricts the container root filesystem to read-only to limit potential file system modifications at runtime.
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * secure/securing-webhooks-with-event-listeners.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id='op-sample-eventlistener-resource_{context}']
+= Creating a sample EventListener resource using a secure HTTPS connection
+
+[role="_abstract"]
+The following procedure uses the link:https://github.com/openshift/pipelines-tutorial[pipelines-tutorial] example to create a sample `EventListener` resource by using a secure HTTPS connection.
+
+.Procedure
+
+. Create the `TriggerBinding` resource from the YAML file available in the pipelines-tutorial repository:
++
+[source,terminal,subs="attributes+"]
+----
+$ oc create -f https://raw.githubusercontent.com/openshift/pipelines-tutorial/master/03_triggers/01_binding.yaml
+----
+
+. Create the `TriggerTemplate` resource from the YAML file available in the pipelines-tutorial repository:
++
+[source,terminal,subs="attributes+"]
+----
+$ oc create -f https://raw.githubusercontent.com/openshift/pipelines-tutorial/master/03_triggers/02_template.yaml
+----
+
+. Create the `Trigger` resource directly from the pipelines-tutorial repository:
++
+[source,terminal,subs="attributes+"]
+----
+$ oc create -f https://raw.githubusercontent.com/openshift/pipelines-tutorial/master/03_triggers/03_trigger.yaml
+----
+
+. Create an `EventListener` resource using a secure HTTPS connection:
+.. Add a label to enable the secure HTTPS connection to the `Eventlistener` resource:
++
+[source,terminal,subs="attributes+"]
+----
+$ oc label namespace <ns_name> operator.tekton.dev/enable-annotation=enabled
+----
+
+.. Create the `EventListener` resource from the YAML file available in the pipelines-tutorial repository:
++
+[source,terminal,subs="attributes+"]
+----
+$ oc create -f https://raw.githubusercontent.com/openshift/pipelines-tutorial/master/03_triggers/04_event_listener.yaml
+----
+
+.. Create a route with the re-encrypted TLS termination:
++
+[source,terminal,subs="attributes+"]
+----
+$ oc create route reencrypt --service=<svc_name> --cert=tls.crt --key=tls.key --ca-cert=ca.crt --hostname=<hostname>
+----
+
+:leveloffset!:

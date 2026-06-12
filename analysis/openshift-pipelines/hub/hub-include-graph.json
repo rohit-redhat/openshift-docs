@@ -1,0 +1,62 @@
+[
+  {
+    "assembly": "using-tekton-hub-with-openshift-pipelines.adoc",
+    "module_path": "modules/op-installing-and-deploying-tekton-hub-on-an-openshift-cluster.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+1"
+  },
+  {
+    "assembly": "using-tekton-hub-with-openshift-pipelines.adoc",
+    "module_path": "modules/op-installing-tekton-hub-without-login-and-rating.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+2"
+  },
+  {
+    "assembly": "using-tekton-hub-with-openshift-pipelines.adoc",
+    "module_path": "modules/op-installing-tekton-hub-with-login-and-rating.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+2"
+  },
+  {
+    "assembly": "using-tekton-hub-with-openshift-pipelines.adoc",
+    "module_path": "modules/op-using-a-custom-database-in-tekton-hub.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+1"
+  },
+  {
+    "assembly": "using-tekton-hub-with-openshift-pipelines.adoc",
+    "module_path": "modules/op-installing-crunchy-postgres-database-and-tekton-hub.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+2"
+  },
+  {
+    "assembly": "using-tekton-hub-with-openshift-pipelines.adoc",
+    "module_path": "modules/op-migrating-tekton-hub-data-to-an-existing-crunchy-postgres-database.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+2"
+  },
+  {
+    "assembly": "using-tekton-hub-with-openshift-pipelines.adoc",
+    "module_path": "modules/op-updating-tekton-hub-with-custom-categories-and-catalogs.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+1"
+  },
+  {
+    "assembly": "using-tekton-hub-with-openshift-pipelines.adoc",
+    "module_path": "modules/op-modifying-catalog-refresh-interval-tekton-hub.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+1"
+  },
+  {
+    "assembly": "using-tekton-hub-with-openshift-pipelines.adoc",
+    "module_path": "modules/op-adding-new-users-in-tekton-hub-configuration.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+1"
+  },
+  {
+    "assembly": "using-tekton-hub-with-openshift-pipelines.adoc",
+    "module_path": "modules/op-disabling-tekton-hub-authorization-after-upgrade.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+1"
+  }
+]

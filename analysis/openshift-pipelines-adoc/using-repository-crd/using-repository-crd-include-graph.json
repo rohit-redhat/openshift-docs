@@ -1,0 +1,10 @@
+{
+  "assembly": "pac/using-repository-crd.adoc",
+  "includes": [
+    {"path": "modules/op-creating-repository-cr.adoc", "type": "PROCEDURE", "leveloffset": "+1", "title": "Creating a Repository CR"},
+    {"path": "modules/op-creating-global-repository-cr.adoc", "type": "PROCEDURE", "leveloffset": "+1", "title": "Creating a global Repository CR"},
+    {"path": "modules/op-setting-concurrency-limits-in-repository-crd.adoc", "type": "PROCEDURE", "leveloffset": "+1", "title": "Setting concurrency limits in Repository CRD"},
+    {"path": "modules/op-changing-source-branch-in-repository-crd.adoc", "type": "PROCEDURE", "leveloffset": "+1", "title": "Changing source branch in Repository CRD"},
+    {"path": "modules/op-custom-parameter-expansion.adoc", "type": "CONCEPT", "leveloffset": "+1", "title": "Custom parameter expansion"}
+  ]
+}

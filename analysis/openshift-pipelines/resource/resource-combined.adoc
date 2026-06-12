@@ -1,0 +1,2013 @@
+= Managing OpenShift Pipelines performance
+
+[id="managing-pipelines-performance"]
+= Managing {pipelines-shortname} performance
+:context: managing-pipelines-performance
+
+toc::[]
+
+[role="_abstract"]
+If your {pipelines-shortname} installation runs a large number of tasks at the same time, its performance might degrade. You might experience slowdowns and failed pipeline runs.
+
+For reference, in Red Hat tests, on a three-node {OCP} cluster running on Amazon Web Services (AWS) `m6a.2xlarge` nodes, up to 60 simple test pipelines ran concurrently without significant failures or delays.
+
+If more pipelines ran concurrently, the following metrics increased: the number of failed pipeline runs, the average duration of a pipeline run, the pod creation latency, the work queue depth, and the number of pending pods.
+
+This testing was performed on {pipelines-title} version 1.13. No statistically significant difference was observed from version 1.12.
+
+[NOTE]
+====
+These results depend on the test configuration. Performance results with your configuration can be different.
+====
+
+:leveloffset: +1
+
+:_mod-docs-content-type: CONCEPT
+// This module is included in the following assemblies:
+// * resource/managing-pipelines-performance.adoc
+
+[id="improving-performance_{context}"]
+= Improving {pipelines-shortname} performance
+
+[role="_abstract"]
+If you experience slowness or recurrent failures of pipeline runs, you can take any of the following steps to improve the performance of {pipelines-shortname}.
+
+* Monitor the resource usage of the nodes in the {OCP} cluster on which {pipelines-shortname} runs. If the resource usage is high, increase the number of nodes.
++
+* Enable high-availability mode. This mode affects the controller that creates and starts pods for task runs and pipeline runs. In Red Hat testing, high-availability mode significantly reduced pipeline execution times and the delay from creating a `TaskRun` resource CR to the start of the pod executing the task run. To enable high-availability mode, make the following changes in the `TektonConfig` custom resource (CR):
+** Set the `pipeline.performance.disable-ha` spec to `false`.
+** Set the `pipeline.performance.buckets` spec to a number between `5` and `10`.
+** Set the `pipeline.performance.replicas` spec to a number higher than `2` and lower than or equal to the `pipeline.performance.buckets` setting.
++
+[NOTE]
+====
+You can try different numbers for buckets and replicas to observe the effect on performance. In general, higher numbers are beneficial. Monitor for exhausting the resources of the nodes, including CPU and memory use.
+====
+
+:leveloffset!:
+
+[role="_additional-resources"]
+== Additional resources
+
+* xref:../install_config/customizing-configurations-in-the-tektonconfig-cr.adoc#op-performance-tuning-using-tektonconfig-cr_customizing-configurations-in-the-tektonconfig-cr[Performance tuning using the TektonConfig CR]
+
+= Reducing resource consumption of OpenShift Pipelines
+
+[id="reducing-pipelines-resource-consumption"]
+= Reducing resource consumption of {pipelines-shortname}
+:context: reducing-pipelines-resource-consumption
+
+toc::[]
+
+[role="_abstract"]
+If you use clusters in multitenant environments you must control the consumption of CPU, memory, and storage resources for each project and Kubernetes object. This helps prevent any one application from consuming too many resources and affecting other applications.
+
+To set pod resource limits, {pipelines-title} applies the resource quota limits and limit ranges defined in the project.
+
+To restrict resource consumption in your project, you can:
+
+* link:https://docs.openshift.com/container-platform/latest/applications/quotas/quotas-setting-per-project.html[Set and manage resource quotas] to limit the total resource consumption.
+
+* Use link:https://docs.openshift.com/container-platform/latest/nodes/clusters/nodes-cluster-limit-ranges.html[limit ranges to restrict resource consumption] for specific objects, such as pods, images, image streams, and persistent volume claims.
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * resource/reducing-pipelines-resource-consumption.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id='op-understanding-pipelines-resource-consumption_{context}']
+= Understanding resource consumption in pipelines
+
+[role="_abstract"]
+Each task consists of several required steps that run in a particular order defined in the `steps` field of the `Task` resource. Every task runs as a pod, and each step runs as a container within that pod.
+
+The `Resources` field in the `steps` spec specifies the limits for resource consumption.
+By default, the resource requests for the CPU, memory, and ephemeral storage use `BestEffort` (zero) values or the minimums that limit ranges set in that project.
+
+.Example configuration of resource requests and limits for a step
+[source,yaml]
+----
+spec:
+  steps:
+  - name: <step_name>
+    computeResources:
+      requests:
+        memory: 2Gi
+        cpu: 600m
+      limits:
+        memory: 4Gi
+        cpu: 900m
+----
+
+When you specify the `LimitRange` parameter and the minimum values for container resource requests in the project, {pipelines-title} looks at all the `LimitRange` values in the project. In this case, {pipelines-title} uses the minimum values instead of zero.
+
+.Example configuration of limit range parameters at a project level
+[source,yaml]
+----
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: <limit_container_resource>
+spec:
+  limits:
+  - max:
+      cpu: "600m"
+      memory: "2Gi"
+    min:
+      cpu: "200m"
+      memory: "100Mi"
+    default:
+      cpu: "500m"
+      memory: "800Mi"
+    defaultRequest:
+      cpu: "100m"
+      memory: "100Mi"
+    type: Container
+...
+----
+
+:leveloffset!:
+
+:leveloffset: +1
+
+:_mod-docs-content-type: CONCEPT
+// This module is included in the following assemblies:
+// * resource/reducing-pipelines-resource-consumption.adoc
+
+[id='op-mitigating-extra-pipeline-resource-consumption_{context}']
+= Mitigating extra resource consumption in pipelines
+
+[role="_abstract"]
+When you have resource limits set on the containers in your pod, {OCP} sums up the resource limits requested as all containers run simultaneously.
+
+To consume the minimum amount of resources needed to run one step at a time in the invoked task, {pipelines-title} requests the maximum CPU, memory, and ephemeral storage as specified in the step that requires the most resources. This approach ensures that all the steps have the resources they require. {pipelines-title} sets requests other than the maximum values to zero.
+
+However, this behavior can lead to greater resource usage than required. If you use resource quotas, this could also lead to unschedulable pods.
+
+For example, consider a task with two steps that uses scripts, and that does not define any resource limits and requests. The resulting pod has two init containers (one for entrypoint copy, the other for writing scripts) and two containers, one for each step.
+
+{OCP} uses the limit range set up for the project to compute required resource requests and limits.
+For this example, set the following limit range in the project:
+
+[source,yaml]
+----
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: mem-min-max-demo-lr
+spec:
+  limits:
+  - max:
+      memory: 1Gi
+    min:
+      memory: 500Mi
+    type: Container
+----
+
+In this scenario, each init container uses a request memory of 1Gi (the max limit of the limit range), and each container uses a request memory of 500Mi. Thus, the total memory request for the pod is 2Gi.
+
+If you use the same limit range with a task of ten steps, the final memory request is 5Gi. This value is higher than what each step actually needs (500Mi), because each step runs after the other.
+
+Thus, to reduce resource consumption of resources, you can:
+
+* Reduce the number of steps in a given task by grouping different steps into one bigger step, using the script feature, and the same image. This reduces the minimum  requested resource.
+* Distribute steps that are relatively independent of each other and can run on their own to many tasks instead of a single task. This lowers the number of steps in each task, making the request for each task smaller, and the scheduler can then run them when resources become available.
+
+:leveloffset!:
+
+:leveloffset: +1
+
+:_mod-docs-content-type: CONCEPT
+// This module is included in the following assemblies:
+// * resource/reducing-pipelines-resource-consumption.adoc
+
+[id='op-override-step-resources-pipelinerun_{context}']
+= Override step level compute resources in a PipelineRun
+
+[role="_abstract"]
+In {product-title}, tasks consume compute resources based on the definitions in the `Task` specification or cluster defaults. In some cases, a specific step within a task requires more CPU, memory, or ephemeral storage than the configured defaults.
+
+When using referenced tasks, such as tasks from Tekton bundles or shared pipelines, modifying the original `Task` or `Pipeline` definition might not be possible or desirable. In this scenario, you can override step-level compute resources directly in a `PipelineRun`.
+
+You can override step level resources by using the `spec.taskRunSpecs[*].stepSpecs` field in the `PipelineRun` definition.
+
+This approach enables you to:
+
+* Increase CPU or memory for a specific step
+* Prevent failures caused by insufficient resources
+* Avoid modifying shared or upstream pipeline definitions
+* Customize execution behavior when using {PaC}
+
+[IMPORTANT]
+====
+Step-level overrides differ from task-level compute resource settings.
+
+* *Step-level override*: A step-level override allocates resources to a specific step.
+* *Task-level compute resources*: Task-level compute resources distribute resources evenly across all steps in a task.
+
+If only one step requires additional resources, step-level overrides provide more precise and efficient allocation.
+====
+
+:leveloffset!:
+
+:leveloffset: +2
+
+:_mod-docs-content-type: PROCEDURE
+// This module is included in the following assemblies:
+// * resource/reducing-pipelines-resource-consumption.adoc
+
+[id="op-setting-compute-resources-for-a-task-step_{context}"]
+= Setting compute resources for a task step
+
+[role="_abstract"]
+You can set compute resources for a specific task step by modifying the `PipelineRun` definition in your `.tekton` directory.
+
+.Prerequisites
+
+* You installed the {pipelines-title} Operator in your cluster.
+* You have permission to modify `PipelineRun` definitions.
+* You identified a task step that fails due to insufficient resources.
+
+.Procedure
+
+. Identify the task step that requires additional resources.
++
+Inspect the `TaskRun` logs in the OpenShift web console or by using the CLI. Determine:
+
+* The pipeline task name.
+* The step name within the task.
+* The resource constraint, such as memory or CPU limits.
+
+. Edit the corresponding `PipelineRun` file in the `.tekton` directory.
+
+. Add a `taskRunSpecs` entry for the task and step.
++
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: example-run
+spec:
+  taskRunSpecs:
+    - pipelineTaskName: ecosystem-cert-preflight-checks
+      stepSpecs:
+        - name: app-check
+          computeResources:
+            requests:
+              memory: 4Gi
+            limits:
+              memory: 4Gi
+----
++
+--
+where:
+
+`pipelineTaskName`:: Specifies the task name that the Pipeline defines.
+`stepSpecs[].name`:: Specifies the step within the task.
+`computeResources`:: Defines the CPU and memory allocation for the step.
+--
+
+. Optional: Configure CPU in addition to memory.
++
+[source,yaml]
+----
+computeResources:
+  requests:
+    memory: 4Gi
+    cpu: 100m
+  limits:
+    memory: 4Gi
+    cpu: 2000m
+----
++
+To guarantee allocation, set identical values for `requests` and `limits`.
+
+. Commit and push the changes.
++
+When using {pac}, the system applies the updated PipelineRun during the next execution.
+
+. Verify that the step completes successfully.
+
+:leveloffset!:
+
+[role="_additional-resources"]
+.Additional resources
+
+* xref:../resource/setting-compute-resource-quota-for-openshift-pipelines.adoc#setting-compute-resource-quota-for-openshift-pipelines[Setting compute resource quota for {pipelines-shortname}]
+
+* link:https://docs.openshift.com/container-platform/latest/applications/quotas/quotas-setting-per-project.html[Resource quotas per project]
+
+* link:https://docs.openshift.com/container-platform/latest/nodes/clusters/nodes-cluster-limit-ranges.html[Restricting resource consumption using limit ranges]
+
+* link:https://kubernetes.io/docs/concepts/workloads/pods/init-containers/#resources[Resource requests and limits in Kubernetes]
+
+= Setting compute resource quota for OpenShift Pipelines
+
+[id="setting-compute-resource-quota-for-openshift-pipelines"]
+= Setting compute resource quota for {pipelines-shortname}
+:context: setting-compute-resource-quota-for-openshift-pipelines
+
+toc::[]
+
+[role="_abstract"]
+A `ResourceQuota` object in {pipelines-title} controls the total resource consumption per namespace. You can use it to limit the quantity of objects created in a namespace, based on the type of the object. In addition, you can specify a compute resource quota to restrict the total amount of compute resources consumed in a namespace.
+
+However, you might want to limit the amount of compute resources consumed by pods resulting from a pipeline run, rather than setting quotas for the entire namespace. Currently, {pipelines-title} does not enable you to directly specify the compute resource quota for a pipeline.
+
+:leveloffset: +1
+
+:_mod-docs-content-type: CONCEPT
+// This module is included in the following assemblies:
+// * resource/setting-compute-resource-quota-for-openshift-pipelines.adoc
+
+[id="alternative-approaches-compute-resource-quota-pipelines_{context}"]
+= Alternative approaches for limiting compute resource consumption in {pipelines-shortname}
+
+[role="_abstract"]
+To reach some degree of control over the usage of compute resources by a pipeline, consider the following alternative approaches:
+
+* Set resource requests and limits for each step in a task.
++
+.Example
+[source,yaml]
+----
+...
+spec:
+  steps:
+    - name: step-with-limts
+      computeResources:
+        requests:
+          memory: 1Gi
+          cpu: 500m
+        limits:
+          memory: 2Gi
+          cpu: 800m
+...
+----
+
+* Set resource limits by specifying values for the `LimitRange` object.
+
+* Reduce pipeline resource consumption.
+
+* Set and manage resource quotas per project.
+
+* Ideally, set the compute resource quota for a pipeline to match the total resources consumed by the pods running at the same time in a pipeline run. However, pods running tasks consume compute resources based on the use case. For example, a Maven build task might need different compute resources for different applications. As a result, you cannot set the compute resource quotas ahead of time for tasks in a generic pipeline. For greater control over compute resource usage, use customized pipelines for different applications.
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://docs.openshift.com/container-platform/latest/nodes/clusters/nodes-cluster-limit-ranges.html[Restrict resource consumption with limit ranges]
+
+* xref:../resource/reducing-pipelines-resource-consumption.adoc#reducing-pipelines-resource-consumption[Reduce pipeline resource consumption]
+
+* link:https://docs.openshift.com/container-platform/latest/applications/quotas/quotas-setting-per-project.html[Resource quotas per project]
+
+:leveloffset!:
+
+[NOTE]
+====
+When using {pipelines-title} in a namespace configured with a `ResourceQuota` object, the pods resulting from task runs and pipeline runs might fail with an error, such as: `failed quota: <quota name> must specify cpu, memory`.
+
+To avoid this error, do any one of the following:
+
+* (Recommended) Specify a limit range for the namespace.
+* Explicitly define requests and limits for all containers.
+
+For more information, see the link:https://issues.redhat.com/browse/SRVKP-1801[issue] and the link:https://access.redhat.com/solutions/2841971[resolution].
+====
+
+If your use case is not addressed by these approaches, you can implement a workaround by using a resource quota for a priority class.
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * resource/setting-compute-resource-quota-for-openshift-pipelines.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="specifying-pipelines-resource-quota-using-priority-class_{context}"]
+= Specifying pipelines resource quota using priority class
+
+[role="_abstract"]
+Specify a resource quota for a pipeline by creating a priority class and configuring resource quotas based on pod priority.
+
+A `PriorityClass` object maps priority class names to the integer values that indicates their relative priorities. Higher values increase the priority of a class. After you create a priority class, you can create pods that specify the priority class name in their specifications. In addition, you can control a pod's consumption of system resources based on the pod's priority.
+
+Specifying resource quota for a pipeline is similar to setting a resource quota for the subset of pods created by a pipeline run. The following steps give an example of the workaround by specifying resource quota based on priority class.
+
+.Procedure
+
+. Create a priority class for a pipeline.
++
+.Example: Priority class for a pipeline
+[source,yaml]
+----
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: pipeline1-pc
+value: 1000000
+description: "Priority class for pipeline1"
+----
+
+. Create a resource quota for a pipeline.
++
+.Example: Resource quota for a pipeline
+[source,yaml]
+----
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: pipeline1-rq
+spec:
+  hard:
+    cpu: "1000"
+    memory: 200Gi
+    pods: "10"
+  scopeSelector:
+    matchExpressions:
+    - operator : In
+      scopeName: PriorityClass
+      values: ["pipeline1-pc"]
+----
+
+. Verify the resource quota usage for the pipeline.
++
+.Example: Verify resource quota usage for the pipeline
+[source,terminal]
+----
+$ oc describe quota
+----
++
+.Sample output
+----
+Name:       pipeline1-rq
+Namespace:  default
+Resource    Used  Hard
+--------    ----  ----
+cpu         0     1k
+memory      0     200Gi
+pods        0     10
+----
++
+Because pods are not running, nothing uses the quota.
+
+. Create the pipelines and tasks.
++
+.Example: YAML for the pipeline
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: maven-build
+spec:
+  params:
+  - name: GIT_URL
+  workspaces:
+  - name: local-maven-repo
+  - name: source
+  tasks:
+  - name: git-clone
+    taskRef:
+      resolver: cluster
+      params:
+      - name: kind
+        value: task
+      - name: name
+        value: git-clone
+      - name: namespace
+        value: openshift-pipelines
+    workspaces:
+    - name: output
+      workspace: source
+    params:
+    - name: URL
+      value: $(params.GIT_URL)
+  - name: build
+    taskRef:
+      name: mvn
+    runAfter: ["git-clone"]
+    params:
+    - name: GOALS
+      value: ["package"]
+    workspaces:
+    - name: maven-repo
+      workspace: local-maven-repo
+    - name: source
+      workspace: source
+  - name: int-test
+    taskRef:
+      name: mvn
+    runAfter: ["build"]
+    params:
+    - name: GOALS
+      value: ["verify"]
+    workspaces:
+    - name: maven-repo
+      workspace: local-maven-repo
+    - name: source
+      workspace: source
+  - name: gen-report
+    taskRef:
+      name: mvn
+    runAfter: ["build"]
+    params:
+    - name: GOALS
+      value: ["site"]
+    workspaces:
+    - name: maven-repo
+      workspace: local-maven-repo
+    - name: source
+      workspace: source
+----
++
+.Example: YAML for a task in the pipeline
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: mvn
+spec:
+  workspaces:
+  - name: maven-repo
+  - name: source
+  params:
+  - name: GOALS
+    description: The Maven goals to run
+    type: array
+    default: ["package"]
+  steps:
+    - name: mvn
+      image: gcr.io/cloud-builders/mvn
+      workingDir: $(workspaces.source.path)
+      command: ["/usr/bin/mvn"]
+      args:
+        - -Dmaven.repo.local=$(workspaces.maven-repo.path)
+        - "$(params.GOALS)"
+----
+
+. Create and start the pipeline run.
++
+.Example: YAML for a pipeline run
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: petclinic-run-
+spec:
+  pipelineRef:
+    name: maven-build
+  params:
+  - name: GIT_URL
+    value: https://github.com/spring-projects/spring-petclinic
+  taskRunTemplate:
+    podTemplate:
+      priorityClassName: pipeline1-pc
+  workspaces:
+  - name: local-maven-repo
+    emptyDir: {}
+  - name: source
+    volumeClaimTemplate:
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 200M
+----
++
+[NOTE]
+====
+The pipeline run might fail with an error: `failed quota: <quota name> must specify cpu, memory`.
+
+To avoid this error, set a limit range for the namespace, where the defaults from the `LimitRange` object apply to pods created during the build process.
+
+For more information about setting limit ranges, see _Restrict resource consumption with limit ranges_ in the _Additional resources_ section.
+====
++
+[NOTE]
+====
+Since {pipelines-shortname} 1.17, the priority class that you set for a task applies to all pods created for the task, including the affinity assistant pod that {pipelines-shortname} creates to ensure that the task executes on a particular node.
+====
+. After {pipelines-title} creates the pods, verify the resource quota usage for the pipeline run.
++
+.Example: Verify resource quota usage for the pipeline
+[source,terminal]
+----
+$ oc describe quota
+----
++
+.Sample output
+----
+Name:       pipeline1-rq
+Namespace:  default
+Resource    Used  Hard
+--------    ----  ----
+cpu         500m  1k
+memory      10Gi  200Gi
+pods        1     10
+----
++
+The output indicates that you can manage the combined resource quota for all concurrent running pods belonging to a priority class, by specifying the resource quota per priority class.
+
+:leveloffset!:
+
+[role="_additional-resources"]
+== Additional resources
+
+* link:https://docs.openshift.com/container-platform/latest/nodes/clusters/nodes-cluster-limit-ranges.html[Restrict resource consumption with limit ranges]
+* link:https://kubernetes.io/docs/concepts/policy/resource-quotas/[Resource quotas in Kubernetes]
+* link:https://kubernetes.io/docs/concepts/policy/limit-range/[Limit ranges in Kubernetes]
+* link:https://kubernetes.io/docs/concepts/workloads/pods/init-containers/#resources[Resource requests and limits in Kubernetes]
+
+= Protecting Tekton workload pods from eviction during node drains
+
+[id="protecting-tekton-workloads-from-eviction-during-node-drains"]
+= Protecting Tekton workload pods from eviction during node drains
+:context: managing-pipelines-performance
+
+toc::[]
+
+[role="_abstract"]
+During cluster maintenance operations such as node drains or upgrades in {OCP}, the system might evict and reschedule running Tekton workload pods to another node.
+
+Eviction during execution can disrupt workloads that are not designed to rerun safely, such as one-time configuration tasks, backups, deletions, or infrastructure changes.
+
+In {pipelines-title}, labels applied to a PipelineRun custom resource (CR) propagate automatically to the associated TaskRun resources and the pods created by those resources. You can use this label propagation behavior together with a `PodDisruptionBudget` (PDB) custom resource to protect selected workloads from voluntary disruptions.
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * resource/protecting-tekton-workloads-from-eviction-during-node-drains.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id="op-eviction-protection-for-taskrun-pods_{context}"]
+= Eviction protection for TaskRun pods
+
+[role="_abstract"]
+Labels defined on a `PipelineRun` resource propagate automatically to the associated `TaskRun` resources and the pods created by those `TaskRun` resources.
+
+You can use this label propagation behavior to identify and protect selected workloads from voluntary disruptions during cluster maintenance operations such as node drains or upgrades.
+
+By applying a label to a `PipelineRun` or standalone `TaskRun`, and configuring a `PodDisruptionBudget` (PDB) that targets pods with the same label, you can prevent eviction of running Tekton workload pods during voluntary disruptions.
+
+This configuration ensures the following behavior:
+
+* While a Tekton pod with a matching label is running, the PDB blocks node drains and other voluntary eviction operations.
+* After the protected pod completes execution, for example when the associated `PipelineRun` succeeds, the PDB no longer blocks cluster disruption operations.
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * resource/protecting-tekton-workloads-from-eviction-during-node-drains.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="op-preventing-taskrun-pod-eviction-during-node-maintenance_{context}"]
+= Preventing eviction of TaskRun pods during node maintenance
+
+[role="_abstract"]
+You can prevent eviction of running Tekton `TaskRun` pods during node maintenance operations. Label the associated `PipelineRun` or `TaskRun` resources and configure a `PodDisruptionBudget` (PDB) that targets the resulting pods. This configuration prevents voluntary disruption of critical workloads while they are running.
+
+.Prerequisites
+
+* You have access to an {OCP} cluster.
+* You have installed the xref:../install_config/installing-pipelines.adoc#installing-pipelines[{pipelines-shortname} Operator] in your cluster.
+* You have identified the tasks or pipelines that require protection from eviction.
+
+.Procedure
+
+. Create a `PodDisruptionBudget` resource in the namespace where you want to protect Tekton workloads:
++
+[source,yaml]
+----
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: tekton-protect
+  namespace: ci
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      pdb: protect
+----
++
+[NOTE]
+====
+This PDB is a one-time configuration for the namespace. Many `PipelineRun` and `TaskRun` resources can use it.
+====
+
+. Apply the `PodDisruptionBudget` resource by running the following command:
++
+[source,terminal]
+----
+$ oc apply -f pdb-tekton-protect.yaml
+----
+
+. Add a label to the `PipelineRun` resource that requires protection from eviction:
++
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: infra-change
+  namespace: ci
+  labels:
+    pdb: protect
+spec:
+  pipelineRef:
+    name: infra-change-pipeline
+----
++
+The label propagates automatically to the associated `TaskRun` resources and the pods created by those resources. The `PodDisruptionBudget` protects any workload with the `pdb: protect` label.
+
+.Verification
+
+. Verify that the `PodDisruptionBudget` resource is active by running the following command:
++
+[source,terminal]
+----
+$ oc get pdb tekton-protect -n ci
+----
+
+. Optional: Test the protection by attempting to drain a node running a protected `TaskRun` pod:
++
+[source,terminal]
+----
+$ oc adm drain <node_name> --ignore-daemonsets
+----
++
+If you configured the PDB correctly, the drain operation pauses while the protected pod is running.
+
+:leveloffset!:
+
+= Multicluster support for OpenShift Pipelines
+
+:context: configuring-multicluster-support
+
+toc::[]
+
+[role="_abstract"]
+You can configure multicluster support in {pipelines-title} to distribute pipeline workloads across multiple {product-title} clusters for horizontal scalability. This approach uses a hub-and-spoke architecture, where a hub cluster manages pipeline runs and spoke clusters execute the workloads.
+
+Multicluster support helps you overcome performance limitations that occur when running many tasks concurrently on a single cluster. By distributing workloads across clusters, you can reduce resource contention, improve performance, and increase the overall capacity of your pipeline infrastructure.
+
+:FeatureName: Multicluster support for {pipelines-shortname}
+:_mod-docs-content-type: SNIPPET
+// When including this file, ensure that {FeatureName} is set immediately before
+// the include. Otherwise it will result in an incorrect replacement.
+
+[IMPORTANT]
+====
+[subs="attributes+"]
+{FeatureName} is a Technology Preview feature only. Technology Preview features are not supported with Red Hat production service level agreements (SLAs) and might not be functionally complete. Red Hat does not recommend using them in production. These features provide early access to upcoming product features, enabling customers to test functionality and provide feedback during the development process.
+
+For more information about the support scope of Red Hat Technology Preview features, see link:https://access.redhat.com/support/offerings/techpreview/[Technology Preview Features Support Scope].
+====
+// Undefine {FeatureName} attribute, so that any mistakes are easily spotted
+:!FeatureName:
+
+:leveloffset: +1
+
+// Module included in the following assemblies:
+//
+// * resource/configuring-multicluster-support.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id="op-about-multicluster-support_{context}"]
+= About multicluster support in {pipelines-shortname}
+
+[role="_abstract"]
+Multicluster support enables you to distribute pipeline workloads across multiple {product-title} clusters to achieve horizontal scalability. By using a hub-and-spoke architecture, you can manage pipeline runs from a central hub cluster while the actual pipeline run execution occurs on spoke clusters.
+
+When you run many tasks concurrently on a single cluster, performance can degrade due to resource contention on critical components such as the Kubernetes API server and etcd. A multicluster approach addresses these challenges by distributing workloads across multiple clusters, which helps alleviate resource bottlenecks, reduce the impact of failures, and improve overall scalability.
+
+.Key benefits
+
+* *Horizontal scalability*: Distribute pipeline workloads across multiple clusters to handle increased capacity demands without overloading a single cluster.
+* *Improved performance*: Reduce resource contention on the Kubernetes API server and etcd by spreading workloads across clusters.
+* *Reduced failure impact*: Minimize the effect of cluster failures by isolating workloads across different clusters.
+* *Resource optimization*: Use Kueue to schedule pipeline runs based on resource availability across your cluster infrastructure.
+
+.How it works
+
+In a multicluster setup:
+
+. You create pipeline runs on the hub cluster which initially enter a pending state.
+. Kueue and MultiKueue detect the pending pipeline run and schedule it to an appropriate spoke cluster based on resource availability.
+. The pipeline run executes on the spoke cluster where resources are available.
+. The status of the pipeline run is synchronized back to the hub cluster.
+. After completion, the pipeline run and associated resources are cleaned up from the spoke cluster.
+
+The hub cluster provides a centralized interface for managing all pipeline runs, while spoke clusters handle the actual workload execution. This separation allows you to scale your pipeline infrastructure horizontally as your needs grow.
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// Module included in the following assemblies:
+//
+// * resource/configuring-multicluster-support.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id="op-multicluster-architecture_{context}"]
+= Multicluster architecture
+
+[role="_abstract"]
+Multicluster support in {pipelines-shortname} uses a hub-and-spoke architecture to distribute pipeline workloads across multiple {product-title} clusters. This architecture separates pipeline management from pipeline execution.
+
+[id="hub-cluster_{context}"]
+== Hub cluster
+
+The hub cluster serves as the central control plane for managing pipeline runs. It has the following characteristics:
+
+* Runs Kueue with MultiKueue enabled
+* Runs the Tekton Kueue plugin to integrate pipeline runs with Kueue
+* Runs the proxy-aee service to stream logs and status from spoke clusters
+* Runs the syncer-service to synchronize secrets from the hub to spoke clusters
+* Manages pipeline run definitions and statuses
+* Schedules pipeline runs to spoke clusters based on resource availability
+* Does not execute pipeline workloads
+* Provides a unified interface for monitoring all pipeline runs
+
+The hub cluster requires the TektonConfig custom resource to have the scheduler enabled with multicluster role set to `Hub` (`spec.scheduler.multi-cluster-role: Hub`).
+
+On the hub cluster, you create pipeline runs that initially remain in a pending state. MultiKueue detects these pending pipeline runs and schedules them to appropriate spoke clusters.
+
+[id="spoke-clusters_{context}"]
+== Spoke clusters
+
+Spoke clusters execute the actual pipeline workloads. Each spoke cluster has the following characteristics:
+
+* Contains a full {pipelines-shortname} installation
+* Runs Kueue with MultiKueue disabled
+* Executes pipeline runs scheduled from the hub cluster
+* Reports pipeline run status back to the hub cluster
+* Automatically cleans up pipeline runs and associated resources after completion
+
+When MultiKueue schedules a pipeline run to a spoke cluster, the pipeline run and its associated ConfigMaps and Secrets are synchronized to that cluster. The spoke cluster executes the pipeline run and continuously updates its status back to the hub cluster.
+
+[id="kueue-and-multikueue_{context}"]
+== Kueue and MultiKueue
+
+Kueue is a Kubernetes-native job queueing system that manages resource quotas and workload scheduling. MultiKueue extends Kueue to support scheduling workloads across multiple clusters.
+
+In a multicluster {pipelines-shortname} setup:
+
+* Kueue resources define quotas, queues, and admission checks
+* MultiKueue configuration specifies which spoke clusters are available for scheduling
+* Pipeline runs are treated as workloads that Kueue can schedule
+* Scheduling decisions are based on resource availability across all configured spoke clusters
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// Module included in the following assemblies:
+//
+// * resource/configuring-multicluster-support.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="op-configuring-hub-cluster-multicluster_{context}"]
+= Configuring the hub cluster for multicluster
+
+You can configure an {product-title} cluster as a hub cluster to manage and schedule pipeline runs across multiple spoke clusters.
+
+.Prerequisites
+
+* You have installed the {pipelines-shortname} Operator on the hub cluster.
+* You have access to the hub cluster using an account with `cluster-admin` permissions.
+* You have installed the `oc` CLI.
+* You have access to the kubeconfig files for each spoke cluster you want to connect.
+
+.Procedure
+
+. Install the Red Hat Build of Kueue (RHBoK) operator on the hub cluster:
++
+.. If the cert-manager is not already installed, install it from OperatorHub. Alternatively, you can install it using the following script:
++
+[source,terminal]
+----
+$ curl -sL https://raw.githubusercontent.com/openshift/kueue-operator/refs/heads/main/hack/deploy-cert-manager.sh | bash
+----
++
+.. Install the Red Hat Build of Kueue operator version 1.3 or later from OperatorHub.
++
+.. Create a Kueue custom resource to configure the operator by running the following command:
++
+[source,terminal]
+----
+$ oc apply -f - <<EOF
+apiVersion: kueue.openshift.io/v1
+kind: Kueue
+metadata:
+  name: cluster
+spec:
+  config:
+    integrations:
+      externalFrameworks:
+      - group: tekton.dev
+        resource: pipelineruns
+        version: v1
+      frameworks:
+      - BatchJob
+      - Pod
+      - Deployment
+    multiKueue:
+      externalFrameworks:
+      - group: tekton.dev
+        resource: pipelineruns
+        version: v1
+  logLevel: Normal
+  managementState: Managed
+  operatorLogLevel: Normal
+EOF
+----
+
+. Create RBAC resources to allow the Kueue controller to manage Tekton PipelineRuns by running the following command:
++
+These permissions allow the Kueue controller to create, update, and monitor pipeline runs on the hub cluster as part of the workload scheduling process.
++
+[source,terminal]
+----
+$ oc apply -f - <<EOF
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kueue-tekton-permissions
+rules:
+- apiGroups:
+  - tekton.dev
+  resources:
+  - pipelineruns
+  - pipelineruns/status
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kueue-tekton-permissions-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kueue-tekton-permissions
+subjects:
+- kind: ServiceAccount
+  name: kueue-controller-manager
+  namespace: openshift-kueue-operator
+EOF
+----
+
+. For each spoke cluster you want to connect, create a secret containing the spoke cluster's kubeconfig:
+.. Obtain the kubeconfig file for the spoke cluster.
++
+This kubeconfig file should be provided by the spoke cluster administrator and contains the credentials that allow this hub cluster to connect to and schedule workloads on the spoke cluster.
++
+[NOTE]
+====
+For information about generating a kubeconfig file for a spoke cluster, see step 6 in "Configuring spoke clusters for multicluster".
+====
++
+.. Create a secret in the `openshift-kueue-operator` namespace by running the following command:
++
+[source,terminal,subs="attributes+"]
+----
+$ export KUEUE_NAMESPACE=openshift-kueue-operator
+$ oc create secret generic <spoke_secret_name> \
+  -n ${KUEUE_NAMESPACE} \
+  --from-file=kubeconfig=<path_to_spoke_kubeconfig>
+----
++
+Replace `<spoke_secret_name>` with a name for the secret, such as `spoke1-secret`, and `<path_to_spoke_kubeconfig>` with the path to the spoke cluster's kubeconfig file.
+
+. Create a network policy to allow egress traffic from Kueue pods by running the following command:
++
+[source,terminal]
+----
+$ export KUEUE_NAMESPACE=openshift-kueue-operator
+$ oc apply -f - <<EOF
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kueue-allow-egress-external
+  namespace: ${KUEUE_NAMESPACE}
+spec:
+  podSelector:
+    matchLabels:
+      app.openshift.io/name: kueue
+  policyTypes:
+  - Egress
+  egress:
+  - ports:
+    - port: 443
+      protocol: TCP
+    - port: 80
+      protocol: TCP
+EOF
+----
++
+This network policy allows the Kueue controller on the hub cluster to connect to spoke cluster API servers.
+
+. Create Kueue resources for multicluster configuration by running the following command:
++
+These resources configure Kueue to manage and distribute pipeline runs across multiple clusters:
++
+* *ResourceFlavor*: Defines the type of resources available for workloads. In this case, it represents the default resource flavor used by the cluster queue.
+* *ClusterQueue*: Manages resource quotas across namespaces and enforces admission checks. It defines the total resources available (CPU, memory, and pipeline runs) and requires the multicluster admission check before scheduling workloads.
+* *LocalQueue*: Provides a namespace-scoped queue that users submit pipeline runs to. It maps to the cluster queue and is referenced by pipeline runs through the `kueue.x-k8s.io/queue-name` label.
+* *AdmissionCheck*: Defines the multicluster admission check that determines whether a workload can be scheduled. It references the MultiKueueConfig for cluster selection.
+* *MultiKueueConfig*: Specifies which spoke clusters are available for scheduling workloads. It lists the names of all connected spoke clusters.
+* *MultiKueueCluster*: Defines the connection details for each spoke cluster, including the secret containing the kubeconfig for authentication.
++
+[source,terminal,subs="attributes+"]
+----
+$ oc apply -f - <<EOF
+apiVersion: kueue.x-k8s.io/v1beta2
+kind: ResourceFlavor
+metadata:
+  name: default-flavor
+---
+apiVersion: kueue.x-k8s.io/v1beta2
+kind: ClusterQueue
+metadata:
+  name: cluster-queue
+spec:
+  namespaceSelector: {}
+  resourceGroups:
+  - coveredResources: ["cpu", "memory", "tekton.dev/pipelineruns"]
+    flavors:
+    - name: default-flavor
+      resources:
+      - name: cpu
+        nominalQuota: 9
+      - name: memory
+        nominalQuota: 36Gi
+      - name: tekton.dev/pipelineruns
+        nominalQuota: 10
+  admissionChecksStrategy:
+    admissionChecks:
+    - name: sample-multikueue
+---
+apiVersion: kueue.x-k8s.io/v1beta2
+kind: LocalQueue
+metadata:
+  namespace: default
+  name: pipelines-queue
+spec:
+  clusterQueue: cluster-queue
+---
+apiVersion: kueue.x-k8s.io/v1beta2
+kind: AdmissionCheck
+metadata:
+  name: sample-multikueue
+spec:
+  controllerName: kueue.x-k8s.io/multikueue
+  parameters:
+    apiGroup: kueue.x-k8s.io
+    kind: MultiKueueConfig
+    name: multikueue-config
+---
+apiVersion: kueue.x-k8s.io/v1beta2
+kind: MultiKueueConfig
+metadata:
+  name: multikueue-config
+spec:
+  clusters:
+  - <spoke_cluster_name_1>
+  - <spoke_cluster_name_2>
+---
+apiVersion: kueue.x-k8s.io/v1beta2
+kind: MultiKueueCluster
+metadata:
+  name: <spoke_cluster_name_1>
+spec:
+  clusterSource:
+    kubeConfig:
+      locationType: Secret
+      location: <spoke_secret_name_1>
+---
+apiVersion: kueue.x-k8s.io/v1beta2
+kind: MultiKueueCluster
+metadata:
+  name: <spoke_cluster_name_2>
+spec:
+  clusterSource:
+    kubeConfig:
+      locationType: Secret
+      location: <spoke_secret_name_2>
+EOF
+----
++
+Replace the following placeholders:
++
+* `<spoke_cluster_name_1>` and `<spoke_cluster_name_2>`: Names for the spoke clusters in the MultiKueue configuration
+* `<spoke_secret_name_1>` and `<spoke_secret_name_2>`: Names of the secrets containing the spoke cluster kubeconfig files
+
+. Configure the TektonConfig custom resource to enable multicluster support on the hub cluster by running the following command:
++
+[source,terminal]
+----
+$ oc patch tektonconfig config --type=merge -p '
+{
+  "spec": {
+    "scheduler": {
+      "disabled": false,
+      "multi-cluster-disabled": false,
+      "multi-cluster-role": "Hub"
+    }
+  }
+}'
+----
++
+This configuration enables the scheduler, activates multicluster features, and sets this cluster as a hub cluster.
+
+. Optional: If you have Tekton Results enabled on the hub cluster, configure it for multicluster operation. If Tekton Results is not enabled, skip this step.
++
+Disable the watcher and retention policy agent to prevent conflicts with pipeline runs executing on spoke clusters by running the following command:
++
+[source,terminal]
+----
+$ oc patch tektonconfig config --type=merge -p '
+{
+  "spec": {
+    "result": {
+      "options": {
+        "deployments": {
+          "tekton-results-watcher": {
+            "spec": {
+              "replicas": 0
+            }
+          },
+          "tekton-results-retention-policy-agent": {
+            "spec": {
+              "replicas": 0
+            }
+          }
+        }
+      }
+    }
+  }
+}'
+----
+
+.Verification
+
+* Verify that the hub cluster is properly configured by checking the status of the Kueue resources. See "Verifying multicluster setup".
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// Module included in the following assemblies:
+//
+// * resource/configuring-multicluster-support.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="op-configuring-spoke-clusters-multicluster_{context}"]
+= Configuring spoke clusters for multicluster
+
+You can configure {product-title} clusters as spoke clusters to execute pipeline runs scheduled from a hub cluster.
+
+.Prerequisites
+
+* You have installed the {pipelines-shortname} Operator on each spoke cluster.
+* You have access to each spoke cluster using an account with `cluster-admin` permissions.
+* You have installed the `oc` CLI.
+* You have configured the hub cluster for multicluster support.
+
+.Procedure
+
+. Install the Red Hat Build of Kueue (RHBoK) operator on each spoke cluster:
++
+.. If the cert-manager is not already installed, install it from OperatorHub. Alternatively, you can install it using the following script:
++
+[source,terminal]
+----
+$ curl -sL https://raw.githubusercontent.com/openshift/kueue-operator/refs/heads/main/hack/deploy-cert-manager.sh | bash
+----
++
+.. Install the Red Hat Build of Kueue operator version 1.3 or later from OperatorHub.
++
+.. Create a Kueue custom resource to configure the operator by running the following command:
++
+[source,terminal]
+----
+$ oc apply -f - <<EOF
+apiVersion: kueue.openshift.io/v1
+kind: Kueue
+metadata:
+  name: cluster
+spec:
+  config:
+    integrations:
+      externalFrameworks:
+      - group: tekton.dev
+        resource: pipelineruns
+        version: v1
+      frameworks:
+      - BatchJob
+      - Pod
+      - Deployment
+    multiKueue:
+      externalFrameworks:
+      - group: tekton.dev
+        resource: pipelineruns
+        version: v1
+  logLevel: Normal
+  managementState: Managed
+  operatorLogLevel: Normal
+EOF
+----
+
+. On each spoke cluster, create a service account and RBAC resources for MultiKueue by running the following command:
++
+This service account and its associated roles allow the hub cluster to execute pipeline runs on this spoke cluster. The permissions include creating and managing pipeline runs, task runs, pods, secrets, and Kueue workloads. You will generate a kubeconfig for this service account in a later step.
++
+[source,terminal]
+----
+$ export MULTIKUEUE_SA=multikueue-sa
+$ export NAMESPACE=default
+$ oc apply -f - <<EOF
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ${MULTIKUEUE_SA}
+  namespace: ${NAMESPACE}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ${MULTIKUEUE_SA}-role
+rules:
+- apiGroups:
+  - batch
+  resources:
+  - jobs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - watch
+- apiGroups:
+  - batch
+  resources:
+  - jobs/status
+  verbs:
+  - get
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - secrets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kueue.x-k8s.io
+  resources:
+  - workloads
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kueue.x-k8s.io
+  resources:
+  - workloads/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - tekton.dev
+  resources:
+  - pipelineruns
+  - taskruns
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - tekton.dev
+  resources:
+  - pipelineruns/status
+  - taskruns/status
+  verbs:
+  - get
+  - patch
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: ${MULTIKUEUE_SA}-crb
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: ${MULTIKUEUE_SA}-role
+subjects:
+- kind: ServiceAccount
+  name: ${MULTIKUEUE_SA}
+  namespace: ${NAMESPACE}
+EOF
+----
+
+. Create a network policy to allow egress traffic from Kueue pods by running the following command:
++
+[source,terminal]
+----
+$ export KUEUE_NAMESPACE=openshift-kueue-operator
+$ oc apply -f - <<EOF
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kueue-allow-egress-external
+  namespace: ${KUEUE_NAMESPACE}
+spec:
+  podSelector:
+    matchLabels:
+      app.openshift.io/name: kueue
+  policyTypes:
+  - Egress
+  egress:
+  - ports:
+    - port: 443
+      protocol: TCP
+    - port: 80
+      protocol: TCP
+EOF
+----
++
+This network policy allows Kueue pods to communicate externally, which is required for MultiKueue functionality.
+
+. Create Kueue resources on the spoke cluster by running the following command:
++
+These resources configure Kueue to manage pipeline runs executed on this spoke cluster:
++
+* *ResourceFlavor*: Defines the type of resources available for workloads on this spoke cluster.
+* *ClusterQueue*: Manages resource quotas for this spoke cluster. It defines the resources available (CPU, memory, and pipeline runs) for workloads scheduled from the hub cluster.
+* *LocalQueue*: Provides a namespace-scoped queue for pipeline runs executing on this spoke cluster. The hub cluster references this queue when scheduling workloads to the spoke.
++
+[source,terminal]
+----
+$ oc apply -f - <<EOF
+apiVersion: kueue.x-k8s.io/v1beta2
+kind: ResourceFlavor
+metadata:
+  name: default-flavor
+---
+apiVersion: kueue.x-k8s.io/v1beta2
+kind: ClusterQueue
+metadata:
+  name: cluster-queue
+spec:
+  namespaceSelector: {}
+  resourceGroups:
+  - coveredResources: ["cpu", "memory", "tekton.dev/pipelineruns"]
+    flavors:
+    - name: default-flavor
+      resources:
+      - name: cpu
+        nominalQuota: 9
+      - name: memory
+        nominalQuota: 36Gi
+      - name: tekton.dev/pipelineruns
+        nominalQuota: 1
+---
+apiVersion: kueue.x-k8s.io/v1beta2
+kind: LocalQueue
+metadata:
+  namespace: default
+  name: pipelines-queue
+spec:
+  clusterQueue: cluster-queue
+EOF
+----
+
+. Configure the TektonConfig custom resource to enable multicluster support on the spoke cluster by running the following command:
++
+[source,terminal]
+----
+$ oc patch tektonconfig config --type=merge -p '
+{
+  "spec": {
+    "scheduler": {
+      "disabled": false,
+      "multi-cluster-disabled": false,
+      "multi-cluster-role": "Spoke"
+    }
+  }
+}'
+----
++
+This configuration enables the scheduler, activates multicluster features, and sets this cluster as a spoke cluster.
+
+. Generate a kubeconfig file that allows the hub cluster to connect to this spoke cluster:
++
+This kubeconfig file contains credentials for the service account created in the previous step. The hub cluster administrator will use this file to create a secret that enables the hub cluster to schedule workloads on this spoke cluster.
++
+.. Create a long-lived token secret for the service account by running the following command:
++
+[source,terminal]
+----
+$ oc apply -f - <<EOF
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/service-account-token
+metadata:
+  name: ${MULTIKUEUE_SA}-token
+  namespace: ${NAMESPACE}
+  annotations:
+    kubernetes.io/service-account.name: "${MULTIKUEUE_SA}"
+EOF
+----
++
+.. Wait for the token to be populated and retrieve connection details by running the following command:
++
+[source,terminal]
+----
+$ sleep 2
+$ SA_TOKEN=$(oc get secret ${MULTIKUEUE_SA}-token -n ${NAMESPACE} -o jsonpath='{.data.token}' | base64 -d)
+$ CA_CERT=$(oc get secret ${MULTIKUEUE_SA}-token -n ${NAMESPACE} -o jsonpath='{.data.ca\.crt}')
+$ SERVER_URL=$(oc config view --minify -o jsonpath='{.clusters[0].cluster.server}')
+----
++
+.. Create a kubeconfig file for this spoke cluster by running the following command:
++
+[source,terminal]
+----
+$ cat > spoke-cluster.kubeconfig <<EOF
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: ${CA_CERT}
+    server: ${SERVER_URL}
+  name: spoke-cluster
+contexts:
+- context:
+    cluster: spoke-cluster
+    user: ${MULTIKUEUE_SA}
+  name: spoke-context
+current-context: spoke-context
+kind: Config
+preferences: {}
+users:
+- name: ${MULTIKUEUE_SA}
+  user:
+    token: ${SA_TOKEN}
+EOF
+----
++
+Save this `spoke-cluster.kubeconfig` file and provide it to the hub cluster administrator. The hub cluster administrator will use this kubeconfig file to create a secret on the hub cluster, which allows the hub cluster to authenticate and connect to this spoke cluster for scheduling pipeline runs.
+
+.Verification
+
+* Verify that the spoke cluster can receive and execute pipeline runs from the hub cluster. See "Verifying multicluster setup".
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// Module included in the following assemblies:
+//
+// * resource/configuring-multicluster-support.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="op-verifying-multicluster-setup_{context}"]
+= Verifying multicluster setup
+
+You can verify that your multicluster configuration is working correctly by checking the status of Kueue resources on the hub cluster.
+
+.Prerequisites
+
+* You have configured the hub cluster for multicluster support.
+* You have configured at least one spoke cluster for multicluster support.
+* You have access to the hub cluster using an account with permissions to view cluster resources.
+
+.Procedure
+
+. On the hub cluster, verify the ClusterQueue status by running the following command:
++
+[source,terminal]
+----
+$ oc get clusterqueues cluster-queue -o jsonpath="{range .status.conditions[?(@.type == 'Active')]}CQ - Active: {@.status} Reason: {@.reason} Message: {@.message}{'\n'}{end}"
+----
++
+.Example output
+[source,terminal]
+----
+CQ - Active: True Reason: Ready Message: Can admit new workloads
+----
+
+. Verify the AdmissionCheck status by running the following command:
++
+[source,terminal]
+----
+$ oc get admissionchecks sample-multikueue -o jsonpath="{range .status.conditions[?(@.type == 'Active')]}AC - Active: {@.status} Reason: {@.reason} Message: {@.message}{'\n'}{end}"
+----
++
+.Example output
+[source,terminal]
+----
+AC - Active: True Reason: Active Message: The admission check is active
+----
+
+. For each spoke cluster, verify the MultiKueueCluster status by running the following command:
++
+[source,terminal,subs="attributes+"]
+----
+$ oc get multikueuecluster <spoke_cluster_name> -o jsonpath="{range .status.conditions[?(@.type == 'Active')]}MC - Active: {@.status} Reason: {@.reason} Message: {@.message}{'\n'}{end}"
+----
++
+Replace `<spoke_cluster_name>` with the name of the spoke cluster defined in your MultiKueueConfig.
++
+.Example output
+[source,terminal]
+----
+MC - Active: True Reason: Active Message: Connected
+----
+
+. Optional: Create a test pipeline run to verify end-to-end functionality by running the following command:
++
+[source,terminal]
+----
+$ oc create -f - <<EOF
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: test-multicluster-
+  namespace: default
+  labels:
+    kueue.x-k8s.io/queue-name: pipelines-queue
+spec:
+  managedBy: kueue.x-k8s.io/multikueue
+  pipelineSpec:
+    tasks:
+    - name: test-task
+      taskSpec:
+        steps:
+        - name: echo
+          image: registry.access.redhat.com/ubi9/ubi-minimal:latest
+          script: |
+            #!/bin/sh
+            echo "Multicluster test successful"
+EOF
+----
+
+. Monitor the test pipeline run by running the following command:
++
+[source,terminal]
+----
+$ oc get pipelineruns -w
+----
++
+The pipeline run should transition from `Pending` to `Running` and then to `Succeeded`.
+
+.Verification
+
+If all status checks show `Active: True` and the test pipeline run completes successfully, your multicluster configuration is working correctly.
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// Module included in the following assemblies:
+//
+// * resource/configuring-multicluster-support.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="op-creating-pipeline-runs-multicluster_{context}"]
+= Creating pipeline runs in a multicluster environment
+
+After you configure multicluster support, you can create pipeline runs on the hub cluster that are automatically scheduled and executed on spoke clusters.
+
+.Prerequisites
+
+* You have configured the hub cluster for multicluster support.
+* You have configured at least one spoke cluster for multicluster support.
+* You have access to the hub cluster using an account with permissions to create pipeline runs.
+* You have created a namespace with a LocalQueue resource.
+
+.Procedure
+
+. Create a pipeline run on the hub cluster. You can optionally include the `managedBy` field; if not specified, the Tekton Kueue webhook adds it automatically:
++
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: example-pipeline-run-
+  namespace: default
+  labels:
+    kueue.x-k8s.io/queue-name: pipelines-queue
+spec:
+  managedBy: kueue.x-k8s.io/multikueue
+  pipelineSpec:
+    tasks:
+    - name: hello-task
+      taskSpec:
+        steps:
+        - name: echo
+          image: registry.access.redhat.com/ubi9/ubi-minimal:latest
+          script: |
+            #!/bin/sh
+            echo "Hello from multicluster pipeline"
+    - name: goodbye-task
+      runAfter:
+      - hello-task
+      taskSpec:
+        steps:
+        - name: echo
+          image: registry.access.redhat.com/ubi9/ubi-minimal:latest
+          script: |
+            #!/bin/sh
+            echo "Goodbye from multicluster pipeline"
+----
++
+where:
++
+`default`::
+Specifies the namespace, which must contain a LocalQueue resource.
++
+`kueue.x-k8s.io/queue-name: pipelines-queue`::
+Specifies the LocalQueue to use for scheduling this pipeline run.
++
+`managedBy: kueue.x-k8s.io/multikueue`::
+Enables MultiKueue to manage the pipeline run.
+
+. Apply the pipeline run to the hub cluster by running the following command:
++
+[source,terminal]
+----
+$ oc create -f example-pipeline-run.yaml
+----
+
+. Monitor the pipeline run status on the hub cluster by running the following command:
++
+[source,terminal]
+----
+$ oc get pipelineruns -w
+----
++
+.Example output
+[source,terminal]
+----
+NAME                        STATUS
+example-pipeline-run-abc123 Pending
+example-pipeline-run-abc123 Running
+example-pipeline-run-abc123 Succeeded
+----
++
+The pipeline run initially shows a `Pending` status. When MultiKueue schedules it to a spoke cluster, the status changes to `Running`. After the pipeline run completes on the spoke cluster, the status updates to `Succeeded` or `Failed`.
++
+[NOTE]
+====
+In the web console, multicluster pipeline runs are indicated with a multicluster icon next to the pipeline run name in both the list view and details page.
+====
+
+.Using HTTP resolver to fetch pipeline definitions
+
+You can use the HTTP resolver to fetch pipeline definitions from a remote location. The following example shows how to create a pipeline run that uses the HTTP resolver:
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: http-resolver-pipeline-
+  namespace: default
+  labels:
+    kueue.x-k8s.io/queue-name: pipelines-queue
+spec:
+  managedBy: kueue.x-k8s.io/multikueue
+  pipelineRef:
+    resolver: http
+    params:
+    - name: url
+      value: https://raw.githubusercontent.com/example/repo/main/pipeline.yaml
+----
+
+Replace the `url` parameter value with the URL to your pipeline definition.
+
+.Using {pac} with multicluster
+
+{pac} is compatible with multicluster configurations. When you configure a repository for {pac} on the hub cluster, ensure that pipeline runs created by {pac} include the `managedBy: kueue.x-k8s.io/multikueue` field in the specification.
+
+The following example shows a {pac} pipeline run configuration that works in a multicluster environment:
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: pac-pipeline-run
+  annotations:
+    pipelinesascode.tekton.dev/on-event: "[pull_request]"
+    pipelinesascode.tekton.dev/on-target-branch: "[main]"
+spec:
+  managedBy: kueue.x-k8s.io/multikueue
+  pipelineSpec:
+    tasks:
+    - name: build
+      taskSpec:
+        steps:
+        - name: build-step
+          image: registry.access.redhat.com/ubi9/ubi-minimal:latest
+          script: |
+            #!/bin/sh
+            echo "Building application"
+----
+
+When PAC creates pipeline runs from this configuration, they are automatically scheduled to spoke clusters through MultiKueue.
+
+[NOTE]
+====
+Secret synchronization for PAC is handled automatically by the syncer-service, which is configured based on the cluster role. No additional configuration is required.
+====
+
+[IMPORTANT]
+====
+* Pipeline runs must use the `tekton.dev/v1` API version. The `tekton.dev/v1beta1` API version is not supported in multicluster environments.
+* The namespace must exist on both the hub cluster and the spoke clusters, and each must contain a matching LocalQueue resource.
+* The `kueue.x-k8s.io/queue-name` label specifies which LocalQueue to use for scheduling. If not specified, the Tekton Kueue webhook adds it automatically.
+====
+
+[NOTE]
+====
+* In multicluster environments, you cannot use `pipelineRef` or `taskRef` to reference existing pipelines or tasks stored in the cluster. Instead, use one of the following approaches:
+** Embedded pipeline specifications (as shown in the example above)
+** Remote resolvers such as Git or HTTP resolvers to fetch pipeline definitions from external sources
+* Only the pipeline run and its associated ConfigMaps and Secrets are synchronized to spoke clusters. Other resources are not synchronized.
+====
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// Module included in the following assemblies:
+//
+// * resource/configuring-multicluster-support.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="op-multicluster-limitations_{context}"]
+= Known limitations for multicluster pipeline runs
+
+[role="_abstract"]
+When working with pipeline runs in a multicluster environment, be aware of the following limitations.
+
+[NOTE]
+====
+Some or all of these limitations might be removed in future releases as the multicluster support continues to evolve.
+====
+
+.Web console limitations
+
+The following actions are not fully supported in the web console for multicluster pipeline runs:
+
+Stop action::
+The Stop action does not work for pipeline runs executing on spoke clusters. This action is designed to gracefully stop a pipeline run by allowing currently running tasks to complete before stopping the pipeline run. In a multicluster setup, the hub cluster cannot properly coordinate this action with the spoke cluster.
+
+Cancel action::
+The Cancel action might be disabled or unavailable in the web console for multicluster pipeline runs. This action immediately cancels the pipeline run and all active tasks. The availability of this action depends on whether the hub cluster detects active tasks, which might not be accurately reflected for pipeline runs executing on spoke clusters.
+
+.Workaround
+
+To stop or cancel a multicluster pipeline run, you must cancel it directly on the spoke cluster where it is executing:
+
+. Log in to the spoke cluster where the pipeline run is executing.
+. Cancel the pipeline run, by running the following command:
++
+[source,terminal]
+----
+$ oc patch pipelinerun <pipeline_run_name> -n <namespace> --type merge -p '{"spec":{"status":"Cancelled"}}'
+----
+
+The cancellation status is synchronized back to the hub cluster.
+
+[NOTE]
+====
+Both the Stop and Cancel actions are designed to execute finally tasks as part of cleanup. Cancelling from the spoke cluster allows finally tasks to execute properly.
+====
+
+Logs and status display::
+When viewing logs or status for pipeline runs executing on spoke clusters, you might experience delays or temporary unavailability if the multicluster proxy service is unavailable. The web console displays a message when the multicluster connection is unavailable. Logs and status updates resume when the connection is restored.
+
+Pending admission state::
+Pipeline runs created on the hub cluster show a "waiting to be admitted to a spoke cluster" status before MultiKueue schedules them to a spoke cluster. This is normal behavior while the system determines the best spoke cluster based on resource availability.
+
+.API version requirement
+
+Multicluster pipeline runs must use the `tekton.dev/v1` API version. The `tekton.dev/v1beta1` API version is not supported.
+
+.Reference limitations
+
+You cannot use `pipelineRef` or `taskRef` to reference existing pipelines or tasks stored in the cluster using the cluster resolver. Instead, you must use one of the following approaches:
+
+* Embedded pipeline specifications
+* Remote resolvers such as Git, HTTP, or Bundle resolvers
+
+.Additional limitations
+
+PipelineRun name length::
+The name of a pipeline run must not exceed 45 characters. This limit exists because MultiKueue generates workload names by adding additional characters to the pipeline run name.
+
+Namespace requirements::
+Namespaces must be pre-created on spoke clusters before pipeline runs can be scheduled to them. If a namespace does not exist on a spoke cluster, MultiKueue cannot schedule pipeline runs to that cluster.
+
+LocalQueue requirements::
+Each spoke cluster must have a matching LocalQueue resource in the same namespace where pipeline runs are created. The LocalQueue name must match the name referenced in the pipeline run's `kueue.x-k8s.io/queue-name` label.
+
+.tkn CLI limitations
+
+The `tkn` CLI tool has limited functionality in multicluster environments:
+
+* On the hub cluster, the following commands do not work:
+** `tkn taskrun list` - Returns no results because task runs execute on spoke clusters
+** `tkn pipelinerun describe` - Fails with "failed to find get taskruns of the pipelineruns"
+** `tkn pipelinerun logs` - Fails with "taskruns.tekton.dev not found"
+** `tkn pipelinerun cancel` - Does not cancel the pipeline run
+** `tkn pipeline start` - Creates pipeline runs only on the hub cluster without the `managedBy` field, so they are not managed by Kueue
+* On spoke clusters, `tkn pipelinerun list` and `tkn taskrun list` only work while pipeline runs are actively executing. After completion, pipeline runs are garbage collected from spoke clusters and cannot be listed using `tkn`.
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// Module included in the following assemblies:
+//
+// * resource/configuring-multicluster-support.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="op-multicluster-kueue-resources-reference_{context}"]
+= Kueue resources for multicluster configuration
+
+[role="_abstract"]
+Kueue resources define quotas, queues, and multicluster configuration for managing pipeline runs across clusters. The following tables describe the key Kueue resources used in a multicluster {pipelines-shortname} setup.
+
+.ResourceFlavor
+
+A ResourceFlavor represents a variation of available resources. In multicluster configurations, it typically defines a default set of resources.
+
+[cols="1,2",options="header"]
+|===
+|Field
+|Description
+
+|`metadata.name`
+|The name of the resource flavor.
+|===
+
+.ClusterQueue
+
+A ClusterQueue defines resource quotas and admission checks for workloads across namespaces.
+
+[cols="1,2",options="header"]
+|===
+|Field
+|Description
+
+|`metadata.name`
+|The name of the cluster queue.
+
+|`spec.namespaceSelector`
+|A label selector to determine which namespaces can use this queue. An empty selector matches all namespaces.
+
+|`spec.resourceGroups`
+|A list of resource groups that define quotas for different resource types.
+
+|`spec.resourceGroups[].coveredResources`
+|A list of resource types covered by this resource group, such as `cpu`, `memory`, and `tekton.dev/pipelineruns`.
+
+|`spec.resourceGroups[].flavors`
+|A list of flavors available for this resource group.
+
+|`spec.resourceGroups[].flavors[].name`
+|The name of the resource flavor.
+
+|`spec.resourceGroups[].flavors[].resources`
+|Resource quotas for each resource type.
+
+|`spec.resourceGroups[].flavors[].resources[].name`
+|The resource type name.
+
+|`spec.resourceGroups[].flavors[].resources[].nominalQuota`
+|The nominal quota for the resource.
+
+|`spec.admissionChecksStrategy.admissionChecks`
+|A list of admission checks that workloads must pass before admission. For multicluster, this typically references a MultiKueue admission check.
+|===
+
+.LocalQueue
+
+A LocalQueue provides a namespace-scoped interface to a ClusterQueue.
+
+[cols="1,2",options="header"]
+|===
+|Field
+|Description
+
+|`metadata.name`
+|The name of the local queue.
+
+|`metadata.namespace`
+|The namespace where the local queue is created.
+
+|`spec.clusterQueue`
+|The name of the ClusterQueue that this LocalQueue references.
+|===
+
+.AdmissionCheck
+
+An AdmissionCheck defines a condition that workloads must satisfy before being admitted.
+
+[cols="1,2",options="header"]
+|===
+|Field
+|Description
+
+|`metadata.name`
+|The name of the admission check.
+
+|`spec.controllerName`
+|The controller responsible for this admission check. For multicluster, use `kueue.x-k8s.io/multikueue`.
+
+|`spec.parameters.apiGroup`
+|The API group of the parameters resource. For multicluster, use `kueue.x-k8s.io`.
+
+|`spec.parameters.kind`
+|The kind of the parameters resource. For multicluster, use `MultiKueueConfig`.
+
+|`spec.parameters.name`
+|The name of the MultiKueueConfig resource.
+|===
+
+.MultiKueueConfig
+
+A MultiKueueConfig defines the configuration for multicluster workload distribution.
+
+[cols="1,2",options="header"]
+|===
+|Field
+|Description
+
+|`metadata.name`
+|The name of the multicluster configuration.
+
+|`spec.clusters`
+|A list of MultiKueueCluster names that workloads can be scheduled to.
+|===
+
+.MultiKueueCluster
+
+A MultiKueueCluster defines a spoke cluster configuration.
+
+[cols="1,2",options="header"]
+|===
+|Field
+|Description
+
+|`metadata.name`
+|The name of the spoke cluster.
+
+|`spec.clusterSource.kubeConfig.locationType`
+|The location type for the kubeconfig. Use `Secret`.
+
+|`spec.clusterSource.kubeConfig.location`
+|The name of the secret containing the kubeconfig for the spoke cluster. The secret must be in the `openshift-kueue-operator` namespace.
+|===
+
+:leveloffset!:
+
+[role="_additional-resources"]
+[id="additional-resources_{context}"]
+== Additional resources
+
+* xref:../resource/managing-pipelines-performance.adoc#managing-pipelines-performance[Managing {pipelines-shortname} performance]
+* xref:../install_config/customizing-configurations-in-the-tektonconfig-cr.adoc#customizing-configurations-in-the-tektonconfig-cr[Customizing configurations in the TektonConfig custom resource]
+* link:https://docs.redhat.com/en/documentation/red_hat_build_of_kueue/1/html-single/installing_and_configuring/index#installing-red-hat-build-of-kueue[Installing Red Hat build of Kueue]
+* link:https://kueue.sigs.k8s.io/docs/concepts/multikueue/[Kueue MultiKueue documentation]

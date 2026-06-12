@@ -1,0 +1,6 @@
+{
+  "assembly": "records/understanding-the-tekton-results-retention-policy.adoc",
+  "includes": [
+    {"path": "modules/op-fine-grained-retention-policies.adoc", "type": "CONCEPT", "leveloffset": "+1", "title": "Fine-grained retention policies"}
+  ]
+}

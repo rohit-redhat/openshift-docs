@@ -1,0 +1,276 @@
+:_mod-docs-content-type: ASSEMBLY
+:_mod-docs-content-type: SNIPPET
+// The {product-title} attribute provides the context-sensitive name of the relevant OpenShift distribution, for example, "OpenShift Container Platform" or "OKD". The {product-version} attribute provides the product version relative to the distribution, for example "4.9".
+// {product-title} and {product-version} are parsed when AsciiBinder queries the _distro_map.yml file in relation to the base branch of a pull request.
+// See https://github.com/openshift/openshift-docs/blob/main/contributing_to_docs/doc_guidelines.adoc#product-name-and-version for more information on this topic.
+// Other common attributes are defined in the following lines:
+:data-uri:
+:icons:
+:experimental:
+:toc: macro
+:toc-title:
+:imagesdir: images
+:prewrap!:
+
+:pipelines-title: Red Hat OpenShift Pipelines
+:pipelines-shortname: OpenShift Pipelines
+:pipelines-ver: pipelines-1.22
+:pipelines-version-number: 1.22
+:osp-version-patch: 0
+:tekton-cache: Tekton Cache
+:tekton-chains: Tekton Chains
+:tekton-results: Tekton Results
+:tekton-triggers: Tekton Triggers
+:tekton-hub: Tekton Hub
+:artifact-hub: Artifact Hub
+:pac: Pipelines as Code
+:product-registry: OpenShift image registry
+// IBM Power
+:ibmpowerProductName: IBM Power
+// IBM zSystems
+:ibmzProductName: IBM zSystems
+:linuxoneProductName: IBM(R) LinuxONE
+:kebab: image:kebab.png[title="Options menu"]
+
+:op-system-base: RHEL
+:op-system-base-full: Red Hat Enterprise Linux (RHEL)
+
+:cluster-manager-first: Red Hat OpenShift Cluster Manager
+:cluster-manager: OpenShift Cluster Manager
+:cluster-manager-url: link:https://console.redhat.com/openshift[OpenShift Cluster Manager Hybrid Cloud Console]
+:cluster-manager-url-pull: link:https://console.redhat.com/openshift/install/pull-secret[pull secret from the Red Hat OpenShift Cluster Manager]
+
+:oc-first: pass:quotes[OpenShift CLI (`oc`)]
+
+// Attributes not present in the main branch
+:OCP: OpenShift Container Platform
+
+//We should use lowercase like regular OCP docs and deprecate the above.
+:ocp: OpenShift Container Platform
+
+
+:ols-official: Red{nbsp}Hat OpenShift Lightspeed
+:ols: OpenShift Lightspeed
+
+// Attributes not present in the main branch
+:rhosp: Red Hat OpenStack Platform
+[id="using-buildah-ns-tekton-task"]
+= Using buildah-ns Tekton task
+:context: using-buildah-ns-tekton-task
+
+toc::[]
+
+[role="_abstract"]
+The `buildah-ns` Tekton task builds Open Container Initiative (OCI) images without requiring a container runtime daemon, such as the Docker daemon. The task uses `buildah` and applies user namespace isolation to provide enhanced security.
+
+After a successful build, the task produces the following results:
+
+* The fully qualified image name
+* The SHA256 digest of the image
+
+The `buildah-ns` task is functionally the same as the standard `buildah` Tekton task, but applies additional security mechanisms to improve container isolation at the kernel level.
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * secure/using-buildah-ns-tekton-task.adoc
+
+:_mod-docs-content-type: CONCEPT
+
+[id="op-differences-between-buildah-buildah-ns-tasks_{context}"]
+= Differences between `buildah` and `buildah-ns` tasks
+
+[role="_abstract"]
+The `buildah-ns` task extends the standard `buildah` task with the following security-focused changes:
+
+* **Task name**: The task name is `buildah-ns` instead of `buildah`.
+* **Annotations**: The task includes security annotations that enable automatic user namespace mapping:
++
+----
+io.kubernetes.cri-o.userns-mode: "auto"
+io.openshift.builder: "true"
+----
+
+* **Security model**: User namespace separation improves privilege isolation. This limits the impact of container escape vulnerabilities.
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * secure/using-buildah-ns-tekton-task.adoc
+
+:_mod-docs-content-type: CONCEPT
+
+[id="security-model-buildah-ns-task_{context}"]
+= Security model of the `buildah-ns` task
+
+[role="_abstract"]
+The `buildah-ns` task uses user namespace isolation to separate privileges between containers and the host system.
+
+When the task runs with namespace annotations, the system maps user IDs (UIDs) as follows:
+
+* **Inside the container**: Processes run as UID 0, which appears as the root user.
+* **Outside the container**: The same processes run as a nonzero UID on the host system.
+
+This mapping lets container processes behave as root while restricting their host-level privileges.
+
+User namespace isolation provides the following security advantages:
+
+* **kernel-level isolation**: Adds an extra isolation boundary between containers.
+* **Reduced privilege exposure**: Limits the impact of compromised workloads by running them as non-root users on the host.
+* **Container escape protection**: Helps mitigate potential vulnerabilities that allow escaping from the container runtime environment.
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * secure/using-buildah-ns-tekton-task.adoc
+
+:_mod-docs-content-type: CONCEPT
+
+[id="workspaces-parameters-results-buildah-ns-task_{context}"]
+= Workspaces, parameters, and results for the `buildah-ns` task
+
+[role="_abstract"]
+The `buildah-ns` task requires a workspace and accepts several parameters to customize image builds. The task results contain information about the built image.
+
+== Workspace
+
+[options="header"]
+|===
+| Name | Required | Description
+
+| source
+| Yes
+| The build context for the container image. Typically has application source code and a `Containerfile` or `Dockerfile`.
+|===
+
+== Parameters
+
+[options="header"]
+|===
+| Name | Type | Default | Description
+
+| `IMAGE`
+| string
+| Required
+| Fully qualified name of the image to build, including tag.
+
+| CONTAINERFILE_PATH
+| string
+| Containerfile
+| Path to the container build file relative to the source workspace.
+
+| TLS_VERIFY
+| string
+| true
+| Verify TLS when pushing images. Red Hat recommends `true`.
+
+| VERBOSE
+| string
+| false
+| Enables verbose build output.
+
+| SUBDIRECTORY
+| string
+| .
+| Subdirectory in the workspace to use as the build context.
+
+| STORAGE_DRIVER
+| string
+| overlay
+| Storage driver for Buildah. Align with the cluster node configuration.
+
+| BUILD_EXTRA_ARGS
+| string
+| Empty
+| Additional flags for the `Buildah` build command.
+
+| PUSH_EXTRA_ARGS
+| string
+| Empty
+| Additional flags for the `Buildah` push command.
+
+| SKIP_PUSH
+| string
+| false
+| Set to `true` to skip pushing the image to the registry.
+|===
+
+== Results
+
+[options="header"]
+|===
+| Name | Description
+
+| IMAGE_URL
+| Fully qualified name of the built image.
+
+| IMAGE_DIGEST
+| SHA256 digest of the built image.
+|===
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * secure/using-buildah-ns-tekton-task.adoc
+
+:_mod-docs-content-type: PROCEDURE
+
+[id="running-buildah-ns-task_{context}"]
+= Running the `buildah-ns` task
+
+[role="_abstract"]
+You can run the `buildah-ns` task as part of a `PipelineRun` resource.
+
+.Procedure
+
+. Create a YAML file that defines `PipelineRun` object:
++
+.Example `pipeline-run.yaml` file
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata: {}
+spec:
+  pipelineRef:
+    name: task-buildah-ns
+  params:
+    - name: IMAGE
+      value: your-image-name
+    - name: TLS_VERIFY
+      value: true
+    - name: VERBOSE
+      value: false
+  workspaces:
+    - name: source
+      persistentVolumeClaim:
+        claimName: your-pvc-name
+----
++
+`value`:: Replace `your-image-name` with the full name of the container image that you want to build.
+`claimName`:: Replace `your-pvc-name` with the name of the `PersistentVolumeClaim` (PVC) that stores the application source code.
++
+[NOTE]
+====
+If the target container registry requires authentication, configure a Kubernetes secret for registry access and link it to the service account that runs the `TaskRun` or `PipelineRun` resources.
+====
+
+. Create the `PipelineRun` resource by applying the YAML file:
++
+[source,terminal]
+----
+$ oc apply -f pipeline-run.yaml
+----
+
+:leveloffset!:
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://docs.openshift.com/container-platform/latest/authentication/managing-security-context-constraints.html[Managing security context constraints (SCCs)]

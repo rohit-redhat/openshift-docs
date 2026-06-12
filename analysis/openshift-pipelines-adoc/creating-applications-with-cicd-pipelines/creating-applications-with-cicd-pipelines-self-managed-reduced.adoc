@@ -1,0 +1,1421 @@
+:_mod-docs-content-type: ASSEMBLY
+:_mod-docs-content-type: SNIPPET
+// The {product-title} attribute provides the context-sensitive name of the relevant OpenShift distribution, for example, "OpenShift Container Platform" or "OKD". The {product-version} attribute provides the product version relative to the distribution, for example "4.9".
+// {product-title} and {product-version} are parsed when AsciiBinder queries the _distro_map.yml file in relation to the base branch of a pull request.
+// See https://github.com/openshift/openshift-docs/blob/main/contributing_to_docs/doc_guidelines.adoc#product-name-and-version for more information on this topic.
+// Other common attributes are defined in the following lines:
+:data-uri:
+:icons:
+:experimental:
+:toc: macro
+:toc-title:
+:imagesdir: images
+:prewrap!:
+
+:pipelines-title: Red Hat OpenShift Pipelines
+:pipelines-shortname: OpenShift Pipelines
+:pipelines-ver: pipelines-1.22
+:pipelines-version-number: 1.22
+:osp-version-patch: 0
+:tekton-cache: Tekton Cache
+:tekton-chains: Tekton Chains
+:tekton-results: Tekton Results
+:tekton-triggers: Tekton Triggers
+:tekton-hub: Tekton Hub
+:artifact-hub: Artifact Hub
+:pac: Pipelines as Code
+:product-registry: OpenShift image registry
+// IBM Power
+:ibmpowerProductName: IBM Power
+// IBM zSystems
+:ibmzProductName: IBM zSystems
+:linuxoneProductName: IBM(R) LinuxONE
+:kebab: image:kebab.png[title="Options menu"]
+
+:op-system-base: RHEL
+:op-system-base-full: Red Hat Enterprise Linux (RHEL)
+
+:cluster-manager-first: Red Hat OpenShift Cluster Manager
+:cluster-manager: OpenShift Cluster Manager
+:cluster-manager-url: link:https://console.redhat.com/openshift[OpenShift Cluster Manager Hybrid Cloud Console]
+:cluster-manager-url-pull: link:https://console.redhat.com/openshift/install/pull-secret[pull secret from the Red Hat OpenShift Cluster Manager]
+
+:oc-first: pass:quotes[OpenShift CLI (`oc`)]
+
+// Attributes not present in the main branch
+:OCP: OpenShift Container Platform
+
+//We should use lowercase like regular OCP docs and deprecate the above.
+:ocp: OpenShift Container Platform
+
+
+:ols-official: Red{nbsp}Hat OpenShift Lightspeed
+:ols: OpenShift Lightspeed
+
+// Attributes not present in the main branch
+:rhosp: Red Hat OpenStack Platform
+[id="creating-applications-with-cicd-pipelines"]
+= Creating CI/CD solutions for applications using {pipelines-shortname}
+:context: creating-applications-with-cicd-pipelines
+
+toc::[]
+
+[role="_abstract"]
+With {pipelines-title}, you can create a customized CI/CD solution to build, test, and deploy your application.
+
+To create a full-fledged, self-serving CI/CD pipeline for an application, perform the following tasks:
+
+* Create custom tasks, or install existing reusable tasks.
+* Create and define the delivery pipeline for your application.
+* Specify a storage volume or filesystem to attach to a workspace for the pipeline execution, using one of the following approaches:
+** Specify a volume claim template that creates a persistent volume claim
+** Specify a persistent volume claim
+* Create a `PipelineRun` object to instantiate and start the pipeline.
+* Add triggers to capture events in the source repository.
+
+The following `pipelines-tutorial` example demonstrates the preceding tasks. The example uses a simple application that consists of:
+
+* A front-end interface, `pipelines-vote-ui`, with the source code in the link:https://github.com/openshift/pipelines-vote-ui/tree/{pipelines-ver}[`pipelines-vote-ui`] Git repository.
+* A back-end interface, `pipelines-vote-api`, with the source code in the link:https://github.com/openshift/pipelines-vote-api/tree/{pipelines-ver}[`pipelines-vote-api`]  Git repository.
+* The `apply-manifests` and `update-deployment` tasks in the link:https://github.com/openshift/pipelines-tutorial/tree/{pipelines-ver}[`pipelines-tutorial`] Git repository.
+
+== Prerequisites
+
+* You have access to an {OCP} cluster.
+* You have installed xref:../install_config/installing-pipelines.adoc#installing-pipelines[{pipelines-shortname}] using the {pipelines-title} Operator listed in the OpenShift OperatorHub. After you install it, it is applicable to the entire cluster.
+* You have installed xref:../tkn_cli/installing-tkn.adoc#installing-tkn[{pipelines-shortname} CLI].
+* You have forked the front-end link:https://github.com/openshift/pipelines-vote-ui/tree/{pipelines-ver}[`pipelines-vote-ui`] and back-end link:https://github.com/openshift/pipelines-vote-api/tree/{pipelines-ver}[`pipelines-vote-api`] Git repositories using your GitHub ID, and have administrator access to these repositories.
+* Optional: You have cloned the link:https://github.com/openshift/pipelines-tutorial/tree/{pipelines-ver}[`pipelines-tutorial`] Git repository.
+
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * create/creating-applications-with-cicd-pipelines.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="creating-project-and-checking-pipeline-service-account_{context}"]
+= Creating a project and checking your pipeline service account
+
+[role="_abstract"]
+Create a project and verify that the `pipeline` service account exists before running pipelines.
+
+.Procedure
+
+. Log in to your {OCP} cluster:
++
+----
+$ oc login -u <login> -p <password> https://openshift.example.com:6443
+----
+
+. Create a project for the sample application. For this example workflow, create the `pipelines-tutorial` project:
++
+----
+$ oc new-project pipelines-tutorial
+----
++
+[NOTE]
+====
+If you create a project with a different name, be sure to update the resource URLs used in the example with your project name.
+====
+. View the `pipeline` service account:
++
+{pipelines-title} Operator adds and configures a service account named `pipeline` that has enough permissions to build and push an image. The `PipelineRun` object uses this service account.
++
+----
+$ oc get serviceaccount pipeline
+----
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * create/creating-applications-with-cicd-pipelines.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="creating-pipeline-tasks_{context}"]
+= Creating pipeline tasks
+
+[role="_abstract"]
+Create reusable pipeline tasks by installing task resources from the `pipelines-tutorial` repository.
+
+.Procedure
+
+. Install the `apply-manifests` and `update-deployment` task resources from the `pipelines-tutorial` repository, which has a list of reusable tasks for pipelines:
++
+[source,terminal,subs="attributes+"]
+----
+$ oc create -f https://raw.githubusercontent.com/openshift/pipelines-tutorial/{pipelines-ver}/01_pipeline/01_apply_manifest_task.yaml
+$ oc create -f https://raw.githubusercontent.com/openshift/pipelines-tutorial/{pipelines-ver}/01_pipeline/02_update_deployment_task.yaml
+----
+
+. Use the `tkn task list` command to list the tasks you created:
++
+[source,terminal]
+----
+$ tkn task list
+----
++
+You can use the output to verify that {pipelines-title} created the `apply-manifests` and `update-deployment` task resources:
++
+.Example output
+[source,terminal]
+----
+NAME                DESCRIPTION   AGE
+apply-manifests                   1 minute ago
+update-deployment                 48 seconds ago
+----
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * create/creating-applications-with-cicd-pipelines.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="assembling-a-pipeline_{context}"]
+= Assembling a pipeline
+
+[role="_abstract"]
+A pipeline represents a CI/CD flow consisting of executable program tasks. The pipeline design is generic and reusable in many applications and environments.
+
+A pipeline specifies how the tasks interact with each other and their order of execution by using the `from` and `runAfter` parameters. It uses the `workspaces` field to specify one or more volumes that each task in the pipeline requires during execution.
+
+Create a pipeline that takes the source code of the application from GitHub, and then builds and deploys it on {OCP}.
+
+The pipeline performs the following tasks for the back-end application `pipelines-vote-api` and front-end application `pipelines-vote-ui`:
+
+* Clones the source code of the application from the Git repository by referring to the `git-url` and `git-revision` parameters.
+* Builds the container image using the `buildah` task provided in the `openshift-pipelines` namespace.
+* Pushes the image to the {product-registry} by referring to the `image` parameter.
+* Deploys the new image on {OCP} by using the `apply-manifests` and `update-deployment` tasks.
+
+.Procedure
+
+. Copy the contents of the following sample pipeline YAML file and save it:
++
+[source,yaml,subs="attributes+"]
+----
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: build-and-deploy
+spec:
+  workspaces:
+  - name: shared-workspace
+  params:
+  - name: deployment-name
+    type: string
+    description: name of the deployment to be patched
+  - name: git-url
+    type: string
+    description: url of the git repo for the code of deployment
+  - name: git-revision
+    type: string
+    description: revision to use from repo of the code for deployment
+    default: "{pipelines-ver}"
+  - name: IMAGE
+    type: string
+    description: image to be built from the code
+  tasks:
+  - name: fetch-repository
+    taskRef:
+      resolver: cluster
+      params:
+      - name: kind
+        value: task
+      - name: name
+        value: git-clone
+      - name: namespace
+        value: openshift-pipelines
+    workspaces:
+    - name: output
+      workspace: shared-workspace
+    params:
+    - name: URL
+      value: $(params.git-url)
+    - name: SUBDIRECTORY
+      value: ""
+    - name: DELETE_EXISTING
+      value: "true"
+    - name: REVISION
+      value: $(params.git-revision)
+  - name: build-image
+    taskRef:
+      resolver: cluster
+      params:
+      - name: kind
+        value: task
+      - name: name
+        value: buildah
+      - name: namespace
+        value: openshift-pipelines
+    workspaces:
+    - name: source
+      workspace: shared-workspace
+    params:
+    - name: IMAGE
+      value: $(params.IMAGE)
+    runAfter:
+    - fetch-repository
+  - name: apply-manifests
+    taskRef:
+      name: apply-manifests
+    workspaces:
+    - name: source
+      workspace: shared-workspace
+    runAfter:
+    - build-image
+  - name: update-deployment
+    taskRef:
+      name: update-deployment
+    params:
+    - name: deployment
+      value: $(params.deployment-name)
+    - name: IMAGE
+      value: $(params.IMAGE)
+    runAfter:
+    - apply-manifests
+----
++
+The pipeline definition abstracts away the specifics of the Git source repository and image registries. You add these details as `params` when you trigger and run a pipeline.
+
+. Create the pipeline:
++
+----
+$ oc create -f <pipeline-yaml-file-name.yaml>
+----
++
+Or, you can also run the YAML file directly from the Git repository:
++
+[source,terminal,subs="attributes+"]
+----
+$ oc create -f https://raw.githubusercontent.com/openshift/pipelines-tutorial/{pipelines-ver}/01_pipeline/04_pipeline.yaml
+----
+
+. Use the `tkn pipeline list` command to verify that the pipeline exists in the application:
++
+----
+$ tkn pipeline list
+----
++
+The output verifies the creation of the `build-and-deploy` pipeline:
++
+----
+NAME               AGE            LAST RUN   STARTED   DURATION   STATUS
+build-and-deploy   1 minute ago   ---        ---       ---        ---
+----
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * create/creating-applications-with-cicd-pipelines.adoc
+
+// pipelines/creating-applications-with-cicd-pipelines
+:_mod-docs-content-type: PROCEDURE
+[id="op-mirroring-images-to-run-pipelines-in-restricted-environment_{context}"]
+=  Mirroring images to run pipelines in a restricted environment
+
+
+[role="_abstract"]
+To run {pipelines-shortname} in a disconnected cluster or a cluster provisioned in a restricted environment, ensure that you configure the Samples Operator for a restricted network. Alternatively, a cluster administrator can create a cluster with a mirrored registry.
+
+The following procedure uses the `pipelines-tutorial` example to create a pipeline for an application in a restricted environment by using a cluster with a mirrored registry. To ensure that the `pipelines-tutorial` example works in a restricted environment, you must mirror the builder images from the mirror registry for the front-end interface, `pipelines-vote-ui`; back-end interface, `pipelines-vote-api`; and the `cli`.
+
+.Procedure
+
+. Mirror the builder image from the mirror registry for the front-end interface, `pipelines-vote-ui`.
+.. Verify that the required images tag is not imported:
++
+[source,terminal]
+----
+$ oc describe imagestream python -n openshift
+----
++
+.Example output
+[source,terminal]
+----
+Name:			python
+Namespace:		openshift
+[...]
+
+3.8-ubi9 (latest)
+  tagged from registry.redhat.io/ubi9/python-38:latest
+    prefer registry pullthrough when referencing this tag
+
+  Build and run Python 3.8 applications on UBI 8. For more information about using this builder image, including OpenShift considerations, see https://github.com/sclorg/s2i-python-container/blob/master/3.8/README.md.
+  Tags: builder, python
+  Supports: python:3.8, python
+  Example Repo: https://github.com/sclorg/django-ex.git
+
+[...]
+----
+
+.. Mirror the supported image tag to the private registry:
++
+[source,terminal]
+----
+$ oc image mirror registry.redhat.io/ubi9/python-39:latest <mirror_registry>:<port>/ubi9/python-39
+----
+
+.. Import the image:
++
+[source,terminal]
+----
+$ oc tag <mirror_registry>:<port>/ubi9/python-39 python:latest --scheduled -n openshift
+----
++
+You must periodically re-import the image. The `--scheduled` flag enables automatic re-import of the image.
+
+.. Verify that the images with the given tag have been imported:
++
+[source,terminal]
+----
+$ oc describe imagestream python -n openshift
+----
++
+.Example output
+[source,terminal]
+----
+Name:			python
+Namespace:		openshift
+[...]
+
+latest
+  updates automatically from registry  <mirror_registry>:<port>/ubi9/python-39
+
+  *  <mirror_registry>:<port>/ubi9/python-39@sha256:3ee...
+
+[...]
+----
+
+. Mirror the builder image from the mirror registry for the back-end interface, `pipelines-vote-api`.
+.. Verify that the required images tag is not imported:
++
+[source,terminal]
+----
+$ oc describe imagestream golang -n openshift
+----
++
+.Example output
+[source,terminal]
+----
+Name:			golang
+Namespace:		openshift
+[...]
+
+1.14.7-ubi8 (latest)
+  tagged from registry.redhat.io/ubi8/go-toolset:1.14.7
+    prefer registry pullthrough when referencing this tag
+
+  Build and run Go applications on UBI 8. For more information about using this builder image, including OpenShift considerations, see https://github.com/sclorg/golang-container/blob/master/README.md.
+  Tags: builder, golang, go
+  Supports: golang
+  Example Repo: https://github.com/sclorg/golang-ex.git
+
+[...]
+----
+
+.. Mirror the supported image tag to the private registry:
++
+[source,terminal]
+----
+$ oc image mirror registry.redhat.io/ubi9/go-toolset:latest <mirror_registry>:<port>/ubi9/go-toolset
+----
+
+.. Import the image:
++
+[source,terminal]
+----
+$ oc tag <mirror_registry>:<port>/ubi9/go-toolset golang:latest --scheduled -n openshift
+----
++
+You must periodically re-import the image. The `--scheduled` flag enables automatic re-import of the image.
+
+.. Verify that the images with the given tag have been imported:
++
+[source,terminal]
+----
+$ oc describe imagestream golang -n openshift
+----
++
+.Example output
+[source,terminal]
+----
+Name:			golang
+Namespace:		openshift
+[...]
+
+latest
+  updates automatically from registry <mirror_registry>:<port>/ubi9/go-toolset
+
+  * <mirror_registry>:<port>/ubi9/go-toolset@sha256:59a74d581df3a2bd63ab55f7ac106677694bf612a1fe9e7e3e1487f55c421b37
+
+[...]
+----
+
+. Mirror the builder image from the mirror registry for the `cli`.
+.. Verify that the required images tag is not imported:
++
+[source,terminal]
+----
+$ oc describe imagestream cli -n openshift
+----
++
+.Example output
+[source,terminal]
+----
+Name:                   cli
+Namespace:              openshift
+[...]
+
+latest
+  updates automatically from registry quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:65c68e8c22487375c4c6ce6f18ed5485915f2bf612e41fef6d41cbfcdb143551
+
+  * quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:65c68e8c22487375c4c6ce6f18ed5485915f2bf612e41fef6d41cbfcdb143551
+
+[...]
+----
+
+.. Mirror the supported image tag to the private registry:
++
+[source,terminal]
+----
+$ oc image mirror quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:65c68e8c22487375c4c6ce6f18ed5485915f2bf612e41fef6d41cbfcdb143551 <mirror_registry>:<port>/openshift-release-dev/ocp-v4.0-art-dev:latest
+----
+
+.. Import the image:
++
+[source,terminal]
+----
+$ oc tag <mirror_registry>:<port>/openshift-release-dev/ocp-v4.0-art-dev cli:latest --scheduled -n openshift
+----
++
+You must periodically re-import the image. The `--scheduled` flag enables automatic re-import of the image.
+
+.. Verify that the images with the given tag have been imported:
++
+[source,terminal]
+----
+$ oc describe imagestream cli -n openshift
+----
++
+.Example output
+[source,terminal]
+----
+Name:                   cli
+Namespace:              openshift
+[...]
+
+latest
+  updates automatically from registry <mirror_registry>:<port>/openshift-release-dev/ocp-v4.0-art-dev
+
+  * <mirror_registry>:<port>/openshift-release-dev/ocp-v4.0-art-dev@sha256:65c68e8c22487375c4c6ce6f18ed5485915f2bf612e41fef6d41cbfcdb143551
+
+[...]
+----
+
+:leveloffset!:
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://docs.openshift.com/container-platform/latest/openshift_images/configuring-samples-operator.html#samples-operator-restricted-network-install[Configuring Samples Operator for a restricted cluster]
+
+* link:https://docs.openshift.com/container-platform/4.17/disconnected/mirroring/index.html[About disconnected installation mirroring]
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * create/creating-applications-with-cicd-pipelines.adoc
+
+// // *openshift_pipelines/creating-applications-with-cicd-pipelines.adoc
+:_mod-docs-content-type: PROCEDURE
+[id="running-a-pipeline_{context}"]
+= Running a pipeline
+
+[role="_abstract"]
+A `PipelineRun` resource starts a pipeline and ties it to the Git and image resources to use for the specific invocation. It automatically creates and starts the `TaskRun` resources for each task in the pipeline.
+
+.Procedure
+
+. Start the pipeline for the back-end application:
++
+[source,yaml,subs="attributes+"]
+----
+$ tkn pipeline start build-and-deploy \
+    -w name=shared-workspace,volumeClaimTemplateFile=https://raw.githubusercontent.com/openshift/pipelines-tutorial/{pipelines-ver}/01_pipeline/03_persistent_volume_claim.yaml \
+    -p deployment-name=pipelines-vote-api \
+    -p git-url=https://github.com/openshift/pipelines-vote-api.git \
+    -p IMAGE='image-registry.openshift-image-registry.svc:5000/pipelines-tutorial/pipelines-vote-api' \
+    --use-param-defaults
+----
++
+The earlier command uses a volume claim template, which creates a persistent volume claim for the pipeline execution.
+
+. To track the progress of the pipeline run, enter the following command::
++
+[source,yaml]
+----
+$ tkn pipelinerun logs <pipelinerun_id> -f
+----
++
+The <pipelinerun_id> in the previous command is the ID for the `PipelineRun` that the earlier command returned.
+
+. Start the pipeline for the front-end application:
++
+[source,yaml,subs="attributes+"]
+----
+$ tkn pipeline start build-and-deploy \
+    -w name=shared-workspace,volumeClaimTemplateFile=https://raw.githubusercontent.com/openshift/pipelines-tutorial/{pipelines-ver}/01_pipeline/03_persistent_volume_claim.yaml \
+    -p deployment-name=pipelines-vote-ui \
+    -p git-url=https://github.com/openshift/pipelines-vote-ui.git \
+    -p IMAGE='image-registry.openshift-image-registry.svc:5000/pipelines-tutorial/pipelines-vote-ui' \
+    --use-param-defaults
+----
+
+. To track the progress of the pipeline run, enter the following command:
++
+[source,yaml]
+----
+$ tkn pipelinerun logs <pipelinerun_id> -f
+----
++
+The <pipelinerun_id> in the previous command is the ID for the `PipelineRun` that the earlier command returned.
+
+. After a few minutes, use `tkn pipelinerun list` command to verify that the pipeline ran successfully by listing all the pipeline runs:
++
+[source,yaml]
+----
+$ tkn pipelinerun list
+----
++
+The output lists the pipeline runs:
++
+[source,yaml]
+----
+
+ NAME                         STARTED      DURATION     STATUS
+ build-and-deploy-run-xy7rw   1 hour ago   2 minutes    Succeeded
+ build-and-deploy-run-z2rz8   1 hour ago   19 minutes   Succeeded
+----
+
+. Get the application route:
++
+[source,yaml]
+----
+$ oc get route pipelines-vote-ui --template='http://{{.spec.host}}'
+----
+Note the output of the earlier command. You can access the application by using this route.
+
+. To rerun the last pipeline run, using the pipeline resources and service account of the earlier pipeline, run:
++
+[source,yaml]
+----
+$ tkn pipeline start build-and-deploy --last
+----
+
+:leveloffset!:
+
+[role="_additional-resources"]
+.Additional resources
+
+* xref:../secure/authenticating-pipelines-repos-using-secrets.adoc#authenticating-pipelines-repos-using-secrets[Authenticating pipelines with repositories using secrets]
+
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * create/creating-applications-with-cicd-pipelines.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="adding-triggers_{context}"]
+= Adding triggers to a pipeline
+
+[role="_abstract"]
+Triggers enable pipelines to respond to external GitHub events, such as push events and pull requests. After you assemble and start a pipeline for the application, add the `TriggerBinding`, `TriggerTemplate`, `Trigger`, and `EventListener` resources to capture the GitHub events.
+
+.Procedure
+. Copy the content of the following sample `TriggerBinding` YAML file and save it:
++
+[source,yaml]
+----
+apiVersion: triggers.tekton.dev/v1
+kind: TriggerBinding
+metadata:
+  name: vote-app
+spec:
+  params:
+  - name: git-repo-url
+    value: $(body.repository.url)
+  - name: git-repo-name
+    value: $(body.repository.name)
+  - name: git-revision
+    value: $(body.head_commit.id)
+----
+
+. Create the `TriggerBinding` resource:
++
+[source,terminal]
+----
+$ oc create -f <triggerbinding-yaml-file-name.yaml>
+----
++
+Or, you can create the `TriggerBinding` resource directly from the `pipelines-tutorial` Git repository:
++
+[source,terminal,subs="attributes+"]
+----
+$ oc create -f https://raw.githubusercontent.com/openshift/pipelines-tutorial/{pipelines-ver}/03_triggers/01_binding.yaml
+----
+
+. Copy the content of the following sample `TriggerTemplate` YAML file and save it:
++
+[source,yaml,subs="attributes+"]
+----
+apiVersion: triggers.tekton.dev/v1
+kind: TriggerTemplate
+metadata:
+  name: vote-app
+spec:
+  params:
+  - name: git-repo-url
+    description: The git repository url
+  - name: git-revision
+    description: The git revision
+    default: {pipelines-ver}
+  - name: git-repo-name
+    description: The name of the deployment to be created / patched
+
+  resourcetemplates:
+  - apiVersion: tekton.dev/v1
+    kind: PipelineRun
+    metadata:
+      generateName: build-deploy-$(tt.params.git-repo-name)-
+    spec:
+      taskRunTemplate:
+        serviceAccountName: pipeline
+      pipelineRef:
+        name: build-and-deploy
+      params:
+      - name: deployment-name
+        value: $(tt.params.git-repo-name)
+      - name: git-url
+        value: $(tt.params.git-repo-url)
+      - name: git-revision
+        value: $(tt.params.git-revision)
+      - name: IMAGE
+        value: image-registry.openshift-image-registry.svc:5000/pipelines-tutorial/$(tt.params.git-repo-name)
+      workspaces:
+      - name: shared-workspace
+        volumeClaimTemplate:
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 500Mi
+----
++
+The template specifies a volume claim template to create a persistent volume claim for defining the storage volume for the workspace. Therefore, you do not need to create a persistent volume claim to give data storage.
+
+. Create the `TriggerTemplate` resource:
++
+[source,terminal]
+----
+$ oc create -f <triggertemplate-yaml-file-name.yaml>
+----
++
+Or, you can create the `TriggerTemplate` resource directly from the `pipelines-tutorial` Git repository:
++
+[source,terminal,subs="attributes+"]
+----
+$ oc create -f https://raw.githubusercontent.com/openshift/pipelines-tutorial/{pipelines-ver}/03_triggers/02_template.yaml
+----
+
+. Copy the contents of the following sample `Trigger` YAML file and save it:
++
+[source,yaml]
+----
+apiVersion: triggers.tekton.dev/v1
+kind: Trigger
+metadata:
+  name: vote-trigger
+spec:
+  serviceAccountName: pipeline
+  bindings:
+    - ref: vote-app
+  template:
+    ref: vote-app
+----
+
+. Create the `Trigger` resource:
++
+[source,terminal]
+----
+$ oc create -f <trigger-yaml-file-name.yaml>
+----
++
+Or, you can create the `Trigger` resource directly from the `pipelines-tutorial` Git repository:
++
+[source,terminal,subs="attributes+"]
+----
+$ oc create -f https://raw.githubusercontent.com/openshift/pipelines-tutorial/{pipelines-ver}/03_triggers/03_trigger.yaml
+----
+
+. Copy the contents of the following sample `EventListener` YAML file and save it:
++
+[source,yaml]
+----
+apiVersion: triggers.tekton.dev/v1
+kind: EventListener
+metadata:
+  name: vote-app
+spec:
+  serviceAccountName: pipeline
+  triggers:
+    - triggerRef: vote-trigger
+----
++
+
+Or, if you have not defined a trigger custom resource, add the binding and template spec to the `EventListener` YAML file, instead of referring to the name of the trigger:
++
+[source,yaml]
+----
+apiVersion: triggers.tekton.dev/v1
+kind: EventListener
+metadata:
+  name: vote-app
+spec:
+  serviceAccountName: pipeline
+  triggers:
+  - bindings:
+    - ref: vote-app
+    template:
+      ref: vote-app
+----
+
+. Create the `EventListener` resource by performing the following steps:
++
+* To create an `EventListener` resource using a secure HTTPS connection:
++
+.. Add a label to enable the secure HTTPS connection to the `Eventlistener` resource:
++
+[source,terminal]
+----
+$ oc label namespace <ns_name> operator.tekton.dev/enable-annotation=enabled
+----
+.. Create the `EventListener` resource:
++
+[source,terminal]
+----
+$ oc create -f <eventlistener-yaml-file-name.yaml>
+----
++
+Or, you can create the `EvenListener` resource directly from the `pipelines-tutorial` Git repository:
++
+[source,terminal,subs="attributes+"]
+----
+$ oc create -f https://raw.githubusercontent.com/openshift/pipelines-tutorial/{pipelines-ver}/03_triggers/04_event_listener.yaml
+----
+.. Create a route with the re-encrypt TLS termination:
++
+[source,terminal]
+----
+$ oc create route reencrypt --service=<svc_name> --cert=tls.crt --key=tls.key --ca-cert=ca.crt --hostname=<hostname>
+----
++
+Or, you can create a re-encrypt TLS termination YAML file to create a secured route.
++
+.Example Re-encrypt TLS Termination YAML of the Secured Route
+[source,yaml]
+----
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: route-passthrough-secured
+spec:
+  host: <hostname>
+  to:
+    kind: Service
+    name: frontend
+  tls:
+    termination: reencrypt
+    key: [as in edge termination]
+    certificate: [as in edge termination]
+    caCertificate: [as in edge termination]
+    destinationCACertificate: |-
+      -----BEGIN CERTIFICATE-----
+      [...]
+      -----END CERTIFICATE-----
+----
+
+`name`:: The name of the object, which is limited to 63 characters.
+`termination`:: Set the `*termination*` field to `reencrypt`. This is the only required `tls` field.
+`destinationCACertificate`:: Required for re-encryption. Specifies a CA certificate to validate the endpoint certificate, securing the connection from the router to the destination pods. You can omit this field if the service uses a service signing certificate. You can also omit it if the administrator has specified a default CA certificate for the router and the service has a certificate signed by that CA.
++
+See `oc create route reencrypt --help` for more options.
++
+* To create an `EventListener` resource using an insecure HTTP connection:
++
+.. Create the `EventListener` resource.
+.. Expose the `EventListener` service as an {OCP} route to make it publicly accessible:
++
+[source,terminal]
+----
+$ oc expose svc el-vote-app
+----
+
+:leveloffset!:
+
+:leveloffset: +1
+
+:_mod-docs-content-type: PROCEDURE
+// This module is included in the following assemblies:
+// * create/creating-applications-with-cicd-pipelines.adoc
+
+[id="configuring-eventlisteners-to-serve-multiple-namespaces_{context}"]
+= Configuring event listeners to serve many namespaces
+
+[role="_abstract"]
+Configure and deploy event listeners as multitenant resources that serve many namespaces, increasing reusability across your cluster.
+
+[NOTE]
+====
+You can skip this step if you want to create a basic CI/CD pipeline. However, if your deployment strategy involves many namespaces, you can configure event listeners to serve many namespaces.
+====
+
+To increase reusability of `EvenListener` objects, cluster administrators can configure and deploy them as multitenant event listeners that serve many namespaces.
+
+.Procedure
+. Configure cluster-wide fetch permission for the event listener.
+.. Set a service account name for the `ClusterRoleBinding` and `EventListener` objects. For example, `el-sa`.
++
+.Example `ServiceAccount.yaml`
+[source,yaml]
+----
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: el-sa
+---
+----
+.. In the `rules` section of the `ClusterRole.yaml` file, set appropriate permissions for every event listener deployment to function cluster-wide.
++
+.Example `ClusterRole.yaml`
+[source,yaml]
+----
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: el-sel-clusterrole
+rules:
+- apiGroups: ["triggers.tekton.dev"]
+  resources: ["eventlisteners", "clustertriggerbindings", "clusterinterceptors", "triggerbindings", "triggertemplates", "triggers"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["configmaps", "secrets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["serviceaccounts"]
+  verbs: ["impersonate"]
+...
+----
+.. Configure cluster role binding with the appropriate service account name and cluster role name.
++
+.Example `ClusterRoleBinding.yaml`
+[source,yaml]
+----
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: el-mul-clusterrolebinding
+subjects:
+- kind: ServiceAccount
+  name: el-sa
+  namespace: default
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: el-sel-clusterrole
+...
+----
+
+. In the `spec` parameter of the event listener, add the service account name, for example `el-sa`. Fill the `namespaceSelector` parameter with names of namespaces where you want the event listener to serve.
++
+.Example `EventListener.yaml`
+[source,yaml]
+----
+apiVersion: triggers.tekton.dev/v1
+kind: EventListener
+metadata:
+  name: namespace-selector-listener
+spec:
+  taskRunTemplate:
+    serviceAccountName: el-sa
+  namespaceSelector:
+    matchNames:
+    - default
+    - foo
+...
+----
+
+. Create a service account with the necessary permissions, for example `foo-trigger-sa`. Use it for role binding the triggers.
++
+.Example `ServiceAccount.yaml`
+[source,yaml]
+----
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: foo-trigger-sa
+  namespace: foo
+...
+----
++
+.Example `RoleBinding.yaml`
+[source,yaml]
+----
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: triggercr-rolebinding
+  namespace: foo
+subjects:
+- kind: ServiceAccount
+  name: foo-trigger-sa
+  namespace: foo
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: tekton-triggers-eventlistener-roles
+...
+----
+
+. Create a trigger with the appropriate trigger template, trigger binding, and service account name.
++
+.Example `Trigger.yaml`
+[source,yaml]
+----
+apiVersion: triggers.tekton.dev/v1
+kind: Trigger
+metadata:
+  name: trigger
+  namespace: foo
+spec:
+  taskRunTemplate:
+    serviceAccountName: foo-trigger-sa
+  interceptors:
+    - ref:
+        name: "github"
+      params:
+        - name: "secretRef"
+          value:
+            secretName: github-secret
+            secretKey: secretToken
+        - name: "eventTypes"
+          value: ["push"]
+  bindings:
+    - ref: vote-app
+  template:
+    ref: vote-app
+...
+----
+
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * create/creating-applications-with-cicd-pipelines.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="creating-webhooks_{context}"]
+= Creating webhooks
+
+[role="_abstract"]
+Configure webhook URLs on your forked Git repositories to point to the publicly accessible `EventListener` service route and trigger pipeline runs.
+
+_Webhooks_ are HTTP POST messages that the event listeners receive whenever a configured event occurs in your repository. The event payload is then mapped to trigger bindings, and processed by trigger templates. The trigger templates eventually start one or more pipeline runs, leading to the creation and deployment of Kubernetes resources.
+
+Configure a webhook URL on your forked Git repositories `pipelines-vote-ui` and `pipelines-vote-api`. This URL points to the publicly accessible `EventListener` service route.
+
+[NOTE]
+====
+Adding webhooks requires administrative privileges to the repository. If you do not have administrative access to your repository, contact your system administrator for adding webhooks.
+====
+
+.Procedure
+
+. Get the webhook URL:
++
+* For a secure HTTPS connection:
++
+----
+$ echo "URL: $(oc  get route el-vote-app --template='https://{{.spec.host}}')"
+----
++
+* For an HTTP (insecure) connection:
++
+----
+$ echo "URL: $(oc  get route el-vote-app --template='http://{{.spec.host}}')"
+----
++
+Note the URL obtained in the output.
+
+. Configure webhooks manually on the front-end repository:
+
+.. Open the front-end Git repository `pipelines-vote-ui` in your browser.
+.. Click *Settings* -> *Webhooks* -> *Add Webhook*
+.. On the *Webhooks/Add Webhook* page:
++
+... Enter the webhook URL from step 1 in *Payload URL* field
+... Select *application/json* for the *Content type*
+... Specify the secret in the *Secret* field
+... Ensure that you select *Just the push event*
+... Select *Active*
+... Click *Add Webhook*
+
+. Repeat step 2 for the back-end repository `pipelines-vote-api`.
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * create/creating-applications-with-cicd-pipelines.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="triggering-a-pipeline_{context}"]
+= Triggering a pipeline run
+
+[role="_abstract"]
+Trigger a pipeline run by pushing a commit to your Git repository, which sends an event payload to the `EventListener` service route.
+
+Whenever a `push` event occurs in the Git repository, the configured webhook sends an event payload to the publicly exposed `EventListener` service route. The `EventListener` service of the application processes the payload, and passes it to the relevant `TriggerBinding` and `TriggerTemplate` resource pairs. The `TriggerBinding` resource extracts the parameters, and the `TriggerTemplate` resource uses these parameters and specifies the way it must create the resources. This might rebuild and redeploy the application.
+
+To trigger the pipeline run, push an empty commit to the front-end `pipelines-vote-ui` repository.
+
+.Procedure
+
+. From the terminal, clone your forked Git repository `pipelines-vote-ui`:
++
+[source,terminal,subs="attributes+"]
+----
+$ git clone git@github.com:<your GitHub ID>/pipelines-vote-ui.git -b {pipelines-ver}
+----
+. Push an empty commit:
++
+[source,terminal,subs="attributes+"]
+----
+$ git commit -m "empty-commit" --allow-empty && git push origin {pipelines-ver}
+----
+. Check if the event triggered the pipeline run:
++
+----
+$ tkn pipelinerun list
+----
++
+Notice that the event initiated a new pipeline run.
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * create/creating-applications-with-cicd-pipelines.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="enabling-monitoring-of-event-listeners-for-triggers-for-user-defined-projects_{context}"]
+= Enabling monitoring of event listeners for Triggers for user-defined projects
+
+[role="_abstract"]
+Create a service monitor for each event listener to gather `Triggers` service metrics and display them in the {OCP} web console.
+
+As a cluster administrator, you can create a service monitor for each event listener to gather metrics for the `Triggers` service in a user-defined project. These metrics display in the {OCP} web console. On receiving an HTTP request, event listeners return three metrics: `eventlistener_http_duration_seconds`, `eventlistener_event_count`, and `eventlistener_triggered_resources`.
+
+.Prerequisites
+
+* You have logged in to the {OCP} web console.
+* You have installed the {pipelines-title} Operator.
+* You have enabled monitoring for user-defined projects.
+
+.Procedure
+
+. For each event listener, create a service monitor. For example, to view the metrics for the `github-listener` event listener in the `test` namespace, create the following service monitor:
++
+[source,yaml]
+----
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: EventListener
+    app.kubernetes.io/part-of: Triggers
+    eventlistener: github-listener
+  annotations:
+    networkoperator.openshift.io/ignore-errors: ""
+  name: el-monitor
+  namespace: test
+spec:
+  endpoints:
+    - interval: 10s
+      port: http-metrics
+  jobLabel: name
+  namespaceSelector:
+    matchNames:
+      - test
+  selector:
+    matchLabels:
+      app.kubernetes.io/managed-by: EventListener
+      app.kubernetes.io/part-of: Triggers
+      eventlistener: github-listener
+...
+----
+. Test the service monitor by sending a request to the event listener. For example, push an empty commit:
++
+[source,terminal]
+----
+$ git commit -m "empty-commit" --allow-empty && git push origin main
+----
+. On the {OCP} web console, navigate to **Administrator** -> **Observe** -> **Metrics**.
+. To view a metric, search by its name. For example, to view the details of the `eventlistener_http_resources` metric for the `github-listener` event listener, search using the `eventlistener_http_resources` keyword.
+
+:leveloffset!:
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://docs.openshift.com/container-platform/latest/observability/monitoring/enabling-monitoring-for-user-defined-projects.html[Enabling monitoring for user-defined projects]
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * create/creating-applications-with-cicd-pipelines.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id="op-configuring-pull-request-capabilities-in-GitHub-interceptor_{context}"]
+= Configuring pull request capabilities in GitHub Interceptor
+
+[role="_abstract"]
+GitHub Interceptor filters pull request events based on changed files and validates pull requests based on configured repository owners.
+
+You can use GitHub Interceptor to create logic that validates and filters GitHub webhooks. For example, you can validate the origin of the webhook and filter incoming events based on specified criteria. When you use GitHub Interceptor to filter event data, you can specify the event types that Interceptor can accept in a field.
+In {pipelines-title}, you can use the following capabilities of GitHub Interceptor:
+
+* Filter pull request events based on the changed files
+* Validate pull requests based on configured GitHub owners
+
+:leveloffset!:
+
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * create/creating-applications-with-cicd-pipelines.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="op-filtering-pull-requests-using-GitHub-interceptor_{context}"]
+= Filtering pull requests using GitHub Interceptor
+
+[role="_abstract"]
+Filter GitHub push and pull request events based on changed files by using GitHub Interceptor with the Common Expression Language (CEL) Interceptor.
+
+You can filter GitHub events based on the changed files for push and pull events. This helps you to run a pipeline for only relevant changes in your Git repository.
+GitHub Interceptor adds a comma-delimited list of all changed files and uses the Common Expression Language (CEL) Interceptor to filter incoming events based on those files. The interceptor adds the list of changed files to the `changed_files` property of the event payload in the top-level  `extensions` field.
+
+.Prerequisites
+* You have installed the {pipelines-title} Operator.
+
+.Procedure
+. Perform one of the following steps:
+* For a public GitHub repository, set the value of the `addChangedFiles` parameter to `true` in the YAML configuration file shown below:
++
+[source,yaml]
+----
+apiVersion: triggers.tekton.dev/v1
+kind: EventListener
+metadata:
+  name: github-add-changed-files-pr-listener
+spec:
+  triggers:
+    - name: github-listener
+      interceptors:
+        - ref:
+            name: "github"
+            kind: ClusterInterceptor
+            apiVersion: triggers.tekton.dev
+          params:
+          - name: "secretRef"
+            value:
+              secretName: github-secret
+              secretKey: secretToken
+          - name: "eventTypes"
+            value: ["pull_request", "push"]
+          - name: "addChangedFiles"
+            value:
+              enabled: true
+        - ref:
+            name: cel
+          params:
+          - name: filter
+            value: extensions.changed_files.matches('controllers/')
+...
+----
+
+* For a private GitHub repository, set the value of the `addChangedFiles` parameter to `true` and give the access token details, `secretName` and `secretKey` in the YAML configuration file shown below:
++
+[source,yaml]
+----
+apiVersion: triggers.tekton.dev/v1
+kind: EventListener
+metadata:
+  name: github-add-changed-files-pr-listener
+spec:
+  triggers:
+    - name: github-listener
+      interceptors:
+        - ref:
+            name: "github"
+            kind: ClusterInterceptor
+            apiVersion: triggers.tekton.dev
+          params:
+          - name: "secretRef"
+            value:
+              secretName: github-secret
+              secretKey: secretToken
+          - name: "eventTypes"
+            value: ["pull_request", "push"]
+          - name: "addChangedFiles"
+            value:
+              enabled: true
+              personalAccessToken:
+                secretName: github-pat
+                secretKey: token
+        - ref:
+            name: cel
+          params:
+          - name: filter
+            value: extensions.changed_files.matches('controllers/')
+...
+----
+
+. Save the configuration file.
+
+:leveloffset!:
+
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * create/creating-applications-with-cicd-pipelines.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="op-validating-pull-requests-using-GitHub-interceptors_{context}"]
+= Validating pull requests using GitHub Interceptors
+
+[role="_abstract"]
+Use GitHub Interceptor to validate pull requests based on configured GitHub repository owners before triggering a `PipelineRun` or `TaskRun`.
+
+You can use GitHub Interceptor to validate the processing of pull requests based on the GitHub owners configured for a repository. This validation helps you to prevent unnecessary execution of a `PipelineRun` or `TaskRun` object.
+GitHub Interceptor processes a pull request only if the user name is listed as an owner or if an owner of the repository issues a configurable comment. For example, when you comment `/ok-to-test` on a pull request as an owner, the comment triggers a `PipelineRun` or `TaskRun`.
+
+[NOTE]
+====
+You configure owners in an `OWNERS` file at the root of the repository.
+====
+
+.Prerequisites
+* You have installed the {pipelines-title} Operator.
+
+.Procedure
+. Create a secret string value.
+. Configure the GitHub webhook with that value.
+. Create a Kubernetes secret named `secretRef` that has your secret value.
+. Pass the Kubernetes secret as a reference to your GitHub Interceptor.
+. Create an `owners` file and add the list of approvers into the `approvers` section.
+. Perform one of the following steps:
+* For a public GitHub repository, set the value of the `githubOwners` parameter to `true` in the YAML configuration file shown below:
++
+[source,yaml]
+----
+apiVersion: triggers.tekton.dev/v1
+kind: EventListener
+metadata:
+  name: github-owners-listener
+spec:
+  triggers:
+    - name: github-listener
+      interceptors:
+        - ref:
+            name: "github"
+            kind: ClusterInterceptor
+            apiVersion: triggers.tekton.dev
+          params:
+            - name: "secretRef"
+              value:
+                secretName: github-secret
+                secretKey: secretToken
+            - name: "eventTypes"
+              value: ["pull_request", "issue_comment"]
+            - name: "githubOwners"
+              value:
+                enabled: true
+                checkType: none
+...
+----
+
+* For a private GitHub repository, set the value of the `githubOwners` parameter to `true` and give the access token details, `secretName` and `secretKey` in the YAML configuration file shown below:
++
+[source,yaml]
+----
+apiVersion: triggers.tekton.dev/v1
+kind: EventListener
+metadata:
+  name: github-owners-listener
+spec:
+  triggers:
+    - name: github-listener
+      interceptors:
+        - ref:
+            name: "github"
+            kind: ClusterInterceptor
+            apiVersion: triggers.tekton.dev
+          params:
+            - name: "secretRef"
+              value:
+                secretName: github-secret
+                secretKey: secretToken
+            - name: "eventTypes"
+              value: ["pull_request", "issue_comment"]
+            - name: "githubOwners"
+              value:
+                enabled: true
+                personalAccessToken:
+                  secretName: github-token
+                  secretKey: secretToken
+                checkType: all
+...
+----
++
+[NOTE]
+====
+Use the `checkType` parameter to specify the GitHub owners who need authentication. You can set its value to `orgMembers`, `repoMembers`, or `all`.
+====
+
+. Save the configuration file.
+
+:leveloffset!:
+
+[role="_additional-resources"]
+== Additional resources
+
+* To include {pac} along with the application source code in the same repository, see xref:../pac/about-pipelines-as-code.adoc#about-pipelines-as-code[About {pac}].
+* For more details on pipelines in the *Developer* perspective, see the xref:../create/working-with-pipelines-web-console.adoc#working-with-pipelines-web-console[Working with {pipelines-shortname} in the web console] section.
+* To learn more about Security Context Constraints (SCCs), see the link:https://docs.openshift.com/container-platform/latest/authentication/managing-security-context-constraints.html[Managing Security Context Constraints] section.
+* For more examples of reusable tasks, see the link:https://github.com/openshift/pipelines-catalog[OpenShift Catalog] repository. Additionally, you can also see the Tekton Catalog in the Tekton project.
+* To install and deploy a custom instance of {tekton-hub} for reusable tasks and pipelines, see xref:../hub/using-tekton-hub-with-openshift-pipelines.adoc#using-tekton-hub-with-openshift-pipelines[Using {tekton-hub} with {pipelines-title}].
+* For more details on re-encrypt TLS termination, see link:https://docs.openshift.com/container-platform/3.11/architecture/networking/routes.html#re-encryption-termination[Re-encryption Termination].
+* For more details on secured routes, see the link:https://docs.openshift.com/container-platform/latest/networking/routes/secured-routes.html[Secured routes] section.

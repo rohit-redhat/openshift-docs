@@ -1,0 +1,305 @@
+:_mod-docs-content-type: ASSEMBLY
+:_mod-docs-content-type: SNIPPET
+// The {product-title} attribute provides the context-sensitive name of the relevant OpenShift distribution, for example, "OpenShift Container Platform" or "OKD". The {product-version} attribute provides the product version relative to the distribution, for example "4.9".
+// {product-title} and {product-version} are parsed when AsciiBinder queries the _distro_map.yml file in relation to the base branch of a pull request.
+// See https://github.com/openshift/openshift-docs/blob/main/contributing_to_docs/doc_guidelines.adoc#product-name-and-version for more information on this topic.
+// Other common attributes are defined in the following lines:
+:data-uri:
+:icons:
+:experimental:
+:toc: macro
+:toc-title:
+:imagesdir: images
+:prewrap!:
+
+:pipelines-title: Red Hat OpenShift Pipelines
+:pipelines-shortname: OpenShift Pipelines
+:pipelines-ver: pipelines-1.22
+:pipelines-version-number: 1.22
+:osp-version-patch: 0
+:tekton-cache: Tekton Cache
+:tekton-chains: Tekton Chains
+:tekton-results: Tekton Results
+:tekton-triggers: Tekton Triggers
+:tekton-hub: Tekton Hub
+:artifact-hub: Artifact Hub
+:pac: Pipelines as Code
+:product-registry: OpenShift image registry
+// IBM Power
+:ibmpowerProductName: IBM Power
+// IBM zSystems
+:ibmzProductName: IBM zSystems
+:linuxoneProductName: IBM(R) LinuxONE
+:kebab: image:kebab.png[title="Options menu"]
+
+:op-system-base: RHEL
+:op-system-base-full: Red Hat Enterprise Linux (RHEL)
+
+:cluster-manager-first: Red Hat OpenShift Cluster Manager
+:cluster-manager: OpenShift Cluster Manager
+:cluster-manager-url: link:https://console.redhat.com/openshift[OpenShift Cluster Manager Hybrid Cloud Console]
+:cluster-manager-url-pull: link:https://console.redhat.com/openshift/install/pull-secret[pull secret from the Red Hat OpenShift Cluster Manager]
+
+:oc-first: pass:quotes[OpenShift CLI (`oc`)]
+
+// Attributes not present in the main branch
+:OCP: OpenShift Container Platform
+
+//We should use lowercase like regular OCP docs and deprecate the above.
+:ocp: OpenShift Container Platform
+
+
+:ols-official: Red{nbsp}Hat OpenShift Lightspeed
+:ols: OpenShift Lightspeed
+
+// Attributes not present in the main branch
+:rhosp: Red Hat OpenStack Platform
+[id="reducing-pipelines-resource-consumption"]
+= Reducing resource consumption of {pipelines-shortname}
+:context: reducing-pipelines-resource-consumption
+
+toc::[]
+
+[role="_abstract"]
+If you use clusters in multitenant environments you must control the consumption of CPU, memory, and storage resources for each project and Kubernetes object. This helps prevent any one application from consuming too many resources and affecting other applications.
+
+To set pod resource limits, {pipelines-title} applies the resource quota limits and limit ranges defined in the project.
+
+To restrict resource consumption in your project, you can:
+
+* link:https://docs.openshift.com/container-platform/latest/applications/quotas/quotas-setting-per-project.html[Set and manage resource quotas] to limit the total resource consumption.
+
+* Use link:https://docs.openshift.com/container-platform/latest/nodes/clusters/nodes-cluster-limit-ranges.html[limit ranges to restrict resource consumption] for specific objects, such as pods, images, image streams, and persistent volume claims.
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * resource/reducing-pipelines-resource-consumption.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id='op-understanding-pipelines-resource-consumption_{context}']
+= Understanding resource consumption in pipelines
+
+[role="_abstract"]
+Each task consists of several required steps that run in a particular order defined in the `steps` field of the `Task` resource. Every task runs as a pod, and each step runs as a container within that pod.
+
+The `Resources` field in the `steps` spec specifies the limits for resource consumption.
+By default, the resource requests for the CPU, memory, and ephemeral storage use `BestEffort` (zero) values or the minimums that limit ranges set in that project.
+
+.Example configuration of resource requests and limits for a step
+[source,yaml]
+----
+spec:
+  steps:
+  - name: <step_name>
+    computeResources:
+      requests:
+        memory: 2Gi
+        cpu: 600m
+      limits:
+        memory: 4Gi
+        cpu: 900m
+----
+
+When you specify the `LimitRange` parameter and the minimum values for container resource requests in the project, {pipelines-title} looks at all the `LimitRange` values in the project. In this case, {pipelines-title} uses the minimum values instead of zero.
+
+.Example configuration of limit range parameters at a project level
+[source,yaml]
+----
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: <limit_container_resource>
+spec:
+  limits:
+  - max:
+      cpu: "600m"
+      memory: "2Gi"
+    min:
+      cpu: "200m"
+      memory: "100Mi"
+    default:
+      cpu: "500m"
+      memory: "800Mi"
+    defaultRequest:
+      cpu: "100m"
+      memory: "100Mi"
+    type: Container
+...
+----
+
+:leveloffset!:
+
+:leveloffset: +1
+
+:_mod-docs-content-type: CONCEPT
+// This module is included in the following assemblies:
+// * resource/reducing-pipelines-resource-consumption.adoc
+
+[id='op-mitigating-extra-pipeline-resource-consumption_{context}']
+= Mitigating extra resource consumption in pipelines
+
+[role="_abstract"]
+When you have resource limits set on the containers in your pod, {OCP} sums up the resource limits requested as all containers run simultaneously.
+
+To consume the minimum amount of resources needed to run one step at a time in the invoked task, {pipelines-title} requests the maximum CPU, memory, and ephemeral storage as specified in the step that requires the most resources. This approach ensures that all the steps have the resources they require. {pipelines-title} sets requests other than the maximum values to zero.
+
+However, this behavior can lead to greater resource usage than required. If you use resource quotas, this could also lead to unschedulable pods.
+
+For example, consider a task with two steps that uses scripts, and that does not define any resource limits and requests. The resulting pod has two init containers (one for entrypoint copy, the other for writing scripts) and two containers, one for each step.
+
+{OCP} uses the limit range set up for the project to compute required resource requests and limits.
+For this example, set the following limit range in the project:
+
+[source,yaml]
+----
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: mem-min-max-demo-lr
+spec:
+  limits:
+  - max:
+      memory: 1Gi
+    min:
+      memory: 500Mi
+    type: Container
+----
+
+In this scenario, each init container uses a request memory of 1Gi (the max limit of the limit range), and each container uses a request memory of 500Mi. Thus, the total memory request for the pod is 2Gi.
+
+If you use the same limit range with a task of ten steps, the final memory request is 5Gi. This value is higher than what each step actually needs (500Mi), because each step runs after the other.
+
+Thus, to reduce resource consumption of resources, you can:
+
+* Reduce the number of steps in a given task by grouping different steps into one bigger step, using the script feature, and the same image. This reduces the minimum  requested resource.
+* Distribute steps that are relatively independent of each other and can run on their own to many tasks instead of a single task. This lowers the number of steps in each task, making the request for each task smaller, and the scheduler can then run them when resources become available.
+
+:leveloffset!:
+
+:leveloffset: +1
+
+:_mod-docs-content-type: CONCEPT
+// This module is included in the following assemblies:
+// * resource/reducing-pipelines-resource-consumption.adoc
+
+[id='op-override-step-resources-pipelinerun_{context}']
+= Override step level compute resources in a PipelineRun
+
+[role="_abstract"]
+In {product-title}, tasks consume compute resources based on the definitions in the `Task` specification or cluster defaults. In some cases, a specific step within a task requires more CPU, memory, or ephemeral storage than the configured defaults.
+
+When using referenced tasks, such as tasks from Tekton bundles or shared pipelines, modifying the original `Task` or `Pipeline` definition might not be possible or desirable. In this scenario, you can override step-level compute resources directly in a `PipelineRun`.
+
+You can override step level resources by using the `spec.taskRunSpecs[*].stepSpecs` field in the `PipelineRun` definition.
+
+This approach enables you to:
+
+* Increase CPU or memory for a specific step
+* Prevent failures caused by insufficient resources
+* Avoid modifying shared or upstream pipeline definitions
+* Customize execution behavior when using {PaC}
+
+[IMPORTANT]
+====
+Step-level overrides differ from task-level compute resource settings.
+
+* *Step-level override*: A step-level override allocates resources to a specific step.
+* *Task-level compute resources*: Task-level compute resources distribute resources evenly across all steps in a task.
+
+If only one step requires additional resources, step-level overrides provide more precise and efficient allocation.
+====
+
+:leveloffset!:
+
+:leveloffset: +2
+
+:_mod-docs-content-type: PROCEDURE
+// This module is included in the following assemblies:
+// * resource/reducing-pipelines-resource-consumption.adoc
+
+[id="op-setting-compute-resources-for-a-task-step_{context}"]
+= Setting compute resources for a task step
+
+[role="_abstract"]
+You can set compute resources for a specific task step by modifying the `PipelineRun` definition in your `.tekton` directory.
+
+.Prerequisites
+
+* You installed the {pipelines-title} Operator in your cluster.
+* You have permission to modify `PipelineRun` definitions.
+* You identified a task step that fails due to insufficient resources.
+
+.Procedure
+
+. Identify the task step that requires additional resources.
++
+Inspect the `TaskRun` logs in the OpenShift web console or by using the CLI. Determine:
+
+* The pipeline task name.
+* The step name within the task.
+* The resource constraint, such as memory or CPU limits.
+
+. Edit the corresponding `PipelineRun` file in the `.tekton` directory.
+
+. Add a `taskRunSpecs` entry for the task and step.
++
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: example-run
+spec:
+  taskRunSpecs:
+    - pipelineTaskName: ecosystem-cert-preflight-checks
+      stepSpecs:
+        - name: app-check
+          computeResources:
+            requests:
+              memory: 4Gi
+            limits:
+              memory: 4Gi
+----
++
+--
+where:
+
+`pipelineTaskName`:: Specifies the task name that the Pipeline defines.
+`stepSpecs[].name`:: Specifies the step within the task.
+`computeResources`:: Defines the CPU and memory allocation for the step.
+--
+
+. Optional: Configure CPU in addition to memory.
++
+[source,yaml]
+----
+computeResources:
+  requests:
+    memory: 4Gi
+    cpu: 100m
+  limits:
+    memory: 4Gi
+    cpu: 2000m
+----
++
+To guarantee allocation, set identical values for `requests` and `limits`.
+
+. Commit and push the changes.
++
+When using {pac}, the system applies the updated PipelineRun during the next execution.
+
+. Verify that the step completes successfully.
+
+:leveloffset!:
+
+[role="_additional-resources"]
+.Additional resources
+
+* xref:../resource/setting-compute-resource-quota-for-openshift-pipelines.adoc#setting-compute-resource-quota-for-openshift-pipelines[Setting compute resource quota for {pipelines-shortname}]
+
+* link:https://docs.openshift.com/container-platform/latest/applications/quotas/quotas-setting-per-project.html[Resource quotas per project]
+
+* link:https://docs.openshift.com/container-platform/latest/nodes/clusters/nodes-cluster-limit-ranges.html[Restricting resource consumption using limit ranges]
+
+* link:https://kubernetes.io/docs/concepts/workloads/pods/init-containers/#resources[Resource requests and limits in Kubernetes]

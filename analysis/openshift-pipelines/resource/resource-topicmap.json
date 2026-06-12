@@ -1,0 +1,29 @@
+{
+  "book": {
+    "name": "Managing performance and resource use",
+    "dir": "resource",
+    "distros": "openshift-pipelines"
+  },
+  "topics": [
+    {
+      "name": "Managing OpenShift Pipelines performance",
+      "file": "managing-pipelines-performance"
+    },
+    {
+      "name": "Reducing resource consumption of OpenShift Pipelines",
+      "file": "reducing-pipelines-resource-consumption"
+    },
+    {
+      "name": "Setting compute resource quota for OpenShift Pipelines",
+      "file": "setting-compute-resource-quota-for-openshift-pipelines"
+    },
+    {
+      "name": "Protecting Tekton workload pods from eviction during node drains",
+      "file": "protecting-tekton-workloads-from-eviction-during-node-drains"
+    },
+    {
+      "name": "Configuring multicluster support for OpenShift Pipelines",
+      "file": "configuring-multicluster-support"
+    }
+  ]
+}

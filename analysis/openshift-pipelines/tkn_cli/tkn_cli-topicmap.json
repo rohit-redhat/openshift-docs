@@ -1,0 +1,19 @@
+{
+  "name": "Pipelines CLI (tkn) reference",
+  "dir": "tkn_cli",
+  "distro": "openshift-pipelines",
+  "topics": [
+    {
+      "name": "Installing tkn",
+      "file": "installing-tkn"
+    },
+    {
+      "name": "Configuring tkn",
+      "file": "op-configuring-tkn"
+    },
+    {
+      "name": "Basic tkn commands",
+      "file": "op-tkn-reference"
+    }
+  ]
+}

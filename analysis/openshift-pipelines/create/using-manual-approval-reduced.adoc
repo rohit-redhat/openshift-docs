@@ -1,0 +1,593 @@
+:_mod-docs-content-type: ASSEMBLY
+:_mod-docs-content-type: SNIPPET
+// The {product-title} attribute provides the context-sensitive name of the relevant OpenShift distribution, for example, "OpenShift Container Platform" or "OKD". The {product-version} attribute provides the product version relative to the distribution, for example "4.9".
+// {product-title} and {product-version} are parsed when AsciiBinder queries the _distro_map.yml file in relation to the base branch of a pull request.
+// See https://github.com/openshift/openshift-docs/blob/main/contributing_to_docs/doc_guidelines.adoc#product-name-and-version for more information on this topic.
+// Other common attributes are defined in the following lines:
+:data-uri:
+:icons:
+:experimental:
+:toc: macro
+:toc-title:
+:imagesdir: images
+:prewrap!:
+
+:pipelines-title: Red Hat OpenShift Pipelines
+:pipelines-shortname: OpenShift Pipelines
+:pipelines-ver: pipelines-1.22
+:pipelines-version-number: 1.22
+:osp-version-patch: 0
+:tekton-cache: Tekton Cache
+:tekton-chains: Tekton Chains
+:tekton-results: Tekton Results
+:tekton-triggers: Tekton Triggers
+:tekton-hub: Tekton Hub
+:artifact-hub: Artifact Hub
+:pac: Pipelines as Code
+:product-registry: OpenShift image registry
+// IBM Power
+:ibmpowerProductName: IBM Power
+// IBM zSystems
+:ibmzProductName: IBM zSystems
+:linuxoneProductName: IBM(R) LinuxONE
+:kebab: image:kebab.png[title="Options menu"]
+
+:op-system-base: RHEL
+:op-system-base-full: Red Hat Enterprise Linux (RHEL)
+
+:cluster-manager-first: Red Hat OpenShift Cluster Manager
+:cluster-manager: OpenShift Cluster Manager
+:cluster-manager-url: link:https://console.redhat.com/openshift[OpenShift Cluster Manager Hybrid Cloud Console]
+:cluster-manager-url-pull: link:https://console.redhat.com/openshift/install/pull-secret[pull secret from the Red Hat OpenShift Cluster Manager]
+
+:oc-first: pass:quotes[OpenShift CLI (`oc`)]
+
+// Attributes not present in the main branch
+:OCP: OpenShift Container Platform
+
+//We should use lowercase like regular OCP docs and deprecate the above.
+:ocp: OpenShift Container Platform
+
+
+:ols-official: Red{nbsp}Hat OpenShift Lightspeed
+:ols: OpenShift Lightspeed
+
+// Attributes not present in the main branch
+:rhosp: Red Hat OpenStack Platform
+[id="using-manual-approval"]
+= Using manual approval in {pipelines-shortname}
+:context: using-manual-approval
+
+toc::[]
+
+[role="_abstract"]
+You can specify a manual approval task in a pipeline. When the pipeline reaches this task, it pauses and awaits approval from one or several {OCP} users. If any of the users chooses to rejects the task instead of approving it, the pipeline fails. The manual approval gate controller provides this functionality.
+
+:FeatureName: The manual approval gate
+:_mod-docs-content-type: SNIPPET
+// When including this file, ensure that {FeatureName} is set immediately before
+// the include. Otherwise it will result in an incorrect replacement.
+
+[IMPORTANT]
+====
+[subs="attributes+"]
+{FeatureName} is a Technology Preview feature only. Technology Preview features are not supported with Red Hat production service level agreements (SLAs) and might not be functionally complete. Red Hat does not recommend using them in production. These features provide early access to upcoming product features, enabling customers to test functionality and provide feedback during the development process.
+
+For more information about the support scope of Red Hat Technology Preview features, see link:https://access.redhat.com/support/offerings/techpreview/[Technology Preview Features Support Scope].
+====
+// Undefine {FeatureName} attribute, so that any mistakes are easily spotted
+:!FeatureName:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * create/using-manual-approval.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="op-enabling-manual-approval-gate_{context}"]
+= Enabling the manual approval gate controller
+
+[role="_abstract"]
+To use manual approval tasks, you must first enable the manual approval gate controller.
+
+.Prerequisites
+
+* You installed the {pipelines-title} Operator in your cluster.
+* You have logged in to the cluster using the `oc` command-line utility.
+* You have administrator permissions for the `openshift-pipelines` namespace.
+
+.Procedure
+
+. Create a file named `manual-approval-gate-cr.yaml` with the following manifest for the `ManualApprovalGate` custom resource (CR):
++
+[source,yaml]
+----
+apiVersion: operator.tekton.dev/v1alpha1
+kind: ManualApprovalGate
+metadata:
+  name: manual-approval-gate
+spec:
+  targetNamespace: openshift-pipelines
+----
+
+. Apply the `ManualApprovalGate` CR by entering the following command:
++
+[source,terminal]
+----
+$ oc apply -f manual-approval-gate-cr.yaml
+----
+
+. Verify that the manual approval gate controller is running by entering the following command:
++
+[source,terminal]
+----
+$ oc get manualapprovalgates.operator.tekton.dev
+----
++
+.Example output
+[source,terminal]
+----
+NAME                   VERSION    READY   REASON
+manual-approval-gate   v0.1.0	    True
+----
++
+Ensure that the `READY` status is `True`. If it is not `True`, wait for a few minutes and enter the command again. The controller might take some time to reach a ready state.
+
+:leveloffset!:
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * create/using-manual-approval.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="op-specifying-manual-approval-task_{context}"]
+= Specifying a manual approval task
+
+[role="_abstract"]
+You can specify a manual approval task in your pipeline to pause execution until specific stakeholders give authorization. When a pipeline run reaches an approval task, the process stops and waits for approval from the designated users or groups.
+
+.Prerequisites
+
+* You have enabled the manual approver gate controller.
+* You have created a YAML specification of a pipeline.
+* You have created the groups and added the required users before using group approval.
+
+.Procedure
+
+. Add an `ApprovalTask` to your pipeline by entering the task definition in your `Pipeline` definition.
++
+--
+The following example shows how to include an approval task in a typical deployment pipeline:
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: deployment-pipeline
+spec:
+  tasks:
+  - name: build
+    taskRef:
+      name: build-task
+
+  - name: test
+    taskRef:
+      name: test-task
+    runAfter: [build]
+
+  - name: approval-gate
+    taskRef:
+      apiVersion: openshift-pipelines.org/v1alpha1
+      kind: ApprovalTask
+    params:
+    - name: approvers
+      value:
+      - user1
+      - user2
+      - group:security-team
+    - name: numberOfApprovalsRequired
+      value: "2"
+    - name: description
+      value: "Approve deployment to production"
+    runAfter: [test]
+
+  - name: deploy
+    taskRef:
+      name: deploy-task
+    runAfter: [approval-gate]
+----
+--
+
+. Optionally, specify status fields for the approval, such as the approval state and approver responses. These fields allow you to track the approval lifecycle during pipeline execution.
++
+The following example demonstrates an approval task with status information:
++
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: example-manual-approval-pipeline
+spec:
+  tasks:
+  - name: example-manual-approval-task
+    taskRef:
+      apiVersion: openshift-pipelines.org/v1alpha1
+      kind: ApprovalTask
+    params:
+    - name: approvers
+      value:
+      - user1
+      - user2
+      - user3
+    - name: description
+      value: Example manual approval task - please approve or reject
+    - name: numberOfApprovalsRequired
+      value: '2'
+    - name: timeout
+      value: '60m'
+status:
+  state: pending
+  approvers:
+  - user1
+  - user2
+  - user3
+  approvalsRequired: 2
+  approvalsReceived: 0
+  approversResponse: []
+  startTime: "2024-01-15T10:30:00Z"
+----
++
+The following table describes the parameters for a manual approval task.
++
+|===
+| Parameter | Type | Description
+
+| `approvers` | array | The {OCP} users or groups who can approve the task.
+
+| `description` | string | Optional: A description of the approval task. {pipelines-shortname} displays this text to the user who can approve or reject the task.
+
+| `numberOfApprovalsRequired` | string | The number of approvals required from different approvers.
+
+| `timeout` | string | Optional: The timeout period for approval. If the required approvals are not received within this period, the pipeline run fails. The default timeout is 1 hour.
+
+| `state` | string | The current approval state: `pending`, `approved`, or `rejected`.
+
+| `approvalsReceived` | int | The number of approvals received so far.
+
+| `approversResponse` | []ApproverState | Detailed response from each approver.
+
+|===
++
+You can define approval tasks for different workflows depending on your requirements. The following are a few examples of approval configurations.
+
+The following is an example for multi user approval.
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: deployment-pipeline
+spec:
+  tasks:
+  - name: build
+    taskRef:
+      name: build-task
+  - name: test
+    taskRef:
+      name: test-task
+    runAfter: [build]
+  - name: approval-gate
+    taskRef:
+      apiVersion: openshift-pipelines.org/v1alpha1
+      kind: ApprovalTask
+    params:
+    - name: approvers
+      value:
+      - <user_1>
+      - <user_2>
+      - <user_3>
+    - name: numberOfApprovalsRequired
+      value: "2"
+    - name: description
+      value: "Approve deployment to production"
+    runAfter: [test]
+  - name: deploy
+    taskRef:
+      name: deploy-task
+    runAfter: [approval-gate]
+----
+
+The following is an example for a group-based user approval.
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: deployment-pipeline
+spec:
+  tasks:
+  - name: build
+    taskRef:
+      name: build-task
+  - name: test
+    taskRef:
+      name: test-task
+    runAfter: [build]
+  - name: approval-gate
+    taskRef:
+      apiVersion: openshift-pipelines.org/v1alpha1
+      kind: ApprovalTask
+    params:
+    - name: approvers
+      value:
+      - group:qa-team
+      - group:security-team
+    - name: numberOfApprovalsRequired
+      value: "2"
+    - name: description
+      value: "Approve deployment to production"
+    runAfter: [test]
+  - name: deploy
+    taskRef:
+      name: deploy-task
+    runAfter: [approval-gate]
+----
+
+The following is an example for mixed user and group approvals.
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: deployment-pipeline
+spec:
+  tasks:
+  - name: build
+    taskRef:
+      name: build-task
+  - name: test
+    taskRef:
+      name: test-task
+    runAfter: [build]
+  - name: approval-gate
+    taskRef:
+      apiVersion: openshift-pipelines.org/v1alpha1
+      kind: ApprovalTask
+    params:
+    - name: approvers
+      value:
+      - <tech_lead>
+      - <group:qa-team>
+      - <group:security-team>
+    - name: numberOfApprovalsRequired
+      value: "2"
+    - name: description
+      value: "Approve deployment to production"
+    runAfter: [test]
+  - name: deploy
+    taskRef:
+      name: deploy-task
+    runAfter: [approval-gate]
+----
+
+:leveloffset!:
+
+//Approving a manual approval task
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * create/using-manual-approval.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id="approving-a-manual-approval-task_{context}"]
+= Approving a manual approval task
+
+[role="_abstract"]
+When you run a pipeline that includes an approval task and the execution reaches the approval task, the pipeline run pauses and waits for user approval or rejection.
+
+Users can approve or reject the task by using either the web console or the `opc` command line utility.
+
+If any one of the approvers configured in the task rejects the task, the pipeline run fails.
+
+If one user approves the task but the configured number of approvals is still not reached, the same user can change to rejecting the task and the pipeline run fails
+
+:leveloffset!:
+
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * create/using-manual-approval.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="op-approving-task-web-console_{context}"]
+= Approving a manual approval task by using the web console
+
+[role="_abstract"]
+You can approve or reject a manual approval task by using the {OCP} web console.
+
+If a manual approval task lists you as an approver and a pipeline run reaches this task, the web console displays a notification. You can view a list of tasks that require your approval and approve or reject these tasks.
+
+.Prerequisites
+
+* You enabled the {pipelines-shortname} console plugin.
+
+.Procedure
+
+. View a list of tasks that you can approve by completing one of the following actions:
+** When a notification about a task requiring your approval displays, click *Go to Approvals tab* in this notification.
+** In the *Administrator* perspective menu, select *Pipelines* -> *Pipelines* and then click the *Approvals* tab.
+** In the *Developer* perspective menu, select *Pipelines* and then click the *Approvals* tab.
+** In the *`PipelineRun` details* window, in the *Details* tab, click the rectangle that represents the manual approval task. The list displays only the approval for this task.
+** In the *`PipelineRun` details* window, click the *`ApprovalTasks`* tab. The list displays only the approval for this pipeline run.
+. In the list of approval tasks, in the line that represents the task that you want to approve, click the {kebab} icon and then select one of the following options:
+** To approve the task, select *Approve*.
+** To reject the task, select *Reject*.
+. Enter a message in the *Reason* field.
+. Click *Submit*.
+
+:leveloffset!:
+
+[role="_additional-resources"]
+.Additional resources
+
+* xref:../create/working-with-pipelines-web-console.adoc#op-enabling-plugin_working-with-pipelines-web-console[Enabling the {pipelines-shortname} console plugin]
+
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * create/using-manual-approval.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="op-approving-task-command-line_{context}"]
+= Approving a manual approval task by using the command line
+
+[role="_abstract"]
+You can approve or reject a manual approval task by using the `opc` command-line utility. You can view a list of tasks for which you are an approver and approve or reject the tasks that are pending approval.
+
+.Prerequisites
+
+* You downloaded and installed the `opc` command-line utility. This utility is available in the same package as the `tkn` command-line utility.
+* You have logged in to the cluster using the `oc` command-line utility.
+
+.Procedure
+
+. View a list of manual approval tasks that list you as an approver by entering the following command:
++
+[source,terminal]
+----
+$ opc approvaltask list
+----
++
+.Example output
+[source,terminal]
+----
+NAME                                     NumberOfApprovalsRequired   PendingApprovals   Rejected   STATUS
+manual-approval-pipeline-01w6e1-task-2   2                           0                  0          Approved
+manual-approval-pipeline-6ywv82-task-2   2                           2                  0          Rejected
+manual-approval-pipeline-90gyki-task-2   2                           2                  0          Pending
+manual-approval-pipeline-jyrkb3-task-2   2                           1                  1          Rejected
+----
+
+. Optional: To view information about a manual approval task, including its name, namespace, pipeline run name, list of approvers, and current status, enter the following command:
++
+[source,terminal]
+----
+$ opc approvaltask describe <approval_task_name>
+----
++
+. Approve or reject a manual approval task as necessary:
+** To approve a manual approval task, enter the following command:
++
+[source,terminal]
+----
+$ opc approvaltask approve <approval_task_name>
+----
++
+Optionally, you can specify a message for the approval by using the `-m` parameter:
++
+[source,terminal]
+----
+$ opc approvaltask approve <approval_task_name> -m <message>
+----
++
+** To reject a manual approval task, enter the following command:
++
+[source,terminal]
+----
+$ opc approvaltask reject <approval_task_name>
+----
+Optionally, you can specify a message for the rejection by using the `-m` parameter:
++
+[source,terminal]
+----
+$ opc approvaltask reject <approval_task_name> -m <message>
+----
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * create/using-manual-approval.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id="op-behavior-of-approvaltask-with-groups-and-users_{context}"]
+= Behavior of ApprovalTask with groups and users
+
+[role="_abstract"]
+You can define complex approval policies by combining individual users and groups in a single definition. This approach lets you specify the total number of required approvals from different stakeholders, such as a tech lead, a QA engineer, and a member of the security team.
+
+You can assign approval responsibility to a group. When you configure a group as an approver, the controller tracks individual approvals from group members and updates the group's overall approval state automatically.
+
+.Example Initial `ApprovalTask` created by the controller with a group approver
+[source,yaml]
+----
+spec:
+  approvers:
+  - name: dev-team
+    type: Group
+    input: pending
+----
+
+As group members approve or reject the task, their individual actions appear in the `users` list. The group's approval state changes automatically as soon as the controller records the necessary member-level approvals.
+
+.Example Group member approvals recorded by the controller
+[source,yaml]
+----
+spec:
+  approvers:
+  - name: dev-team
+    type: Group
+    input: approve
+    users:
+    - name: alice
+      input: approve  # Alice has approved
+    - name: bob
+      input: approve  # Bob has approved
+----
+
+`ApprovalTask` also supports scenarios that require approvals from both individual users and groups. You can combine users and groups in a single approval definition while specifying the total number of required approvals. This allows pipelines to enforce more granular approval policies, such as requiring sign-off from a tech lead, a QA engineer, and a member of the security team.
+
+[IMPORTANT]
+====
+The following YAML represents a runtime `ApprovalTask` object created automatically by the Manual Approval Gate controller when a `PipelineRun` pauses at an approval step. Do not apply this manifest. Red Hat provides this for debugging and inspection only.
+====
+
+[source,yaml]
+----
+apiVersion: openshift-pipelines.org/v1alpha1
+kind: ApprovalTask
+metadata:
+  name: mixed-approval
+  namespace: default
+spec:
+  approvers:
+  - name: tech-lead
+    type: User
+    input: pending
+  - name: qa-team
+    type: Group
+    input: pending
+    users:
+    - name: <user_1>
+      input: approve
+    - name: <user_2>
+      input: approve
+  - name: security-team
+    type: Group
+    input: pending
+  numberOfApprovalsRequired: 3
+  description: "Requires an approval from the tech lead, a QA team member, and a security team member"
+----
+
+:leveloffset!:
+
+[role="_additional-resources"]
+.Additional resources
+
+* xref:../tkn_cli/installing-tkn.adoc#installing-tkn[Installing tkn]

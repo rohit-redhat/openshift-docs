@@ -1,0 +1,503 @@
+:_mod-docs-content-type: ASSEMBLY
+:_mod-docs-content-type: SNIPPET
+// The {product-title} attribute provides the context-sensitive name of the relevant OpenShift distribution, for example, "OpenShift Container Platform" or "OKD". The {product-version} attribute provides the product version relative to the distribution, for example "4.9".
+// {product-title} and {product-version} are parsed when AsciiBinder queries the _distro_map.yml file in relation to the base branch of a pull request.
+// See https://github.com/openshift/openshift-docs/blob/main/contributing_to_docs/doc_guidelines.adoc#product-name-and-version for more information on this topic.
+// Other common attributes are defined in the following lines:
+:data-uri:
+:icons:
+:experimental:
+:toc: macro
+:toc-title:
+:imagesdir: images
+:prewrap!:
+
+:pipelines-title: Red Hat OpenShift Pipelines
+:pipelines-shortname: OpenShift Pipelines
+:pipelines-ver: pipelines-1.22
+:pipelines-version-number: 1.22
+:osp-version-patch: 0
+:tekton-cache: Tekton Cache
+:tekton-chains: Tekton Chains
+:tekton-results: Tekton Results
+:tekton-triggers: Tekton Triggers
+:tekton-hub: Tekton Hub
+:artifact-hub: Artifact Hub
+:pac: Pipelines as Code
+:product-registry: OpenShift image registry
+// IBM Power
+:ibmpowerProductName: IBM Power
+// IBM zSystems
+:ibmzProductName: IBM zSystems
+:linuxoneProductName: IBM(R) LinuxONE
+:kebab: image:kebab.png[title="Options menu"]
+
+:op-system-base: RHEL
+:op-system-base-full: Red Hat Enterprise Linux (RHEL)
+
+:cluster-manager-first: Red Hat OpenShift Cluster Manager
+:cluster-manager: OpenShift Cluster Manager
+:cluster-manager-url: link:https://console.redhat.com/openshift[OpenShift Cluster Manager Hybrid Cloud Console]
+:cluster-manager-url-pull: link:https://console.redhat.com/openshift/install/pull-secret[pull secret from the Red Hat OpenShift Cluster Manager]
+
+:oc-first: pass:quotes[OpenShift CLI (`oc`)]
+
+// Attributes not present in the main branch
+:OCP: OpenShift Container Platform
+
+//We should use lowercase like regular OCP docs and deprecate the above.
+:ocp: OpenShift Container Platform
+
+
+:ols-official: Red{nbsp}Hat OpenShift Lightspeed
+:ols: OpenShift Lightspeed
+
+// Attributes not present in the main branch
+:rhosp: Red Hat OpenStack Platform
+[id="pac-command-reference_{context}"]
+= {pac} command reference
+:context: pac-command-reference
+
+toc::[]
+
+[role="_abstract"]
+You can use the `tkn pac` CLI tool to control {pac}. You can also configure {pac} logging with the `TektonConfig` custom resource and use the `oc` command to view {pac} logs.
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/pac-command-reference.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="pipelines-as-code-command-reference_{context}"]
+= {pac} command reference
+
+[role="_abstract"]
+The `tkn pac` CLI tool offers the following capabilities:
+
+* Bootstrap {pac} installation and configuration.
+* Create a new {pac} repository.
+* List all {pac} repositories.
+* Describe a {pac} repository and the associated runs.
+* Generate a simple pipeline run to get started.
+* Resolve a pipeline run as if {pac} executed it.
+
+[TIP]
+====
+You can use the commands corresponding to the capabilities for testing and experimentation, so that you do not have to make changes to the Git repository containing the application source code.
+====
+
+== Basic syntax
+
+.Example
+[source,terminal]
+----
+$ tkn pac [command or options] [arguments]
+----
+
+== Global options
+
+.Example
+[source,terminal]
+----
+$ tkn pac --help
+----
+
+== Utility commands
+
+bootstrap::
+
+[options="header"]
+|===
+
+| Command | Description
+
+| `tkn pac bootstrap` | Installs and configures {pac} for Git repository hosting service providers, such as GitHub and GitHub Enterprise.
+
+| `tkn pac bootstrap --nightly` | Installs the nightly build of {pac}.
+
+| `tkn pac bootstrap --route-url <public_url_to_ingress_spec>` | Overrides the OpenShift route URL.
+
+By default, `tkn pac bootstrap` detects the OpenShift route, which is automatically associated with the {pac} controller service.
+
+If you do not have an {OCP} cluster, it asks you for the public URL that points to the ingress endpoint.
+
+| `tkn pac bootstrap github-app` | Create a GitHub application and secrets in the `openshift-pipelines` namespace.
+
+|===
+
+repository::
+
+[options="header"]
+|===
+
+| Command | Description
+
+| `tkn pac create repository` | Creates a new {pac} repository and a namespace based on the pipeline run template.
+
+| `tkn pac list` | Lists all the {pac} repositories and displays the last status of the associated runs.
+
+| `tkn pac repo describe` | Describes a {pac} repository and the associated runs.
+
+|===
+
+generate::
+
+[options="header"]
+|===
+
+| Command | Description
+
+| `tkn pac generate` | Generates a simple pipeline run.
+
+When executed from the directory containing the source code, it automatically detects current Git information.
+
+In addition, it uses basic language detection capability and adds extra tasks depending on the language.
+
+For example, if it detects a `setup.py` file at the repository root, the link:https://hub.tekton.dev/tekton/task/pylint[pylint task] is automatically added to the generated pipeline run.
+
+|===
+
+resolve::
+
+[options="header"]
+|===
+
+| Command | Description
+
+| `tkn pac resolve` | Executes a pipeline run as if the {pac} on service owns it.
+
+| `tkn pac resolve -f .tekton/pull-request.yaml \| oc apply -f -` | Displays the status of a live pipeline run that uses the template in `.tekton/pull-request.yaml`.
+
+Combined with a Kubernetes installation running on your local machine, you can observe the pipeline run without generating a new commit.
+
+If you run the command from a source code repository, it attempts to detect the current Git information and automatically resolve parameters such as current revision or branch.
+
+| `tkn pac resolve -f .tekton/pr.yaml -p revision=main -p repo_name=<repository_name>` | Executes a pipeline run by overriding default parameter values derived from the Git repository.
+
+The `-f` option can also accept a directory path and apply the `tkn pac resolve` command on all `.yaml` or `.yml` files in that directory. You can also use the `-f` flag many times in the same command.
+
+You can override the default information gathered from the Git repository by specifying parameter values by using the `-p` option. For example, you can use a Git branch as a revision and a different repository name.
+
+|===
+
+Common Expression Language (CEL)::
+
+[options="header"]
+|===
+
+| Command | Description
+
+| `tkn pac cel` | Evaluate Common Expression Language (CEL) expressions against webhook payloads and headers. Because the command requires access to the raw webhook payload and header data that the Git provider provides, administrators use it for testing and debugging event filtering logic in {pac}.
+
+|===
+
+:FeatureName: The `tkn pac cel` command
+:_mod-docs-content-type: SNIPPET
+// When including this file, ensure that {FeatureName} is set immediately before
+// the include. Otherwise it will result in an incorrect replacement.
+
+[IMPORTANT]
+====
+[subs="attributes+"]
+{FeatureName} is a Technology Preview feature only. Technology Preview features are not supported with Red Hat production service level agreements (SLAs) and might not be functionally complete. Red Hat does not recommend using them in production. These features provide early access to upcoming product features, enabling customers to test functionality and provide feedback during the development process.
+
+For more information about the support scope of Red Hat Technology Preview features, see link:https://access.redhat.com/support/offerings/techpreview/[Technology Preview Features Support Scope].
+====
+// Undefine {FeatureName} attribute, so that any mistakes are easily spotted
+:!FeatureName:
+
+The `tkn pac cel` command uses the following syntax:
+
+[source,terminal]
+----
+tkn pac cel -b <body.json> -H <headers.txt> [-p <provider>]
+----
+
+[options="header"]
+|===
+| Option | Description
+
+| `-b, --body` | Specify the JSON payload file.
+| `-H, --headers` | Specify the headers file (plain text, JSON, or gosmee script).
+| `-p, --provider` | Optional: specify the Git provider (`auto`, `github`, `gitlab`, `bitbucket-cloud`, `bitbucket-datacenter`, `gitea`).
+|===
+
+*Header formats*
+
+The `tkn pac cel` command supports the following header formats:
+
+* Plain HTTP header format
++
+[source,text]
+----
+X-GitHub-Event: pull_request
+Content-Type: application/json
+User-Agent: GitHub-Hookshot/abc123
+----
+
+* JSON header format
++
+[source,json]
+----
+{
+  "X-GitHub-Event": "pull_request",
+  "Content-Type": "application/json",
+  "User-Agent": "GitHub-Hookshot/abc123"
+}
+----
+
+* Gosmee-generated shell scripts
++
+The `tkn pac cel` command automatically detects and parses headers from gosmee `--save` scripts. The following is an example by using GitHub:
++
+[source,bash]
+----
+#!/usr/bin/env bash
+curl -X POST "http://localhost:8080/" \
+  -H "X-GitHub-Event: pull_request" \
+  -H "Content-Type: application/json" \
+  -H "User-Agent: GitHub-Hookshot/abc123" \
+  -d @payload.json
+----
+
+*Interactive mode*
+
+The `tkn pac cel` command displays an interactive `CEL expression` prompt when executed in a terminal. Expression history is navigable using arrow keys and persists between sessions. Pressing *Enter* on an empty line exits the prompt.
+
+*noninteractive mode*
+
+The `tkn pac cel` command accepts CEL expressions by using standard input (`stdin`), allowing evaluation without using the interactive prompt. For example:
+
+[source,terminal]
+----
+echo 'event == "pull_request"' | tkn pac cel -b body.json -H headers.txt
+----
+
+*Available variables*
+
+The `tkn pac cel` command exposes the following variables that you can use in CEL expressions to filter or inspect events:
+
+* `event`: Event type (`push`, `pull_request`)
+* `target_branch`: Target branch name
+* `source_branch`: Source branch name
+* `target_url`: Target repository URL
+* `source_url`: Source repository URL
+* `event_title`: Pull request title or commit message
+* `body.*`: All fields from the webhook payload
+* `headers.*`: All HTTP headers
+* `files.*`: Always empty in CLI mode
+* `pac.*`: All {pac} parameters for backward compatibility
+
+[NOTE]
+====
+When evaluating CEL expressions locally using the CLI, `files.*` variables are always empty, and functions such as `fileChanged`, `fileDeleted`, and `fileModified` are unavailable.
+====
+
+*Example expressions*
+
+The following expressions illustrate typical use cases, including event filtering, branch matching, and header inspection:
+
+[source,terminal]
+----
+event == "pull_request" && target_branch == "main"
+event == "pull_request" && source_branch.matches(".*feat/.*")
+body.action == "synchronize"
+!body.pull_request.draft
+headers["x-github-event"] == "pull_request"
+----
+
+*History storage*
+
+The `tkn pac cel` command maintains a persistent history and creates the `cel-history` directory automatically if it does not exist in the following paths:
+
+* *Linux or macOS:* `~/.cache/tkn-pac/cel-history`
+* *Windows:* `%USERPROFILE%\.cache\tkn-pac\cel-history`
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assembly:
+//
+// * pac/pac-command-reference.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="configuring-pipelines-as-code-logging_{context}"]
+= Configuring {pac} logging
+
+[role="_abstract"]
+You can configure {pac} logging by editing the `pac-config-logging` config map in the `TektonConfig` custom resource (CR).
+
+.Prerequisites
+
+* You have {pac} installed on your cluster.
+
+.Procedure
+
+. In the *Administrator* perspective of the web console, go to *Administration* → *`CustomResourceDefinitions`*.
+
+. Use the *Search by name* field to search for the `tektonconfigs.operator.tekton.dev` custom resource definition (CRD) and click *`TektonConfig`* to view the CRD *Details* page.
+
+. Click the *Instances* tab.
+
+. Click the *config* instance to view the `TektonConfig` CR details.
+
+. Click the *YAML* tab.
+
+. Edit the `loglevel.` fields under the `.options.configMaps.pac-config-logging.data` parameter based on your requirements.
++
+.Example `TektonConfig` CR with the {pac} log level fields set to `warn`
+[source,yaml]
+----
+apiVersion: operator.tekton.dev/v1alpha1
+kind: TektonConfig
+metadata:
+  name: config
+spec:
+  platforms:
+    openshift:
+      pipelinesAsCode:
+        options:
+          configMaps:
+            pac-config-logging:
+              data:
+                loglevel.pac-watcher: warn
+                loglevel.pipelines-as-code-webhook: warn
+                loglevel.pipelinesascode: warn
+                zap-logger-config: |
+                  {
+                    "level": "info",
+                    "development": false,
+                    "sampling": {
+                      "initial": 100,
+                      "thereafter": 100
+                    },
+                    "outputPaths": ["stdout"],
+                    "errorOutputPaths": ["stderr"],
+                    "encoding": "json",
+                    "encoderConfig": {
+                      "timeKey": "ts",
+                      "levelKey": "level",
+                      "nameKey": "logger",
+                      "callerKey": "caller",
+                      "messageKey": "msg",
+                      "stacktraceKey": "stacktrace",
+                      "lineEnding": "",
+                      "levelEncoder": "",
+                      "timeEncoder": "iso8601",
+                      "durationEncoder": "",
+                      "callerEncoder": ""
+                    }
+                  }
+----
+`loglevel.pac-watcher`:: The log level for the `pipelines-as-code-watcher` component.
+`loglevel.pipelines-as-code-webhook`:: The log level for the `pipelines-as-code-webhook` component.
+`loglevel.pipelinesascode`:: The log level for the `pipelines-as-code-controller` component.
+
+. Optional: Create a custom logging config map for the {pac} components by changing the `.env.value` for each component under the `.options.deployments` field. The example below shows the configuration with the custom config map called `custom-pac-config-logging`.
++
+.Example `TektonConfig` CR with the {pac} custom logging config map
+[source,yaml]
+----
+apiVersion: operator.tekton.dev/v1alpha1
+kind: TektonConfig
+metadata:
+  name: config
+spec:
+  platforms:
+    openshift:
+      pipelinesAsCode:
+        enable: true
+        options:
+          configMaps:
+            custom-pac-config-logging:
+              data:
+                loglevel.pac-watcher: warn
+                loglevel.pipelines-as-code-webhook: warn
+                loglevel.pipelinesascode: warn
+                zap-logger-config: |
+                  {
+                    "level": "info",
+                    "development": false,
+                    "sampling": {
+                      "initial": 100,
+                      "thereafter": 100
+                    },
+                    "outputPaths": ["stdout"],
+                    "errorOutputPaths": ["stderr"],
+                    "encoding": "json",
+                    "encoderConfig": {
+                      "timeKey": "ts",
+                      "levelKey": "level",
+                      "nameKey": "logger",
+                      "callerKey": "caller",
+                      "messageKey": "msg",
+                      "stacktraceKey": "stacktrace",
+                      "lineEnding": "",
+                      "levelEncoder": "",
+                      "timeEncoder": "iso8601",
+                      "durationEncoder": "",
+                      "callerEncoder": ""
+                    }
+                  }
+          deployments:
+            pipelines-as-code-controller:
+              spec:
+                template:
+                  spec:
+                    containers:
+                    - name: pac-controller
+                      env:
+                      - name: CONFIG_LOGGING_NAME
+                        value: custom-pac-config-logging
+            pipelines-as-code-watcher:
+              spec:
+                template:
+                  spec:
+                    containers:
+                    - name: pac-watcher
+                      env:
+                      - name: CONFIG_LOGGING_NAME
+                        value: custom-pac-config-logging
+            pipelines-as-code-webhook:
+              spec:
+                template:
+                  spec:
+                    containers:
+                    - name: pac-webhook
+                      env:
+                      - name: CONFIG_LOGGING_NAME
+                        value: custom-pac-config-logging
+----
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/pac-command-reference.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="splitting-pipelines-as-code-logs-by-namespace_{context}"]
+= Splitting {pac} logs by namespace
+
+[role="_abstract"]
+{pac} logs contain the namespace information to make it possible to filter logs or split the logs by a particular namespace. For example, to view the {pac} logs related to the `mynamespace` namespace, enter the following command:
+
+[source,terminal]
+----
+$ oc logs pipelines-as-code-controller-<unique_id> -n openshift-pipelines | grep mynamespace
+----
+`<unique_id>`:: Replace `pipelines-as-code-controller-<unique_id>` with the {pac} controller name.
+
+:leveloffset!:
+
+
+
+[role="_additional-resources"]
+.Additional resources
+
+* xref:../install_config/installing-pipelines.adoc#installing-pipelines[Installing {pipelines-shortname}]
+
+* xref:../tkn_cli/installing-tkn.adoc#installing-tkn[Installing tkn]

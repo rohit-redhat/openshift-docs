@@ -1,0 +1,184 @@
+{
+  "metadata": {
+    "document": "understanding-the-tekton-results-retention-policy",
+    "variant": "self-managed",
+    "extraction_date": "2026-06-12",
+    "total_jobs": 5
+  },
+  "current_structure": {
+    "title": "Understanding the Tekton Results retention policy",
+    "sections": [
+      {
+        "level": 0,
+        "title": "Understanding the Tekton Results retention policy",
+        "line_range": "57-227",
+        "type": "assembly"
+      },
+      {
+        "level": 1,
+        "title": "Fine-grained retention policies",
+        "line_range": "144-226",
+        "type": "concept"
+      }
+    ]
+  },
+  "jobs": [
+    {
+      "job_number": 1,
+      "job_statement": "Understand how Tekton Results retention works",
+      "user_goal": "Learn the fundamentals of retention policy management",
+      "line_references": [
+        "→ Lines 63-66: Abstract explaining Retention Policy Agent and config map",
+        "→ Lines 66-67: Explanation of retention policy behavior",
+        "→ Lines 114-135: Table of retention configuration fields"
+      ],
+      "current_approaches": [
+        {
+          "title": "Overview in assembly abstract",
+          "topic_type": "[concept]",
+          "source_module": "understanding-the-tekton-results-retention-policy.adoc (assembly)",
+          "line_range": "63-67"
+        },
+        {
+          "title": "Configuration fields reference table",
+          "topic_type": "[reference]",
+          "source_module": "understanding-the-tekton-results-retention-policy.adoc (assembly)",
+          "line_range": "114-135"
+        }
+      ],
+      "gap_analysis": "Content is well-structured with clear conceptual explanation and reference material. The assembly provides a good overview of retention policy fundamentals.",
+      "consolidation_opportunity": "None. Content should remain as foundational understanding material."
+    },
+    {
+      "job_number": 2,
+      "job_statement": "Configure basic retention settings",
+      "user_goal": "Set up default retention behavior for all results",
+      "line_references": [
+        "→ Lines 68-112: Sample YAML configuration with TektonConfig",
+        "→ Lines 114-135: Field descriptions for runAt, defaultRetention, maxRetention"
+      ],
+      "current_approaches": [
+        {
+          "title": "Sample YAML configuration example",
+          "topic_type": "[reference]",
+          "source_module": "understanding-the-tekton-results-retention-policy.adoc (assembly)",
+          "line_range": "68-112"
+        },
+        {
+          "title": "Configuration fields reference",
+          "topic_type": "[reference]",
+          "source_module": "understanding-the-tekton-results-retention-policy.adoc (assembly)",
+          "line_range": "114-135"
+        }
+      ],
+      "gap_analysis": "Missing procedural guidance. The document provides reference examples but lacks step-by-step instructions for configuring retention settings. Users have the 'what' but not the 'how'.",
+      "consolidation_opportunity": "Create a procedure module for configuring basic retention settings, referencing the existing configuration examples."
+    },
+    {
+      "job_number": 3,
+      "job_statement": "Understand fine-grained retention policies",
+      "user_goal": "Learn how to create targeted retention rules based on specific criteria",
+      "line_references": [
+        "→ Lines 147-148: Abstract explaining policies field and evaluation order",
+        "→ Lines 150-176: Table of policy fields and selectors",
+        "→ Lines 219-225: Examples of how policies apply to different Results"
+      ],
+      "current_approaches": [
+        {
+          "title": "Fine-grained retention policies",
+          "topic_type": "[concept]",
+          "source_module": "modules/op-fine-grained-retention-policies.adoc",
+          "line_range": "147-176"
+        },
+        {
+          "title": "Policy application examples",
+          "topic_type": "[reference]",
+          "source_module": "modules/op-fine-grained-retention-policies.adoc",
+          "line_range": "219-225"
+        }
+      ],
+      "gap_analysis": "Good conceptual coverage with clear reference examples. The selector logic (AND conditions) is well explained.",
+      "consolidation_opportunity": "None. The concept and reference material work well together to explain fine-grained policies."
+    },
+    {
+      "job_number": 4,
+      "job_statement": "Create namespace-based retention policies",
+      "user_goal": "Configure different retention periods for specific namespaces",
+      "line_references": [
+        "→ Lines 162-163: matchNamespaces field description",
+        "→ Lines 178-217: Example config map with multiple namespace-based policies",
+        "→ Lines 221-225: Examples of namespace-specific policy application"
+      ],
+      "current_approaches": [
+        {
+          "title": "matchNamespaces selector documentation",
+          "topic_type": "[reference]",
+          "source_module": "modules/op-fine-grained-retention-policies.adoc",
+          "line_range": "162-163"
+        },
+        {
+          "title": "Complete policy examples with namespaces",
+          "topic_type": "[reference]",
+          "source_module": "modules/op-fine-grained-retention-policies.adoc",
+          "line_range": "178-217"
+        }
+      ],
+      "gap_analysis": "Lacks procedural guidance for creating and applying namespace-based policies. Users need step-by-step instructions.",
+      "consolidation_opportunity": "Create a procedure module for configuring namespace-based retention policies."
+    },
+    {
+      "job_number": 5,
+      "job_statement": "Create status and label-based retention policies",
+      "user_goal": "Configure retention rules based on pipeline run outcomes and labels",
+      "line_references": [
+        "→ Lines 164-169: matchLabels and matchAnnotations field descriptions",
+        "→ Lines 170-172: matchStatuses field description",
+        "→ Lines 191-200: Example of critical failures retention policy combining status and labels",
+        "→ Lines 221-222: Example of failed Result retention in production"
+      ],
+      "current_approaches": [
+        {
+          "title": "Selector fields for labels, annotations, and statuses",
+          "topic_type": "[reference]",
+          "source_module": "modules/op-fine-grained-retention-policies.adoc",
+          "line_range": "164-172"
+        },
+        {
+          "title": "Combined selector policy examples",
+          "topic_type": "[reference]",
+          "source_module": "modules/op-fine-grained-retention-policies.adoc",
+          "line_range": "191-200"
+        }
+      ],
+      "gap_analysis": "Reference material is comprehensive but lacks procedural guidance for implementing status and label-based policies. Users need practical steps for common scenarios (e.g., retaining failed runs longer).",
+      "consolidation_opportunity": "Create a procedure module for configuring advanced retention policies using labels, annotations, and statuses."
+    }
+  ],
+  "why_ladder_validation": {
+    "job_1": {
+      "statement": "Understand how Tekton Results retention works",
+      "why_test": "Why? → To make informed decisions about retention configuration. (Foundation for other jobs - MAIN JOB)",
+      "classification": "MAIN JOB"
+    },
+    "job_2": {
+      "statement": "Configure basic retention settings",
+      "why_test": "Why? → To set up retention policy. Why? → To manage Results retention. (Contributes to retention management - MAIN JOB)",
+      "classification": "MAIN JOB"
+    },
+    "job_3": {
+      "statement": "Understand fine-grained retention policies",
+      "why_test": "Why? → To create targeted retention rules. (Foundation for jobs 4 and 5 - MAIN JOB)",
+      "classification": "MAIN JOB"
+    },
+    "job_4": {
+      "statement": "Create namespace-based retention policies",
+      "why_test": "Why? → To configure fine-grained retention. (Specific implementation of job 3 - could be TASK under job 3, but valuable as standalone - MAIN JOB)",
+      "classification": "MAIN JOB"
+    },
+    "job_5": {
+      "statement": "Create status and label-based retention policies",
+      "why_test": "Why? → To configure fine-grained retention. (Specific implementation of job 3 - could be TASK under job 3, but valuable as standalone - MAIN JOB)",
+      "classification": "MAIN JOB"
+    }
+  }
+}

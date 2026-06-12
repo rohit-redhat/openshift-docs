@@ -1,0 +1,77 @@
+{
+  "root": "creating-applications-with-cicd-pipelines.adoc",
+  "includes": [
+    {
+      "file": "modules/op-creating-project-and-checking-pipeline-service-account.adoc",
+      "line": 37,
+      "leveloffset": "+1"
+    },
+    {
+      "file": "modules/op-creating-pipeline-tasks.adoc",
+      "line": 39,
+      "leveloffset": "+1"
+    },
+    {
+      "file": "modules/op-assembling-a-pipeline.adoc",
+      "line": 41,
+      "leveloffset": "+1"
+    },
+    {
+      "file": "modules/op-mirroring-images-to-run-pipelines-in-restricted-environment.adoc",
+      "line": 43,
+      "leveloffset": "+1"
+    },
+    {
+      "file": "modules/op-running-a-pipeline.adoc",
+      "line": 52,
+      "leveloffset": "+1"
+    },
+    {
+      "file": "modules/op-adding-triggers.adoc",
+      "line": 60,
+      "leveloffset": "+1"
+    },
+    {
+      "file": "modules/op-configuring-eventlisteners-to-serve-multiple-namespaces.adoc",
+      "line": 62,
+      "leveloffset": "+1"
+    },
+    {
+      "file": "modules/op-creating-webhooks.adoc",
+      "line": 64,
+      "leveloffset": "+1"
+    },
+    {
+      "file": "modules/op-triggering-a-pipelinerun.adoc",
+      "line": 66,
+      "leveloffset": "+1"
+    },
+    {
+      "file": "modules/op-enabling-monitoring-of-event-listeners-for-triggers-for-user-defined-projects.adoc",
+      "line": 68,
+      "leveloffset": "+1"
+    },
+    {
+      "file": "modules/op-configuring-pull-request-capabilities-in-GitHub-interceptor.adoc",
+      "line": 75,
+      "leveloffset": "+1"
+    },
+    {
+      "file": "modules/op-filtering-pull-requests-using-GitHub-interceptor.adoc",
+      "line": 77,
+      "leveloffset": "+2"
+    },
+    {
+      "file": "modules/op-validating-pull-requests-using-GitHub-interceptors.adoc",
+      "line": 79,
+      "leveloffset": "+2"
+    }
+  ],
+  "total_modules": 13,
+  "assembly_type": "ASSEMBLY",
+  "content_types": {
+    "PROCEDURE": 11,
+    "CONCEPT": 1,
+    "ASSEMBLY": 1
+  }
+}

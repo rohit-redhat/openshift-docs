@@ -1,0 +1,1621 @@
+= Using Tekton Results for OpenShift Pipelines observability
+
+:_mod-docs-content-type: ASSEMBLY
+:_mod-docs-content-type: SNIPPET
+// The {product-title} attribute provides the context-sensitive name of the relevant OpenShift distribution, for example, "OpenShift Container Platform" or "OKD". The {product-version} attribute provides the product version relative to the distribution, for example "4.9".
+// {product-title} and {product-version} are parsed when AsciiBinder queries the _distro_map.yml file in relation to the base branch of a pull request.
+// See https://github.com/openshift/openshift-docs/blob/main/contributing_to_docs/doc_guidelines.adoc#product-name-and-version for more information on this topic.
+// Other common attributes are defined in the following lines:
+:data-uri:
+:icons:
+:experimental:
+:toc: macro
+:toc-title:
+:imagesdir: images
+:prewrap!:
+
+:pipelines-title: Red Hat OpenShift Pipelines
+:pipelines-shortname: OpenShift Pipelines
+:pipelines-ver: pipelines-1.22
+:pipelines-version-number: 1.22
+:osp-version-patch: 0
+:tekton-cache: Tekton Cache
+:tekton-chains: Tekton Chains
+:tekton-results: Tekton Results
+:tekton-triggers: Tekton Triggers
+:tekton-hub: Tekton Hub
+:artifact-hub: Artifact Hub
+:pac: Pipelines as Code
+:product-registry: OpenShift image registry
+// IBM Power
+:ibmpowerProductName: IBM Power
+// IBM zSystems
+:ibmzProductName: IBM zSystems
+:linuxoneProductName: IBM(R) LinuxONE
+:kebab: image:kebab.png[title="Options menu"]
+
+:op-system-base: RHEL
+:op-system-base-full: Red Hat Enterprise Linux (RHEL)
+
+:cluster-manager-first: Red Hat OpenShift Cluster Manager
+:cluster-manager: OpenShift Cluster Manager
+:cluster-manager-url: link:https://console.redhat.com/openshift[OpenShift Cluster Manager Hybrid Cloud Console]
+:cluster-manager-url-pull: link:https://console.redhat.com/openshift/install/pull-secret[pull secret from the Red Hat OpenShift Cluster Manager]
+
+:oc-first: pass:quotes[OpenShift CLI (`oc`)]
+
+// Attributes not present in the main branch
+:OCP: OpenShift Container Platform
+
+//We should use lowercase like regular OCP docs and deprecate the above.
+:ocp: OpenShift Container Platform
+
+
+:ols-official: Red{nbsp}Hat OpenShift Lightspeed
+:ols: OpenShift Lightspeed
+
+// Attributes not present in the main branch
+:rhosp: Red Hat OpenStack Platform
+[id="using-tekton-results-for-openshift-pipelines-observability"]
+= Using {tekton-results} for {pipelines-shortname} observability
+:context: using-tekton-results-for-openshift-pipelines-observability
+
+toc::[]
+
+[role="_abstract"]
+{tekton-results} is a service that archives the complete information for every pipeline run and task run. You can prune the `PipelineRun` and `TaskRun` resources as necessary and use the {tekton-results} API or the `opc` command line utility to access their YAML manifests and logging information.
+
+:leveloffset: +1
+
+// This module is included in the following assembly:
+//
+// * records/using-tekton-results-for-openshift-pipelines-observability.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id="results-concepts_{context}"]
+= {tekton-results} concepts
+
+{tekton-results} archives pipeline runs and task runs in the form of results and records.
+[role="_abstract"]
+{tekton-results} archives pipeline runs and task runs in the form of results and records.
+
+For every `PipelineRun` and `TaskRun` custom resource (CR) that completes running, {tekton-results} creates a _record_.
+
+A _result_ can contain one or several records. A record is always a part of exactly one result.
+
+A result corresponds to a pipeline run, and includes the records for the `PipelineRun` CR itself and for all the `TaskRun` CRs that the pipeline run started.
+
+If you start a task run directly, without the use of a pipeline run, {tekton-results} creates a result for this task run. This result has the record for the same task run.
+
+Each result has a name that includes the namespace where you created the `PipelineRun` or `TaskRun` CR and the UUID of the CR. The format for the result name is `<namespace_name>/results/<parent_run_uuid>`. In this format, `<parent_run_uuid>` is the universally unique identifier (UUID) of a pipeline run or else of a task run that you started directly.
+
+.Example result name
+----
+results-testing/results/04e2fbf2-8653-405f-bc42-a262bcf02bed
+----
+
+Each record has a name that includes name of the result that has the record, and the UUID of the `PipelineRun` or `TaskRun` CR to which the record corresponds. The format for the result name is `<namespace_name>/results/<parent_run_uuid>/results/<run_uuid>`.
+
+.Example record name
+----
+results-testing/results/04e2fbf2-8653-405f-bc42-a262bcf02bed/records/e9c736db-5665-441f-922f-7c1d65c9d621
+----
+
+The record includes the full YAML manifest of the `TaskRun` or `PipelineRun` CR as it existed after the run completed. This manifest has the specification of the run and any annotation that you specify for it. It also includes information about the results, such as the completion time and whether the run was successful.
+
+While the `TaskRun` or `PipelineRun` CR exists, you can view the YAML manifest by using the following command:
+
+[source,terminal]
+----
+$ oc get pipelinerun <cr_name> -o yaml
+----
+
+{tekton-results} preserves this manifest after you delete the `TaskRun` or `PipelineRun` CR and makes it available for viewing and searching.
+
+.Example YAML manifest of a pipeline run after its completion
+[source,yaml]
+----
+  kind: PipelineRun
+  spec:
+    params:
+      - name: message
+        value: five
+    timeouts:
+      pipeline: 1h0m0s
+    pipelineRef:
+      name: echo-pipeline
+    taskRunTemplate:
+      serviceAccountName: pipeline
+  status:
+    startTime: "2023-08-07T11:41:40Z"
+    conditions:
+      - type: Succeeded
+        reason: Succeeded
+        status: "True"
+        message: 'Tasks Completed: 1 (Failed: 0, Cancelled 0), Skipped: 0'
+        lastTransitionTime: "2023-08-07T11:41:49Z"
+    pipelineSpec:
+      tasks:
+        - name: echo-task
+          params:
+            - name: message
+              value: five
+          taskRef:
+            kind: Task
+            name: echo-task-pipeline
+      params:
+        - name: message
+          type: string
+    completionTime: "2023-08-07T11:41:49Z"
+    childReferences:
+      - kind: TaskRun
+        name: echo-pipeline-run-gmzrx-echo-task
+        apiVersion: tekton.dev/v1
+        pipelineTaskName: echo-task
+  metadata:
+    uid: 62c3b02e-f12b-416c-9771-c02af518f6d4
+    name: echo-pipeline-run-gmzrx
+    labels:
+      tekton.dev/pipeline: echo-pipeline
+    namespace: releasetest-js5tt
+    finalizers:
+      - chains.tekton.dev/pipelinerun
+    generation: 2
+    annotations:
+      results.tekton.dev/log: releasetest-js5tt/results/62c3b02e-f12b-416c-9771-c02af518f6d4/logs/c1e49dd8-d641-383e-b708-e3a02b6a4378
+      chains.tekton.dev/signed: "true"
+      results.tekton.dev/record: releasetest-js5tt/results/62c3b02e-f12b-416c-9771-c02af518f6d4/records/62c3b02e-f12b-416c-9771-c02af518f6d4
+      results.tekton.dev/result: releasetest-js5tt/results/62c3b02e-f12b-416c-9771-c02af518f6d4
+    generateName: echo-pipeline-run-
+    managedFields:
+      - time: "2023-08-07T11:41:39Z"
+        manager: kubectl-create
+        fieldsV1:
+          f:spec:
+            .: {}
+            f:params: {}
+            f:pipelineRef:
+              .: {}
+              f:name: {}
+          f:metadata:
+            f:generateName: {}
+        operation: Update
+        apiVersion: tekton.dev/v1
+        fieldsType: FieldsV1
+      - time: "2023-08-07T11:41:40Z"
+        manager: openshift-pipelines-controller
+        fieldsV1:
+          f:metadata:
+            f:labels:
+              .: {}
+              f:tekton.dev/pipeline: {}
+        operation: Update
+        apiVersion: tekton.dev/v1
+        fieldsType: FieldsV1
+      - time: "2023-08-07T11:41:49Z"
+        manager: openshift-pipelines-chains-controller
+        fieldsV1:
+          f:metadata:
+            f:finalizers:
+              .: {}
+              v:"chains.tekton.dev/pipelinerun": {}
+            f:annotations:
+              .: {}
+              f:chains.tekton.dev/signed: {}
+        operation: Update
+        apiVersion: tekton.dev/v1
+        fieldsType: FieldsV1
+      - time: "2023-08-07T11:41:49Z"
+        manager: openshift-pipelines-controller
+        fieldsV1:
+          f:status:
+            f:startTime: {}
+            f:conditions: {}
+            f:pipelineSpec:
+              .: {}
+              f:tasks: {}
+              f:params: {}
+            f:completionTime: {}
+            f:childReferences: {}
+        operation: Update
+        apiVersion: tekton.dev/v1
+        fieldsType: FieldsV1
+        subresource: status
+      - time: "2023-08-07T11:42:15Z"
+        manager: openshift-pipelines-results-watcher
+        fieldsV1:
+          f:metadata:
+            f:annotations:
+              f:results.tekton.dev/log: {}
+              f:results.tekton.dev/record: {}
+              f:results.tekton.dev/result: {}
+        operation: Update
+        apiVersion: tekton.dev/v1
+        fieldsType: FieldsV1
+    resourceVersion: "126429"
+    creationTimestamp: "2023-08-07T11:41:39Z"
+    deletionTimestamp: "2023-08-07T11:42:23Z"
+    deletionGracePeriodSeconds: 0
+  apiVersion: tekton.dev/v1
+----
+
+You can access every result and record by its name. You can also use Common Expression Language (CEL) queries to search for results and records by the information they contain, including the YAML manifest.
+
+You can configure {tekton-results} to help forwarding the logging information of all the tools that ran as a part of a pipeline or task to `LokiStack`. You can then query {tekton-results} for logging information of the task run associated with a {tekton-results} record.
+
+You can also query results and logs by the names of pipeline runs and task runs.
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assembly:
+//
+// * records/using-tekton-results-for-openshift-pipelines-observability.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id="configuring-results_{context}"]
+= Configuring {tekton-results}
+
+[role="_abstract"]
+Installing {pipelines-shortname} enables {tekton-results} by default.
+
+However, if you want to store and access logging information for your pipeline runs and task runs, you must configure forwarding this information to `LokiStack`.
+
+You can optionally complete additional configuration for {tekton-results}.
+
+:leveloffset!:
+
+:leveloffset: +2
+
+// This module is included in the following assembly:
+//
+// * records/using-tekton-results-for-openshift-pipelines-observability.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="results-log-forward_{context}"]
+= Configuring LokiStack forwarding for logging information
+
+If you want to use {tekton-results} to query logging information for task runs, you must install `LokiStack` and OpenShift Logging on your {OCP} cluster and configure forwarding of the logging information to `LokiStack`.
+[role="_abstract"]
+If you want to use {tekton-results} to query logging information for task runs, you must install `LokiStack` and OpenShift Logging on your {OCP} cluster and configure forwarding of the logging information to `LokiStack`.
+
+If you do not configure `LokiStack` forwarding for logging information, {tekton-results} does not store this information or give it from the command-line interface or API.
+
+.Prerequisites
+
+* You installed the {oc-first} utility.
+* You logged in to your {OCP} cluster as a cluster administrator user.
+
+.Procedure
+
+
+. On your {OCP} cluster, install `LokiStack` by using the Loki Operator and also install the OpenShift Logging Operator.
+
+. Create a `ClusterLogForwarder.yaml` manifest file for the `ClusterLogForwarder` custom resource (CR) with one of the following YAML manifests, depending on whether you installed OpenShift Logging version 6 or version 5:
++
+.YAML manifest for the `ClusterLogForwarder` CR if you installed OpenShift Logging version 6
+[source,yaml]
+----
+apiVersion: observability.openshift.io/v1
+kind: ClusterLogForwarder
+metadata:
+  name: collector
+  namespace: openshift-logging
+spec:
+  inputs:
+  - application:
+      selector:
+        matchExpressions:
+          - key: app.kubernetes.io/managed-by
+            operator: In
+            values: ["tekton-pipelines", "pipelinesascode.tekton.dev"]
+    name: only-tekton
+    type: application
+  managementState: Managed
+  outputs:
+  - lokiStack:
+      labelKeys:
+        application:
+          ignoreGlobal: true
+          labelKeys:
+          - log_type
+          - kubernetes.namespace_name
+          - openshift_cluster_id
+      authentication:
+        token:
+          from: serviceAccount
+      target:
+        name: logging-loki
+        namespace: openshift-logging
+    name: default-lokistack
+    tls:
+      ca:
+        configMapName: openshift-service-ca.crt
+        key: service-ca.crt
+    type: lokiStack
+  pipelines:
+  - inputRefs:
+    - only-tekton
+    name: default-logstore
+    outputRefs:
+    - default-lokistack
+  serviceAccount:
+    name: collector
+----
++
+.YAML manifest for the `ClusterLogForwarder` CR if you installed OpenShift Logging version 5
+[source,yaml]
+----
+apiVersion: "logging.openshift.io/v1"
+kind: ClusterLogForwarder
+metadata:
+  name: instance
+  namespace: openshift-logging
+spec:
+  inputs:
+  - name: only-tekton
+    application:
+      selector:
+        matchLabels:
+          app.kubernetes.io/managed-by: tekton-pipelines
+  pipelines:
+    - name: enable-default-log-store
+      inputRefs: [ only-tekton ]
+      outputRefs: [ default ]
+----
+
+. Create the `ClusterLogForwarder` CR in the `openshift-logging` namespace by entering the following command:
++
+[source, terminal]
+----
+$ oc apply -n openshift-logging ClusterLogForwarder.yaml
+----
+
+. Edit the `TektonConfig` CR by using the following command:
++
+[source,terminal]
+----
+$ oc edit TektonConfig config
+----
++
+Make the following changes in the `result` spec:
++
+[source,yaml]
+----
+apiVersion: operator.tekton.dev/v1alpha1
+kind: TektonConfig
+metadata:
+  name: config
+spec:
+  result:
+    loki_stack_name: logging-loki
+    loki_stack_namespace: openshift-logging
+----
+`loki_stack_name`:: The name of the `LokiStack` CR, typically `logging-loki`.
+`loki_stack_namespace`:: The name of the namespace where you deployed `LokiStack`, typically `openshift-logging`.
+
+:leveloffset!:
+
+:leveloffset: +2
+
+// This module is included in the following assembly:
+//
+// * records/using-tekton-results-for-openshift-pipelines-observability.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="results-db_{context}"]
+= Configuring an external database server
+
+[role="_abstract"]
+Configure {tekton-results} to connect to an external PostgreSQL-compatible database for production environments instead of the default internal instance.
+
+{tekton-results} uses a PostgreSQL database to store data. By default, the installation includes an internal PostgreSQL instance intended for testing and non-production use. The default instance does not give production-grade capabilities, such as automated backups, performance tuning, storage lifecycle management, or support for database-level modifications through the {pipelines-shortname} Operator.
+
+For production environments or business-critical workloads, you can configure {tekton-results} to connect to an external PostgreSQL-compatible database that is present in your environment.
+
+
+.Procedure
+
+. Create a secret with the credentials for connecting to your PostgreSQL server by entering the following command:
++
+[source,terminal]
+----
+$ oc create secret generic tekton-results-postgres \
+  --namespace=openshift-pipelines \
+  --from-literal=POSTGRES_USER=<user> \
+  --from-literal=POSTGRES_PASSWORD=<password>
+----
+
+. Edit the `TektonConfig` custom resource (CR) by using the following command:
++
+[source,terminal]
+----
+$ oc edit TektonConfig config
+----
++
+Make the following changes in the `result` spec:
++
+[source,yaml]
+----
+apiVersion: operator.tekton.dev/v1alpha1
+kind: TektonConfig
+metadata:
+  name: config
+spec:
+  result:
+    is_external_db: true
+    db_host: database.example.com
+    db_port: 5342
+----
+`db_host`:: Give the hostname of your PostgreSQL server.
+`db_port`:: Give the port number of your PostgreSQL server.
+
+:leveloffset!:
+
+:leveloffset: +2
+
+// This module is included in the following assembly:
+//
+// * cicd/pipelines/using-tekton-results-for-openshift-pipelines-observability.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="configuring-retention-policy-results_{context}"]
+= Configuring the retention policy for {tekton-results}
+
+[role="_abstract"]
+By default, {tekton-results} stores pipeline runs, task runs, events, and logs indefinitely. This leads to an unnecessary use of storage resources and can affect your database performance.
+
+You can configure the retention policy for {tekton-results} at the cluster level to remove older results and their associated records and logs.
+
+.Procedure
+
+*  Edit the `TektonConfig` custom resource (CR) by using the following command:
++
+[source,terminal]
+----
+$ oc edit TektonConfig config
+----
++
+Make the following changes in the `result` spec:
++
+[source,yaml]
+----
+apiVersion: operator.tekton.dev/v1alpha1
+kind: TektonConfig
+metadata:
+  name: config
+spec:
+  result:
+    options:
+      configMaps:
+        config-results-retention-policy:
+          data:
+            runAt: "3 5 * * 0"
+            maxRetention: "30"
+----
+`runAt`:: Specify, in cron format, when to run the pruning job in the database. This example runs the job at 5:03 AM every Sunday.
+`maxRetention`:: Specify how many days to keep the data in the database. This example retains the data for 30 days.
+
+:leveloffset!:
+
+:leveloffset: +2
+
+// This module is included in the following assembly:
+//
+// * records/using-tekton-results-for-openshift-pipelines-observability.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="results-observability-metrics_{context}"]
+= Observability metrics for {tekton-results}
+
+[role="_abstract"]
+You can monitor the health and performance of {tekton-results} storage and deletion operations by using the metrics exposed by the `tekton-results-watcher` component. These metrics provide insights into storage latency, deletion timing, and help identify runs deleted before successful storage.
+
+The `tekton-results-watcher` service exposes the metrics on port `9090` at the `/metrics` endpoint. If you have configured `ServiceMonitor` resources for {tekton-results}, Prometheus Operator automatically discovers these metrics.
+
+The following are the metric categories:
+
+* Storage performance
+* Storage failures
+* Deletion duration
+* Deletion count
+
+Most {tekton-results} metrics use labels to provide additional context, which you can use in PromQL{nbsp}queries or dashboards to filter and group the metrics.
+
+[cols="1,3",options="header"]
+|===
+| Label | Description
+
+| `kind`
+| The Tekton resource type: `pipelinerun` or `taskrun`.
+
+| `namespace`
+| The Kubernetes namespace of the run.
+
+| `pipeline`
+| The name of the pipeline. This label is optional.
+
+| `status`
+| The completion status of the run.
+
+| `task`
+| The name of the task. This label is optional and applies only to TaskRuns.
+
+| `taskrun`
+| The name of the TaskRun. This label is optional and applies only to TaskRuns.
+|===
+
+Storage performance metrics::
+{tekton-results} exposes the following storage performance metrics:
++
+[cols="3,1,3,2,2",options="header"]
+|===
+| Name | Type | Description | Labels | Buckets
+
+| `watcher_run_storage_latency_seconds` | Histogram | The duration between run completion and successful storage | kind, namespace | 0.1, 0.5, 1, 2, 5, 10, 30, 60, 120, 300, 600, and 1800 seconds
+|===
++
+[NOTE]
+====
+This metric tracks latency only when the watcher stores a run after completion. When you set `DisableStoringIncompleteRuns` to `false`, the watcher stores runs before completion but only records storage latency when the run completes and the watcher stores it again.
+====
+
+Storage failure metrics::
+{tekton-results} exposes the following storage failure metrics:
++
+[cols="3,1,3,2",options="header"]
+|===
+| Name | Type | Description | Labels
+
+| `runs_not_stored_count` | Counter | Total number of runs the system deletes without successful storage | kind, namespace
+|===
++
+[NOTE]
+====
+This metric might show inflated values in rare cases because the system can increment it multiple times during reconciliation when the controller attempts to store the run again or when the system does not complete deletion immediately.
+====
+
+Deletion duration metrics::
+{tekton-results} exposes the following deletion duration metrics:
++
+[cols="3,1,3,2",options="header"]
+|===
+| Name | Type | Description | Labels
+
+| `watcher_pipelinerun_delete_duration_seconds` | Histogram | The duration that the watcher takes to delete the PipelineRun since completion | pipeline, status, namespace
+
+| `watcher_taskrun_delete_duration_seconds` | Histogram | The duration that the watcher takes to delete the TaskRun since completion | pipeline, status, task, taskrun, namespace
+|===
+
+Deletion count metrics::
+{tekton-results} exposes the following deletion count metrics:
++
+[cols="3,1,3,2",options="header"]
+|===
+| Name | Type | Description | Labels
+
+| `watcher_pipelinerun_delete_count` | Counter | The total count of deleted PipelineRuns | status, namespace
+
+| `watcher_taskrun_delete_count` | Counter | The total count of deleted TaskRuns | status, namespace
+|===
+
+:leveloffset!:
+
+//Querying {tekton-results} for results and records
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * records/using-tekton-results-for-openshift-pipelines-observability.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id="querying-using-opc_{context}"]
+= Querying {tekton-results} for results and records
+
+[role="_abstract"]
+You can use the `opc` command line utility to query {tekton-results} for results and records. To install the `opc` command line utility, install the package for the `tkn` command line utility. For instructions about installing this package, see xref:../tkn_cli/installing-tkn.adoc#installing-tkn[Installing tkn].
+
+You can use the names of records and results to retrieve the data in them.
+
+You can search for results and records by using Common Expression Language (CEL) queries. These searches display the universally unique identifiers (UUIDs) of the results or records. You can use the provided examples to create queries for common search types. You can also use reference information to create other queries.
+
+:leveloffset!:
+
+:leveloffset: +2
+
+// This module is included in the following assembly:
+//
+// * records/using-tekton-results-for-openshift-pipelines-observability.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="prepare-opc-for-results_{context}"]
+= Preparing the opc utility environment for querying {tekton-results}
+
+[role="_abstract"]
+Before you can query {tekton-results}, you must prepare the environment for the `opc` utility.
+
+.Prerequisites
+
+* You installed the `opc` utility.
+* You logged on to the {OCP} cluster by using the {oc-first}.
+
+.Procedure
+
+. Set the `RESULTS_API` environment variable to the route to the {tekton-results} API by entering the following command:
++
+[source, terminal]
+----
+$ export RESULTS_API=$(oc get route tekton-results-api-service -n openshift-pipelines --no-headers -o custom-columns=":spec.host"):443
+----
+
+. Create an authentication token for the {tekton-results} API by entering the following command:
++
+[source,terminal]
+----
+$ oc create token <service_account>
+----
++
+Replace `<service_account>` with the name of an {OCP} service account that has read access to the namespaces where {pipelines-shortname} ran the pipeline runs and task runs.
++
+Save the string that this command outputs.
+
+. Optional: Create the `~/.config/tkn/results.yaml` file for automatic authentication with the {tekton-results} API. The file must have the following contents:
++
+[source,yaml]
+----
+address: <tekton_results_route>
+token: <authentication_token>
+ssl:
+   roots_file_path: /home/example/cert.pem
+   server_name_override: tekton-results-api-service.openshift-pipelines.svc.cluster.local
+ service_account:
+   namespace: service_acc_1
+   name: service_acc_1
+----
+`address`:: The route to the {tekton-results} API. Use the same value as you set for `RESULTS_API`.
+`token`:: The authentication token that the `oc create token` command created. If you give this token, it overrides the `service_account` setting and `opc` uses this token to authenticate.
+`ssl.roots_file_path`:: The location of the file with the SSL/TLS certificate that you configured for the API endpoint.
+`ssl.server_name_override`:: If you configured a custom target namespace for {pipelines-shortname}, replace `openshift-pipelines` with the name of this namespace.
+`service_account`:: The name of a service account for authenticating with the {tekton-results} API. If you provided the authentication token, you do not need to give the `service_account` parameters.
++
+Or, if you do not create the `~/.config/tkn/results.yaml` file, you can pass the token to each `opc` command by using the `--authtoken` option.
+
+:leveloffset!:
+
+:leveloffset: +2
+
+// This module is included in the following assembly:
+//
+// * records/using-tekton-results-for-openshift-pipelines-observability.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="query-results-uuid_{context}"]
+= Querying for results and records by name
+
+[role="_abstract"]
+You can list and query results and records by using their names.
+
+.Prerequisites
+
+* You installed the `opc` utility and prepared its environment to query {tekton-results}.
+* You installed the `jq` package.
+* If you want to query logging information, you configured log forwarding to `LokiStack`.
+
+.Procedure
+
+. List the names of all results that correspond to pipeline runs and task runs created in a namespace. Enter the following command:
++
+[source,terminal]
+----
+$ opc results result list --addr ${RESULTS_API} <namespace_name>
+----
++
+.Example command
+[source,terminal]
+----
+$ opc results result list --addr ${RESULTS_API} results-testing
+----
++
+.Example output
+[source,text]
+----
+Name                                                          Start                                   Update
+results-testing/results/04e2fbf2-8653-405f-bc42-a262bcf02bed  2023-06-29 02:49:53 +0530 IST           2023-06-29 02:50:05 +0530 IST
+results-testing/results/ad7eb937-90cc-4510-8380-defe51ad793f  2023-06-29 02:49:38 +0530 IST           2023-06-29 02:50:06 +0530 IST
+results-testing/results/d064ce6e-d851-4b4e-8db4-7605a23671e4  2023-06-29 02:49:45 +0530 IST           2023-06-29 02:49:56 +0530 IST
+----
+
+. List the names of all records in a result by entering the following command:
++
+[source,terminal]
+----
+$ opc results records list --addr ${RESULTS_API} <result_name>
+----
++
+.Example command
+[source,terminal]
+----
+$ opc results records list --addr ${RESULTS_API} results-testing/results/04e2fbf2-8653-405f-bc42-a262bcf02bed
+----
++
+.Example output
+[source,text]
+----
+Name                                                                                                   Type                                    Start                                   Update
+results-testing/results/04e2fbf2-8653-405f-bc42-a262bcf02bed/records/e9c736db-5665-441f-922f-7c1d65c9d621  tekton.dev/v1.TaskRun              2023-06-29 02:49:53 +0530 IST           2023-06-29 02:49:57 +0530 IST
+results-testing/results/04e2fbf2-8653-405f-bc42-a262bcf02bed/records/5de23a76-a12b-3a72-8a6a-4f15a3110a3e  results.tekton.dev/v1alpha2.Log         2023-06-29 02:49:57 +0530 IST           2023-06-29 02:49:57 +0530 IST
+results-testing/results/04e2fbf2-8653-405f-bc42-a262bcf02bed/records/57ce92f9-9bf8-3a0a-aefb-dc20c3e2862d  results.tekton.dev/v1alpha2.Log         2023-06-29 02:50:05 +0530 IST           2023-06-29 02:50:05 +0530 IST
+results-testing/results/04e2fbf2-8653-405f-bc42-a262bcf02bed/records/e9a0c21a-f826-42ab-a9d7-a03bcefed4fd  tekton.dev/v1.TaskRun              2023-06-29 02:49:57 +0530 IST           2023-06-29 02:50:05 +0530 IST
+results-testing/results/04e2fbf2-8653-405f-bc42-a262bcf02bed/records/04e2fbf2-8653-405f-bc42-a262bcf02bed  tekton.dev/v1.PipelineRun          2023-06-29 02:49:53 +0530 IST           2023-06-29 02:50:05 +0530 IST
+results-testing/results/04e2fbf2-8653-405f-bc42-a262bcf02bed/records/e6eea2f9-ec80-388c-9982-74a018a548e4  results.tekton.dev/v1alpha2.Log         2023-06-29 02:50:05 +0530 IST           2023-06-29 02:50:05 +0530 IST
+----
+
+. Retrieve the YAML manifest for a pipeline run or task run from a record by entering the following command:
++
+[source,terminal]
+----
+$ opc results records get --addr ${RESULTS_API} <record_name> \
+  | jq -r .data.value | base64 -d | \
+  xargs -0 python3 -c 'import sys, yaml, json; j=json.loads(sys.argv[1]); print(yaml.safe_dump(j))'
+----
++
+.Example command
+[source,terminal]
+----
+$ opc results records get --addr ${RESULTS_API} \
+  results-testing/results/04e2fbf2-8653-405f-bc42-a262bcf02bed/records/e9c736db-5665-441f-922f-7c1d65c9d621 | \
+  jq -r .data.value | base64 -d | \
+  xargs -0 python3 -c 'import sys, yaml, json; j=json.loads(sys.argv[1]); print(yaml.safe_dump(j))'
+----
+
+. Optional: Retrieve the logging information for a task run from a record using the log record name. To get the log record name, replace `records` with `logs` in the record name. Enter the following command:
++
+[source,terminal]
+----
+$ opc results logs get --addr ${RESULTS_API} <log_record_name> | jq -r .data | base64 -d
+----
++
+.Example command
+[source,terminal]
+----
+$ opc results logs get --addr ${RESULTS_API} \
+  results-testing/results/04e2fbf2-8653-405f-bc42-a262bcf02bed/logs/e9c736db-5665-441f-922f-7c1d65c9d621 | \
+  jq -r .data | base64 -d
+----
+
+:leveloffset!:
+
+:leveloffset: +2
+
+// This module is included in the following assembly:
+//
+// * records/using-tekton-results-for-openshift-pipelines-observability.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="results-search-results_{context}"]
+= Searching for results
+
+[role="_abstract"]
+You can search for results by using Common Expression Language (CEL) queries. For example, you can find results for pipeline runs that did not succeed. However, most of the relevant information is not contained in result objects; to search by the names, completion times, and other data, search for records.
+
+.Prerequisites
+
+* You installed the `opc` utility and prepared its environment to query {tekton-results}.
+
+.Procedure
+
+* Search for results using a CEL query by entering the following command:
++
+[source,terminal]
+----
+$ opc results result list --addr ${RESULTS_API} --filter="<cel_query>" <namespace_name>
+----
++
+Replace `<namespace_name>` with the namespace in which you created the pipeline runs or task runs.
++
+.Example CEL queries for results
+|===
+| Purpose | CEL query
+
+| The results of all runs that failed
+| `!(summary.status == SUCCESS)`
+
+| The results all pipeline runs that contained the annotations `ann1` and `ann2`
+| `summary.annotations.contains('ann1') && summary.annotations.contains('ann2') && summary.type=='PIPELINE_RUN'`
+|===
+
+:leveloffset!:
+
+:leveloffset: +2
+
+// This module is included in the following assembly:
+//
+// * records/using-tekton-results-for-openshift-pipelines-observability.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="results-search-records_{context}"]
+= Searching for records
+
+[role="_abstract"]
+You can search for records by using Common Expression Language (CEL) queries. As each record has full YAML information for a pipeline run or task run, you can find records by many different criteria.
+
+.Prerequisites
+
+* You installed the `opc` utility and prepared its environment to query {tekton-results}.
+
+.Procedure
+
+* Search for records using a CEL query by entering the following command:
++
+[source,terminal]
+----
+$ opc results records list --addr ${RESULTS_API} --filter="<cel_query>" <namespace_name>/result/-
+----
++
+Replace `<namespace_name>` with the namespace in which you created the pipeline runs or task runs. Or, search for records within a single result by entering the following command:
++
+[source,terminal]
+----
+$ opc results records list --addr ${RESULTS_API} --filter="<cel_query>" <result_name>
+----
++
+Replace `<result_name>` with the full name of the result.
+
++
+.Example CEL queries for records
+|===
+| Purpose | CEL query
+
+| Records of all task runs or pipeline runs that failed
+| `!(data.status.conditions[0].status == 'True')`
+
+| Records where the name of the `TaskRun` or `PipelineRun` custom resource (CR) was `run1`
+| `data.metadata.name == 'run1'`
+
+| Records for all task runs that the `PipelineRun` CR named `run1` started
+| `data_type == 'TASK_RUN' && data.metadata.labels['tekton.dev/pipelineRun'] == 'run1'`
+
+| Records of all pipeline runs and task runs associated with a `Pipeline` CR named `pipeline1`
+| `data.metadata.labels['tekton.dev/pipeline'] == 'pipeline1'`
+
+| Records of all pipeline runs associated with a `Pipeline` CR named `pipeline1`
+| `data.metadata.labels['tekton.dev/pipeline'] == 'pipeline1' && data_type == 'PIPELINE_RUN'`
+
+| Records of all task runs where the `TaskRun` CR name stared with `hello`
+| `data.metadata.name.startsWith('hello') && data_type=='TASK_RUN'`
+
+| Records of all pipeline runs that took more than five minutes to complete
+| `data.status.completionTime - data.status.startTime > duration('5m') && data_type == 'PIPELINE_RUN'`
+
+| Records of all pipeline runs and task runs that completed on October 7, 2023
+| `data.status.completionTime.getDate() == 7 && data.status.completionTime.getMonth() == 10 && data.status.completionTime.getFullYear() == 2023`
+
+| Records of all pipeline runs that included three or more tasks
+| `size(data.status.pipelineSpec.tasks) >= 3 && data_type == 'PIPELINE_RUN'`
+
+| Records of all pipeline runs that had annotations containing `ann1`
+| `data.metadata.annotations.contains('ann1') && data_type == 'PIPELINE_RUN'`
+
+| Records of all pipeline runs that had annotations containing `ann1` and the name of the `PipelineRun` CR started with `hello`
+| `data.metadata.annotations.contains('ann1') && data.metadata.name.startsWith('hello') && data_type == 'PIPELINE_RUN'`
+
+|===
+
+:leveloffset!:
+
+:leveloffset: +2
+
+// This module is included in the following assembly:
+//
+// * records/using-tekton-results-for-openshift-pipelines-observability.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="results-reference-results_{context}"]
+= Reference information for searching results
+
+You can use the following fields in Common Expression Language (CEL) queries for results:
+[role="_abstract"]
+You can use the following fields in Common Expression Language (CEL) queries for results:
+
+.Fields available in CEL queries for results
+|===
+| CEL field | Description
+
+| `parent`
+| The namespace in which you created the `PipelineRun` or `TaskRun` custom resource (CR).
+
+| `uid`
+| Unique identifier for the result.
+
+| `annotations`
+| Annotations added to the `PipelineRun` or `TaskRun` CR.
+
+| `summary`
+| The summary of the result.
+
+| `create_time`
+| The creation time of the result.
+
+| `update_time`
+| The last update time of the result.
+|===
+
+You can use the `summary.status` field to find whether the pipeline run was successful. This field can have the following values:
+
+* `UNKNOWN`
+* `SUCCESS`
+* `FAILURE`
+* `TIMEOUT`
+* `CANCELLED`
+
+[NOTE]
+====
+Do not use quote characters such as `"` or `'` to give the value for this field.
+====
+
+:leveloffset!:
+
+:leveloffset: +2
+
+// This module is included in the following assembly:
+//
+// * records/using-tekton-results-for-openshift-pipelines-observability.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="results-reference-records_{context}"]
+= Reference information for searching records
+
+[role="_abstract"]
+You can use the following fields in Common Expression Language (CEL) queries for records:
+
+.Fields available in CEL queries for records
+|===
+| CEL field | Description | Values
+
+| `name`
+| Record name
+|
+
+| `data_type`
+| Record type identifier
+| `tekton.dev/v1.TaskRun` or `TASK_RUN`
+`tekton.dev/v1.PipelineRun` or `PIPELINE_RUN`
+`results.tekton.dev/v1alpha2.Log`
+
+| `data`
+| The YAML data for the task run or pipeline run. In log records, this field has the logging output.
+|
+|===
+
+Because the `data` field has the entire YAML data for the task run or pipeline run, you can use all elements of this data in your CEL query. For example, `data.status.completionTime` has the completion time of the task run or pipeline run.
+
+:leveloffset!:
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://cel.dev/[Common Expression Language (CEL)]
+
+//Querying results and logs by the names of pipeline runs and task runs
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * records/using-tekton-results-for-openshift-pipelines-observability.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id="querying-pipelinerun-tasktun_{context}"]
+= Querying results and logs by the names of pipeline runs and task runs
+
+[role="_abstract"]
+You can use the `opc` command line utility to query {tekton-results} for lists of pipeline runs and task runs. You can then retrieve manifest and log information by using the names of specific runs.
+
+This approach requires different configuration of the `opc` command line utility, compared to queries for results and records.
+
+:FeatureName: Querying results and logs by the names of pipeline runs and task runs
+:_mod-docs-content-type: SNIPPET
+// When including this file, ensure that {FeatureName} is set immediately before
+// the include. Otherwise it will result in an incorrect replacement.
+
+[IMPORTANT]
+====
+[subs="attributes+"]
+{FeatureName} is a Technology Preview feature only. Technology Preview features are not supported with Red Hat production service level agreements (SLAs) and might not be functionally complete. Red Hat does not recommend using them in production. These features provide early access to upcoming product features, enabling customers to test functionality and provide feedback during the development process.
+
+For more information about the support scope of Red Hat Technology Preview features, see link:https://access.redhat.com/support/offerings/techpreview/[Technology Preview Features Support Scope].
+====
+// Undefine {FeatureName} attribute, so that any mistakes are easily spotted
+:!FeatureName:
+
+:leveloffset!:
+
+:leveloffset: +2
+
+// This module is included in the following assembly:
+//
+// * records/using-tekton-results-for-openshift-pipelines-observability.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="results-opc-config_{context}"]
+= Configuring the opc utility for querying results by pipeline run and task run names
+
+[role="_abstract"]
+Before you can query results from {tekton-results} by pipeline run and task run names, you must configure the `opc` utility.
+
+.Prerequisites
+
+* You installed the `opc` utility.
+* You logged on to the {OCP} cluster by using the {oc-first}.
+
+.Procedure
+
+. Create an authentication token for the {tekton-results} API by entering the following command:
++
+[source,terminal]
+----
+$ oc create token <service_account>
+----
++
+Replace `<service_account>` with the name of an {OCP} service account that has read access to the namespaces where {pipelines-shortname} ran the pipeline runs and task runs.
++
+Save the string that this command outputs.
+
+. Complete one of the following steps:
+
+** Configure the `opc` utility interactively by entering the following command:
++
+[source,terminal]
+----
+$ opc results config set
+----
++
+Reply to the prompts that the utility displays. For `Token`, enter the authentication token that you created.
+
+** Configure the `opc` utility from a command by entering the following command:
++
+[source,terminal]
+----
+$ opc results config set --host="https://tekton-results.example.com" --token="<token>"
+----
++
+Replace the hostname with the fully qualified domain name of your {tekton-results} route. Replace `<token>` with the authentication token that you generated.
+
+.Verification
+
+* You can view the configuration that you set for the `opc` utility by entering the following command:
++
+[source,terminal]
+----
+$ opc results config view
+----
++
+.Example output
+[source,terminal]
+----
+api-path: ""
+apiVersion: results.tekton.dev/v1alpha2
+host: https://tekton-results.openshiftapps.com
+insecure-skip-tls-verify: "true"
+kind: Client
+token: sha256~xyz
+----
+
+:leveloffset!:
+
+:leveloffset: +2
+
+// This module is included in the following assembly:
+//
+// * records/using-tekton-results-for-openshift-pipelines-observability.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="results-opc-pipelinerunlist_{context}"]
+= Viewing a list of pipeline run names and identifiers
+
+[role="_abstract"]
+You can use the `opc` utility to view a list of names and identifiers of pipeline runs in a namespace.
+
+.Prerequisites
+
+* You installed the `opc` utility.
+* You configured the `opc` utility to query results from {tekton-results} by pipeline run and task run names.
+
+.Procedure
+
+* Use any of the following commands to view pipeline runs:
+
+** To view all pipeline runs in a specified namespace, enter the following command:
++
+[source,terminal]
+----
+$ opc results pipelinerun list -n <namespace_name>
+----
++
+Optionally, specify the `--limit` command line option, for example, `--limit=10`. With this setting, the `opc` command displays the specified number of lines containing pipeline run names and then exits. If you add the `--single-page=false` command line option, the command displays the specified number of lines and then prompts you to continue or quit.
++
+Optionally, specify the `--labels` command line option, for example, `--labels="app.kubernetes.io/name=test-app, app.kubernetes.io/component=database`. With this setting, the list includes only the pipeline runs that have the specified labels or annotations.
+
+.Example output of the `opc results pipelinerun list` command
+[source,terminal]
+----
+NAME                                           UID                                    STARTED      DURATION   STATUS
+openshift-pipelines-main-release-tests-zscq8   78515e3a-8e20-43e8-a064-d2442c2ae845   1 week ago   5s         Failed(CouldntGetPipeline)
+openshift-pipelines-main-release-tests-zrgv6   14226144-2d08-440d-a600-d602ca46cdf6   1 week ago   26m13s     Failed
+openshift-pipelines-main-release-tests-jdc24   e34daea2-66fb-4c7d-9d4b-d9d82a07b6cd   1 week ago   5s         Failed(CouldntGetPipeline)
+openshift-pipelines-main-release-tests-6zj7f   9b3e5d68-70ab-4c23-8872-e7ad7121e60b   1 week ago   5s         Failed(CouldntGetPipeline)
+openshift-pipelines-main-release-tests-kkk9t   2fd28c48-388b-4e6a-9ec3-2bcd9dedebc3   1 week ago   5s         Failed(CouldntGetPipeline)
+----
+
+** To view pipeline runs related to specified named pipelines, enter the following command:
++
+[source,terminal]
+----
+$ opc results pipelinerun list <pipeline_name> -n <namespace_name>
+----
++
+The command lists all pipeline runs for pipelines that have names containing `<pipeline_name>`. For example, if you specify `build`, the command displays all pipeline runs related to pipelines named `build`, `build_123`, or `enhancedbuild`.
++
+Optionally, specify the `--limit` command line option, for example, `--limit=10`. With this setting, the `opc` command displays the specified number of lines containing pipeline run names and then exits. If you add the `--single-page=false` command line option, the command displays the specified number of lines and then prompts you to continue or quit.
+
+:leveloffset!:
+
+:leveloffset: +2
+
+// This module is included in the following assembly:
+//
+// * records/using-tekton-results-for-openshift-pipelines-observability.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="results-opc-taskrunlist_{context}"]
+= Viewing a list of task run names and identifiers
+
+[role="_abstract"]
+You can use the `opc` utility to view a lists of names and identifiers of task runs in a namespace or of task runs associated with a pipeline dun.
+
+.Prerequisites
+
+* You installed the `opc` utility.
+* You configured the `opc` utility to query results from {tekton-results} by pipeline run and task run names.
+
+.Procedure
+
+* To view a list of all task runs in a namespace, enter the following command:
++
+.Example
+[source,terminal]
+----
+$ opc results taskrun list -n <namespace_name>
+----
++
+Optionally, specify the `--limit` command line option, for example, `--limit=10`. With this setting, the `opc` command displays the specified number of lines containing pipeline run names and then exits. If you add the `--single-page=false` command line option, the command displays the specified number of lines and then prompts you to continue or quit.
++
+Optionally, specify the `--labels` parameter, for example, `--labels="app.kubernetes.io/name=test-app, app.kubernetes.io/component=database`. With this setting, the list includes only the task runs that have the specified labels or annotations.
++
+.Example output of the `opc results pipelinerun list` command for a namespace
+[source,terminal]
+----
+NAME                                           UID                                    STARTED      DURATION   STATUS
+openshift-pipelines-main-release-tests-zrgv6-e2e-test             10d6952f-b926-4e4b-a976-519867969ce7   16d ago   12m41s     Failed
+openshift-pipelines-main-release-tests-zrgv6-deploy-operator      ab41b63b-16ec-4a32-8b95-f2678eb5c945   16d ago   22s        Succeeded
+openshift-pipelines-main-release-tests-zrgv6-provision-cluster    b374df00-5132-4633-91df-3259670756b3   16d ago   12m30s     Succeeded
+operator-main-index-4-18-on-pull-request-ml4ww-show-sbom          c5b77784-cd87-4be8-bc12-28957762f382   16d ago   16s        Succeeded
+openshift-c4ae3a5a28e19ffc930e7c2aa758d85c-provision-eaas-space   22535d8e-d360-4143-9c0c-4bd0414a22b0   16d ago   17s        Succeeded
+----
+
+* To view a list of task runs associate with a pipeline run, enter the following command:
++
+[source,terminal]
+----
+$ opc results taskrun list --pipelinerun <pipelinerun_name> -n <namespace_name>
+----
++
+Optionally, specify the `--limit` command line option, for example, `--limit=10`. With this setting, the `opc` command displays the specified number of lines containing pipeline run names and then exits. If you add the `--single-page=false` command line option, the command displays the specified number of lines and then prompts you to continue or quit.
++
+.Example output of the `opc results taskrun list` command for a pipeline run
+[source,terminal]
+----
+NAME                                                              UID                                    STARTED   DURATION   STATUS
+operator-main-index-4-18-on-pull-request-g95fk-show-sbom          5b405941-0d3e-4f8c-a68a-9ffcc481abf1   16d ago   13s        Succeeded
+operator-main-index-4-18-on-pul2b222db723593a186d12f1b82f1a1fd9   89588ae7-aa36-4b62-97d1-5634ee201850   16d ago   36s        Succeeded
+operator-fb80434867bc15d89fea82506058f664-fbc-fips-check-oci-ta   7598d44a-4370-459b-8ef0-ae4165c58ba5   16d ago   5m52s      Succeeded
+operator-main-index-4-18-on-pull-request-g95fk-validate-fbc       fb80d962-807b-4b63-80cb-6a57d383755a   16d ago   1m26s      Succeeded
+operator-main-index-4-18-on-pull-request-g95fk-apply-tags         8a34b46d-74a9-4f20-9e99-a285f7b258d6   16d ago   13s        Succeeded
+----
+
+:leveloffset!:
+
+:leveloffset: +2
+
+// This module is included in the following assembly:
+//
+// * records/using-tekton-results-for-openshift-pipelines-observability.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="results-opc-pipelinerunresults_{context}"]
+= Viewing result information for a pipeline run
+
+[role="_abstract"]
+You can use the `opc` utility to view a description of when and how a pipeline run completed, a full manifest for the pipeline run, and any logs that the pipeline run produced.
+
+.Prerequisites
+
+* You installed the `opc` utility.
+* You configured the `opc` utility to query results from {tekton-results} by pipeline run and task run names.
+* You have the name or universally unique identifier (UUID) of the pipeline run. You can use the `ocp results list pipelineruns` commands to view names and universally unique identifiers (UUIDs) of pipeline runs for which results are available.
+
+.Procedure
+
+* Use any of the following commands to view the result information for a pipeline run:
+** To view a description of when and how the pipeline run completed, enter the following command:
++
+[source,terminal]
+----
+$ opc results pipelinerun describe -n <namespace_name> <pipelinerun_name>
+----
++
+Or, you can use the pipeline run UUID instead of the name:
++
+[source,terminal]
+----
+$ opc results pipelinerun describe -n <namespace_name> --uid <pipelinerun_uuid>
+----
++
+.Example output of the `opc results pipelinerun describe` command
+[source,terminal]
+----
+Name: operator-main-index-4-18-on-pull-request-7kssl
+Namespace: tekton-ecosystem-tenant
+Service Account: appstudio-pipeline
+Labels:
+ app.kubernetes.io/managed-by=pipelinesascode.tekton.dev
+ app.kubernetes.io/version=v0.33.0
+Annotations:
+ appstudio.openshift.io/snapshot=openshift-pipelines-main-b7jj6
+ build.appstudio.openshift.io/repo=https://github.com/openshift-pipelines/operator?rev=ba5e62e51af0c88bc6c3fd4201e789bdfc093daa
+
+📌 Status
+STARTED          DURATION         STATUS
+27d ago          9m54s            Succeeded
+
+⏱ Timeouts
+Pipeline:   2h0m0s
+
+⚓ Params
+  NAME                          VALUE
+  • git-url                     https://github.com/pramodbindal/operator
+  • revision                    ba5e62e51af0c88bc6c3fd4201e789bdfc093daa
+
+🗂  Workspaces
+  NAME                SUB PATH            WORKSPACE BINDING
+  • workspace          ---                VolumeClaimTemplate
+  • git-auth           ---                Secret (secret=pac-gitauth-ceqzjt)
+
+📦 Taskruns
+  NAME                                                                         TASK NAME
+  • operator-main-index-4-18-on-pull-request-7kssl-init                        init
+  • operator-main-index-4-18-on-pull-request-7kssl-clone-repository            clone-repository
+----
+
+* To view the full YAML manifest of the pipeline run, enter the following command:
++
+[source,terminal]
+----
+$ opc results pipelinerun describe -n <namespace_name> --output yaml <pipelinerun_name>
+----
++
+Or, you can use the pipeline run UUID instead of the name:
++
+[source,terminal]
+----
+$ opc results pipelinerun describe -n <namespace_name> --output yaml --uid <pipelinerun_uuid>
+----
+
+* To view the logs associated with the pipeline run, enter the following command:
++
+[source,terminal]
+----
+$ opc results pipelinerun logs -n <namespace_name> <pipelinerun_name>
+----
++
+Or, you can use the pipeline run UUID instead of the name:
++
+[source,terminal]
+----
+$ opc results pipelinerun logs -n <namespace_name> --uid <pipelinerun_uuid>
+----
++
+[IMPORTANT]
+====
+Logs that the `opc results pipelinerun logs` displays do not include logs of task runs that completed within this pipeline run. To view these logs, find the names of the task runs in this pipeline run using the `opc results taskrun list --pipelinerun` command and specify the name of the pipeline run. Then use the `opc results taskrun log` command to view the logs for the task runs.
+====
+
+:leveloffset!:
+
+:leveloffset: +2
+
+// This module is included in the following assembly:
+//
+// * records/using-tekton-results-for-openshift-pipelines-observability.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="results-opc-taskrunresults_{context}"]
+= Viewing result information for a task run
+
+[role="_abstract"]
+You can use the `opc` utility to view a description of when and how a task run completed, a full manifest for the task run, and any logs that the task run produced.
+
+.Prerequisites
+
+* You installed the `opc` utility.
+* You configured the `opc` utility to query results from {tekton-results} by pipeline run and task run names.
+* You have the name or universally unique identifier (UUID) of the task run. You can use the `opc results taskrun list` command to view names or universally unique identifiers (UUIDs) of task runs for which results are available.
+* If you want to retrieve logs, you configured forwarding logs to `LokiStack`.
+
+.Procedure
+
+* Use any of the following commands to view the result information for a task run:
+** To view a description of when and how the task run completed, enter the following command:
++
+[source,terminal]
+----
+$ opc results taskrun describe -n <namespace_name> <taskrun_name>
+----
++
+Or, you can use the task run UUID instead of the name:
++
+[source,terminal]
+----
+$ opc results taskrun describe -n <namespace_name> --uid <taskrun_uuid>
+----
++
+.Example output of the `opc results taskrun describe` command
+[source,terminal]
+----
+Name: operator-main-index-4-18-on-push-gc699-build-images-0
+Namespace: tekton-ecosystem-tenant
+Service Account: appstudio-pipeline
+Labels:
+ tekton.dev/pipelineTask=build-images
+ tekton.dev/task=buildah-remote-oci-ta
+Annotations:
+ pipelinesascode.tekton.dev/branch=main
+ pipelinesascode.tekton.dev/check-run-id=40080193061
+
+📌 Status
+STARTED          DURATION         STATUS
+28d ago          3m22s            Failed
+
+⚓ Params
+  NAME                          VALUE
+  • PLATFORM                    linux-m2xlarge/arm64
+  • IMAGE                       quay.io/redhat-user-workloads/tekton-ecosystem
+----
+
+* To view the full YAML manifest of the task run, enter the following command:
++
+[source,terminal]
+----
+$ opc results taskrun describe -n <namespace_name> --output yaml <taskrun_name>
+----
++
+Or, you can use the task run UUID instead of the name:
++
+[source,terminal]
+----
+$ opc results taskrun describe -n <namespace_name> --output yaml --uid <taskrun_uuid>
+----
+
+* To view the logs associated with the task run, enter the following command:
++
+[source,terminal]
+----
+$ opc results taskrun logs -n <namespace_name> <taskrun_name>
+----
++
+Or, you can use the task run UUID instead of the name:
++
+[source,terminal]
+----
+$ opc results taskrun logs -n <namespace_name> --uid <taskrun_uuid>
+----
+
+:leveloffset!:
+
+:leveloffset: +2
+
+// This module is included in the following assembly:
+//
+// * records/using-tekton-results-for-openshift-pipelines-observability.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="results-opc-shortnames_{context}"]
+= Short names for command-line arguments
+
+[role="_abstract"]
+When you use the `opc` utility to query {tekton-results}, you can use short names for pipeline run and task run arguments.
+
+.Short names for command-line parameters
+[cols="1,1",options="header"]
+|===
+| Full parameter name | Short parameter name
+
+| `pipelinerun` | `pr`
+| `taskrun` | `tr`
+| `describe` | `desc`
+
+|===
+
+:leveloffset!:
+
+= Understanding the Tekton Results retention policy
+
+[id="understanding-the-tekton-results-retention-policy"]
+= Understanding the Tekton Results retention policy
+:context: understanding-the-tekton-results-retention-policy
+
+toc::[]
+
+[role="_abstract"]
+The {tekton-results} Retention Policy Agent manages how long the database retains {tekton-results} and Records before pruning them. You can configure the retention behavior by using the `tekton-results-config-results-retention-policy` config map in the `tekton-pipelines` namespace.
+
+The retention policy determines when and how old {tekton-results} and Records are automatically deleted from the database. You can define global defaults and fine-grained rules based on namespaces, labels, annotations, or run statuses.
+
+Use the following sample YAML configuration to define Tekton Results settings, including log retention policies, namespaces, and runtime options:
+
+[source,YAML]
+----
+apiVersion: operator.tekton.dev/v1alpha1
+kind: TektonConfig
+metadata:
+  labels:
+    openshift-pipelines.tekton.dev/sa-created: "true"
+    operator.tekton.dev/release-version: 1.21.0
+  name: config
+spec:
+...
+  result:
+    disabled: false
+    is_external_db: false
+    log_level: debug
+    loki_stack_name: logging-loki
+    loki_stack_namespace: openshift-logging
+    options:
+      configMaps:
+        tekton-results-config-results-retention-policy:
+          data:
+            defaultRetention: 30m
+            policies: |
+              - name: "prod-failed-retention"
+                selector:
+                  matchNamespaces:
+                    - "prod-1"
+                    - "prod-west"
+                  matchStatuses:
+                  - "Failed"
+                  matchLabels:
+                    "env": ["prod"]
+                retention: "10m"
+              - name: "all-prod-retention"
+                selector:
+                  matchNamespaces:
+                    - "prod-1"
+                    - "prod-west"
+                retention: "3m"
+            runAt: '*/1 * * * *'
+          metadata:
+            creationTimestamp: null
+----
+
+The following fields in the config map define the retention configuration:
+
+[options="header"]
+|===
+|Field |Description |Default
+
+|`runAt`
+|Specifies when the pruning job runs. The value must use a cron schedule format.
+|`"7 7 * * 7"` (every Sunday at 7:07 a.m.)
+
+|`defaultRetention`
+|Specifies the fallback retention period for Results and Records when no specific policy matches. The value can be a number (in days) or a duration string such as `30d` or `24h`.
+|`30d`
+
+|`maxRetention`
+|(Deprecated). Used for backward compatibility if `defaultRetention` is not set. This field will be removed in a future release. This field functions in the same way as `defaultRetention`.
+|N/A
+
+|`policies`
+|Defines a list of fine-grained retention policies for more specific control, in order of precedence. Each policy includes a name, selector, and retention period. For Records and Results matched by a policy's selector, the policy's retention period overrides the `defaultRetention`.
+|None
+|===
+
+:leveloffset: +1
+
+// This module is included in the following assembly:
+//
+// * records/understanding-the-tekton-results-retention-policy.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id="op-fine-grained-retention-policies_{context}"]
+= Fine-grained retention policies
+
+[role="_abstract"]
+You can use the `policies` field to define rules that apply to specific Results. {tekton-results} evaluates the policies in order, and applies the first matching policy. If no policies match, {tekton-results} uses the `defaultRetention` value.
+
+Each policy includes the following fields:
+
+[options="header"]
+|===
+|Field |Description
+
+|`name`
+|A descriptive name for the policy.
+
+|`selector`
+|Defines criteria for matching Results. All selector types use `AND` logic, meaning a Result must satisfy all specified conditions to match. You can omit a selector type to match all Results for that criterion.
+
+|`matchNamespaces`
+|A list of namespaces. The policy matches Results in any of the listed namespaces.
+
+|`matchLabels`
+|A map of label keys and possible values. A Result must have all listed label keys, and each value must match one of the values in the list.
+
+|`matchAnnotations`
+|A map of annotation keys and possible values. Works similarly to `matchLabels`.
+
+|`matchStatuses`
+|A list of final statuses such as `Succeeded`, `Failed`, `Cancelled`, `Running`, or `Pending`. The policy matches if the Result's final status reason is in this list.
+
+|`retention`
+|The retention period for matching Results. The value can be a number (days) or a duration string such as `24h` or `7d`.
+|===
+
+The following example shows a config map that defines many retention policies:
+
+[source,yaml]
+----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tekton-results-config-results-retention-policy
+  namespace: openshift-pipelines
+data:
+  runAt: "0 2 * * *"
+  defaultRetention: "30d"
+  policies: |
+    - name: "retain-critical-failures-long-term"
+      selector:
+        matchNamespaces:
+          - "production"
+          - "prod-east"
+        matchLabels:
+          "criticality": ["high"]
+        matchStatuses:
+          - "Failed"
+      retention: "180d"
+    - name: "retain-annotated-for-debug"
+      selector:
+        matchAnnotations:
+          "debug/retain": ["true"]
+      retention: "14d"
+    - name: "default-production-policy"
+      selector:
+        matchNamespaces:
+          - "production"
+          - "prod-east"
+      retention: "60d"
+    - name: "short-term-ci-retention"
+      selector:
+        matchNamespaces:
+          - "ci"
+      retention: "7d"
+----
+
+The following examples describe how {tekton-results} applies the defined retention policies to different Results based on their namespaces, labels, annotations, and statuses.
+
+* {tekton-results} retains a failed Result in the `production` or `prod-east` namespace with the label `criticality: high` for 180 days.
+* {tekton-results} retains any Result with the annotation `debug/retain: "true"` for 14 days.
+* {tekton-results} retains Results in the `production` or `prod-east` namespaces for 60 days.
+* {tekton-results} retains Results in the `ci` namespace for 7 days.
+* {tekton-results} retains all other Results that do not match any policy for the default 30 days.
+
+:leveloffset!:

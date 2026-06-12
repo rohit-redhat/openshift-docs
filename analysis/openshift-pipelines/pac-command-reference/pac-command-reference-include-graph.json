@@ -1,0 +1,21 @@
+{
+  "document": "pac-command-reference.adoc",
+  "variant": "self-managed",
+  "includes": [
+    {
+      "module_path": "modules/op-pipelines-as-code-command-reference.adoc",
+      "leveloffset": "+1",
+      "module_type": "UNKNOWN"
+    },
+    {
+      "module_path": "modules/op-configuring-pipelines-as-code-logging.adoc",
+      "leveloffset": "+1",
+      "module_type": "UNKNOWN"
+    },
+    {
+      "module_path": "modules/op-splitting-pipelines-as-code-logs-by-namespace.adoc",
+      "leveloffset": "+1",
+      "module_type": "UNKNOWN"
+    }
+  ]
+}

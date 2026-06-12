@@ -1,0 +1,181 @@
+{
+  "assembly": "create/remote-pipelines-tasks-resolvers.adoc",
+  "title": "Specifying remote pipelines, tasks, and step actions using resolvers",
+  "modules": [
+    {
+      "include": "modules/op-resolver-hub-about.adoc",
+      "level": 1,
+      "type": "CONCEPT",
+      "id": "resolver-hub_{context}",
+      "title": "Specifying a remote pipeline, task, or step action from a Tekton catalog"
+    },
+    {
+      "include": "modules/op-resolver-hub-config.adoc",
+      "level": 2,
+      "type": "PROCEDURE",
+      "id": "resolver-hub-config_{context}",
+      "title": "Configuring the hub resolver"
+    },
+    {
+      "include": "modules/op-resolver-hub.adoc",
+      "level": 2,
+      "type": "PROCEDURE",
+      "id": "resolver-hub-specify_{context}",
+      "title": "Specifying a remote pipeline, task, or step action using the hub resolver"
+    },
+    {
+      "include": "modules/op-resolver-bundles-about.adoc",
+      "level": 1,
+      "type": "CONCEPT",
+      "id": "resolver-bundles_{context}",
+      "title": "Specifying a remote pipeline, task, or step action from a Tekton bundle"
+    },
+    {
+      "include": "modules/op-resolver-bundle-config.adoc",
+      "level": 2,
+      "type": "PROCEDURE",
+      "id": "resolver-bundles-config_{context}",
+      "title": "Configuring the bundles resolver"
+    },
+    {
+      "include": "modules/op-resolver-bundle.adoc",
+      "level": 2,
+      "type": "PROCEDURE",
+      "id": "resolver-bundles-specify_{context}",
+      "title": "Specifying a remote pipeline, task, or step action using the bundles resolver"
+    },
+    {
+      "include": "modules/op-resolver-git-anon-about.adoc",
+      "level": 1,
+      "type": "CONCEPT",
+      "id": "resolver-git-anon_{context}",
+      "title": "Specifying a remote pipeline, task, or step action with anonymous Git cloning"
+    },
+    {
+      "include": "modules/op-resolver-git-config-anon.adoc",
+      "level": 2,
+      "type": "PROCEDURE",
+      "id": "resolver-git-config-anon_{context}",
+      "title": "Configuring the Git resolver for anonymous Git cloning"
+    },
+    {
+      "include": "modules/op-resolver-git-anon.adoc",
+      "level": 2,
+      "type": "PROCEDURE",
+      "id": "resolver-git-anon-specify_{context}",
+      "title": "Specifying a remote pipeline, task, or step action by using the Git resolver for anonymous cloning"
+    },
+    {
+      "include": "modules/op-resolver-git-scm-about.adoc",
+      "level": 1,
+      "type": "CONCEPT",
+      "id": "resolver-git-scm_{context}",
+      "title": "Specifying a remote pipeline, task, or step action with an authenticated Git API"
+    },
+    {
+      "include": "modules/op-resolver-git-config-scm.adoc",
+      "level": 2,
+      "type": "PROCEDURE",
+      "id": "resolver-git-config-scm_{context}",
+      "title": "Configuring the Git resolver for an authenticated API"
+    },
+    {
+      "include": "modules/op-resolver-git-config-multiple-providers.adoc",
+      "level": 2,
+      "type": "PROCEDURE",
+      "id": "op-resolver-git-config-multiple-providers_{context}",
+      "title": "Configuring many Git providers"
+    },
+    {
+      "include": "modules/op-resolver-git-scm.adoc",
+      "level": 2,
+      "type": "PROCEDURE",
+      "id": "resolver-git-specify_{context}",
+      "title": "Specifying a remote pipeline, task, or step action using the Git resolver with the authenticated SCM API"
+    },
+    {
+      "include": "modules/op-resolver-git-specify-multiple-providers.adoc",
+      "level": 2,
+      "type": "PROCEDURE",
+      "id": "op-resolver-git-specify-multiple-providers_{context}",
+      "title": "Specifying many Git providers"
+    },
+    {
+      "include": "modules/op-resolver-git-override-scm.adoc",
+      "level": 2,
+      "type": "REFERENCE",
+      "id": "op-resolver-git-override-scm_{context}",
+      "title": "Specifying a remote pipeline or task by using the Git resolver with the authenticated SCM API overriding the Git resolver configuration"
+    },
+    {
+      "include": "modules/op-resolver-http-about.adoc",
+      "level": 1,
+      "type": "CONCEPT",
+      "id": "resolver-http_{context}",
+      "title": "Specifying a remote pipeline, task, or step action by using the HTTP resolver"
+    },
+    {
+      "include": "modules/op-resolver-http-config.adoc",
+      "level": 2,
+      "type": "PROCEDURE",
+      "id": "resolver-http-config_{context}",
+      "title": "Configuring the HTTP resolver"
+    },
+    {
+      "include": "modules/op-resolver-http.adoc",
+      "level": 2,
+      "type": "PROCEDURE",
+      "id": "resolver-http-specify_{context}",
+      "title": "Specifying a remote pipeline, task, or step action with the HTTP Resolver"
+    },
+    {
+      "include": "modules/op-resolver-cluster-about.adoc",
+      "level": 1,
+      "type": "CONCEPT",
+      "id": "resolver-cluster_{context}",
+      "title": "Specifying a pipeline, task, or step action from the same cluster"
+    },
+    {
+      "include": "modules/op-resolver-cluster-config.adoc",
+      "level": 2,
+      "type": "PROCEDURE",
+      "id": "resolver-cluster-config_{context}",
+      "title": "Configuring the cluster resolver"
+    },
+    {
+      "include": "modules/op-resolver-cluster.adoc",
+      "level": 2,
+      "type": "PROCEDURE",
+      "id": "resolver-cluster-specify_{context}",
+      "title": "Specifying a pipeline, task, or step action from the same cluster using the cluster resolver"
+    },
+    {
+      "include": "modules/op-resolver-cluster-tasks-ref.adoc",
+      "level": 1,
+      "type": "REFERENCE",
+      "id": "resolver-cluster-tasks-ref_{context}",
+      "title": "Tasks provided in the {pipelines-shortname} namespace"
+    },
+    {
+      "include": "modules/op-resolver-community-tasks-ref.adoc",
+      "level": 1,
+      "type": "REFERENCE",
+      "id": "resolver-community-tasks-ref_{context}",
+      "title": "Community tasks provided in the {pipelines-shortname} namespace"
+    },
+    {
+      "include": "modules/op-resolver-stepactions-ref.adoc",
+      "level": 1,
+      "type": "REFERENCE",
+      "id": "resolver-stepactions-ref_{context}",
+      "title": "Step action definitions provided with {pipelines-shortname}"
+    },
+    {
+      "include": "modules/op-resolver-tasks-step-actions-about.adoc",
+      "level": 1,
+      "type": "CONCEPT",
+      "id": "resolver-tasks-step-actions-about_{context}",
+      "title": "About non-versioned and versioned tasks and step actions"
+    }
+  ]
+}

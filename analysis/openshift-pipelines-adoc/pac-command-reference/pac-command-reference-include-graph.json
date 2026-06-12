@@ -1,0 +1,23 @@
+{
+  "assembly": "pac/pac-command-reference.adoc",
+  "includes": [
+    {
+      "path": "modules/op-pipelines-as-code-command-reference.adoc",
+      "type": "REFERENCE",
+      "leveloffset": "+1",
+      "title": "Pipelines as Code command reference"
+    },
+    {
+      "path": "modules/op-configuring-pipelines-as-code-logging.adoc",
+      "type": "PROCEDURE",
+      "leveloffset": "+1",
+      "title": "Configuring Pipelines as Code logging"
+    },
+    {
+      "path": "modules/op-splitting-pipelines-as-code-logs-by-namespace.adoc",
+      "type": "REFERENCE",
+      "leveloffset": "+1",
+      "title": "Splitting Pipelines as Code logs by namespace"
+    }
+  ]
+}

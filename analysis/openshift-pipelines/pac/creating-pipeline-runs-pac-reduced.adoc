@@ -1,0 +1,911 @@
+:_mod-docs-content-type: ASSEMBLY
+:_mod-docs-content-type: SNIPPET
+// The {product-title} attribute provides the context-sensitive name of the relevant OpenShift distribution, for example, "OpenShift Container Platform" or "OKD". The {product-version} attribute provides the product version relative to the distribution, for example "4.9".
+// {product-title} and {product-version} are parsed when AsciiBinder queries the _distro_map.yml file in relation to the base branch of a pull request.
+// See https://github.com/openshift/openshift-docs/blob/main/contributing_to_docs/doc_guidelines.adoc#product-name-and-version for more information on this topic.
+// Other common attributes are defined in the following lines:
+:data-uri:
+:icons:
+:experimental:
+:toc: macro
+:toc-title:
+:imagesdir: images
+:prewrap!:
+
+:pipelines-title: Red Hat OpenShift Pipelines
+:pipelines-shortname: OpenShift Pipelines
+:pipelines-ver: pipelines-1.22
+:pipelines-version-number: 1.22
+:osp-version-patch: 0
+:tekton-cache: Tekton Cache
+:tekton-chains: Tekton Chains
+:tekton-results: Tekton Results
+:tekton-triggers: Tekton Triggers
+:tekton-hub: Tekton Hub
+:artifact-hub: Artifact Hub
+:pac: Pipelines as Code
+:product-registry: OpenShift image registry
+// IBM Power
+:ibmpowerProductName: IBM Power
+// IBM zSystems
+:ibmzProductName: IBM zSystems
+:linuxoneProductName: IBM(R) LinuxONE
+:kebab: image:kebab.png[title="Options menu"]
+
+:op-system-base: RHEL
+:op-system-base-full: Red Hat Enterprise Linux (RHEL)
+
+:cluster-manager-first: Red Hat OpenShift Cluster Manager
+:cluster-manager: OpenShift Cluster Manager
+:cluster-manager-url: link:https://console.redhat.com/openshift[OpenShift Cluster Manager Hybrid Cloud Console]
+:cluster-manager-url-pull: link:https://console.redhat.com/openshift/install/pull-secret[pull secret from the Red Hat OpenShift Cluster Manager]
+
+:oc-first: pass:quotes[OpenShift CLI (`oc`)]
+
+// Attributes not present in the main branch
+:OCP: OpenShift Container Platform
+
+//We should use lowercase like regular OCP docs and deprecate the above.
+:ocp: OpenShift Container Platform
+
+
+:ols-official: Red{nbsp}Hat OpenShift Lightspeed
+:ols: OpenShift Lightspeed
+
+// Attributes not present in the main branch
+:rhosp: Red Hat OpenStack Platform
+[id="creating-pipeline-runs-pac"]
+= Creating pipeline runs in {pac}
+:context: creating-pipeline-runs-pac
+
+toc::[]
+
+[role="_abstract"]
+Automate pipeline execution triggered by Git events. Integrate {pac} with your repository provider and define your repository using the `Repository` custom resource (CR).
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/creating-pipeline-runs-pac.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="creating-pipeline-run-pac_{context}"]
+= Creating a pipeline run in {pac}
+
+[role="_abstract"]
+You can create a pipeline run definition for {pac} in your repository and match it to an event, such as a pull request. When the event happens, {pac} creates a `PipelineRun` custom resource (CR) from this definition, and then {pipelines-shortname} executes the pipeline run.
+
+.Prerequisites
+
+* You configured {pac} to integrate with your Git repository hosting service provider.
+
+* You created a `Repository` CR to define the connection to your repository in {pac}.
+
+* You have a `.tekton` directory in the root of your repository.
+
+.Procedure
+
+. Create a file with a `.yaml` or `.yml` extension in the `.tekton` directory.
+
+. In the file that you created, create a YAML specification for a `PipelineRun` CR. This specification can use all features of {pipelines-shortname}.
+
+. Optional: Complete any of the following configuration steps based on your pipeline run requirements:
+
+** Create other files with a `.yaml` or `.yml` extension in the `.tekton` directory. In these files, give definitions of resources that your pipeline run definition references, such as `Pipeline`, `Task`, or `StepAction` CRs. The {pac} resolver automatically resolves these resources and includes them in the  `PipelineRun` CR that uses your definition.
+
+** Use _dynamic variables_ in your pipeline run specification. {pac} replaces these variables with values that represent the current context. For example, `{{ repo_url }}` is the current URL for the repository and `{{ revision }}` is the commit SHA that started the pipeline run.
++
+For more information about dynamic variables, see the "Dynamic variables in a pipeline run specification" section.
+
+** Add one or more {pac} resolver annotations to your pipeline run definition. A {pac} resolver annotation references a pipeline or task in {tekton-hub}, an HTTP location, or a location in your repository outside the `.tekton` directory. If you create a {pac} resolver annotation to reference a resource, you can use this resource by name in your pipeline run definition. The {pac} resolver automatically resolves these resources and includes them in the  `PipelineRun` CR that uses your definition.
++
+For more information about these annotations, see the "{pac} resolver annotations" section.
+
+. Match the pipeline run to events by adding any of the following annotations to the pipeline run definition. When the defined event happens, {pac} starts the pipeline run. For more information about matching the pipeline run to events, see the "Annotations for matching events to a pipeline run" section.
+
+** A combination of the `pipelinesascode.tekton.dev/on-event` annotation, which defines a `pull request` or `push` event, and a `pipelinesascode.tekton.dev/on-target-branch` annotation, which defines the branch that the pull request or push event must target. If you match your pipeline run to a pull request or push event, the pipeline run starts when a user creates the event. For pull requests, it starts again each time the user updates the source branch event.
++
+[NOTE]
+====
+If your Git repository provider uses merge requests and not pull requests, a `pull_request` event definition matches a merge request.
+====
+
+** A `pipelinesascode.tekton.dev/on-comment` annotation, which matches the pipeline run to a comment on a pull request by regular expression. If you match your pipeline run to a comment, it starts when someone adds the comment to a pull request. To start the pipeline run again, add the comment again.
+
+** A `pipelinesascode.tekton.dev/on-cel-expression` annotation, which matches the pipeline run if the specified Common Expression Language (CEL) expression evaluates to `true` on a pull request or push event.
+
+. Optional: Add one or more annotations that filter the matching events. With these annotations, when the defined matching event (such as a pull request, a push event, or a comment) happens, {pac} checks if these annotations are also matched. The pipeline run starts only if all the annotations that you added to it match the event. For more information about filtering matching events, see the "Annotations for filtering events" section.
+
+** The event matches a `pipelinesascode.tekton.dev/on-path-changed` annotation if the pull request or push event affect files in the specified paths.
+
+** A `pipelinesascode.tekton.dev/on-path-changed-ignore` annotation excludes matching the event if the event changes _only_ files in the specified paths and does not change any other files in the repository.
+
+** The event matches a `pipelinesascode.tekton.dev/on-label` annotation if the pull request or push event has one of the specified labels.
+
+. Optional: Add the `pipelinesascode.tekton.dev/cancel-in-progress: "true"` annotation to enable automatic cancellation of the pipeline run in certain cases. For example, if a pull request triggers a pipeline run and then the user pushes new commits into the pull request source branch, each push triggers a new copy of the pipeline run. If you enable automatic cancellation-in-progress, {pac} cancels the older run after a new copy starts. This prevents many copies of the pipeline run from consuming cluster resources simultaneously. For more information about this annotation, see the "Annotations for specifying automatic cancellation-in-progress for a pipeline run" section.
++
+.Example {pac} pipeline run definition
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: maven-build
+annotations:
+  pipelinesascode.tekton.dev/task: "[git-clone]"
+  pipelinesascode.tekton.dev/on-event: "[pull_request]"
+  pipelinesascode.tekton.dev/on-target-branch: "[main, release]"
+  pipelinesascode.tekton.dev/on-path-changed: "[src/**]"
+  pipelinesascode.tekton.dev/cancel-in-progress: "true"
+spec:
+  pipelineSpec:
+    workspaces:
+    - name: shared-workspace
+    tasks:
+      - name: fetch-repo
+        taskRef:
+          - name: git-clone
+        params:
+        - name: url
+          value: {{ repo_url }}
+        - name: revision
+          value: {{ revision }}
+        workspaces:
+        - name: output
+          workspace: shared-workspace
+      - name: build-from-source
+        taskRef:
+          resolver: cluster
+          params:
+          - name: kind
+            value: task
+          - name: name
+            value: maven
+          - name: namespace
+            value: openshift-pipelines
+        workspaces:
+        - name: source
+          workspace: shared-workspace
+----
+`pipelinesascode.tekton.dev/task`:: References the `git-clone` task from {tekton-hub}.
+`pipelinesascode.tekton.dev/on-event`:: Matches the pipeline run to a pull request or merge request event.
+`pipelinesascode.tekton.dev/on-target-branch`:: Specifies that a pull request into either the `main` branch or `release` branch triggers this pipeline run.
+`pipelinesascode.tekton.dev/on-path-changed`:: Specifies that the pipeline run triggers only if the pull request has changes to files under the `src` directory.
+`pipelinesascode.tekton.dev/cancel-in-progress`:: Specifies that, if {pac} starts the pipeline run again for the same pull request, {pac} cancels the earlier run.
+`tasks.name`:: The pipeline run specification references the `git-clone` task by name. Because of the `pipelinesascode.tekton.dev/task` annotation, the {pac} resolver resolves this reference to the `git-clone` task from {tekton-hub}.
+`params.repo_url`:: {pac} replaces the `{{ repo_url }}` dynamic variable with the URL for the Git repository.
+`params.revision`:: {pac} replaces the `{{ revision }}` dynamic variable with the revision of the branch for which {pac} started the pipeline run.
+
+.Verification
+
+. Verify that your pipeline run definition files exist in the `.tekton` directory:
++
+[source,terminal]
+----
+$ ls .tekton/
+----
++
+The output shows your `.yaml` or `.yml` files and any subdirectories containing additional pipeline resources.
++
+.Example output
+[source,terminal]
+----
+maven-build.yaml  pull-request.yml  shared-tasks/
+----
+
+. After committing and pushing the pipeline run definition to your repository, trigger a matching event such as opening a pull request or pushing to a branch that matches your annotations.
+
+. Verify that {pac} created a `PipelineRun` resource:
++
+[source,terminal]
+----
+$ oc get pipelinerun -n <namespace>
+----
++
+Replace `<namespace>` with the namespace where your `Repository` CR is configured.
++
+The output shows the `PipelineRun` resources that {pac} created from your definition.
+
+.Troubleshooting
+
+* If {pac} does not trigger the pipeline run, verify the following:
+** The webhook is correctly configured for the Git repository.
+** The secret is correctly created in your cluster.
+** The `Repository` CR exists and is correctly configured.
+** The pipeline run definition file is in the `.tekton` directory.
+** The file has a `.yaml` or `.yml` extension.
+** The event annotations match the Git event type (pull_request, push, or comment).
+** The target branch annotation matches the actual branch.
+
+* If the pipeline run fails to start, check the {pac} controller logs by using the following command with the appropriate pod name:
++
+[source,terminal]
+----
+$ oc logs pipelines-as-code-controller-<pod_id> -n openshift-pipelines
+----
++
+Replace `<pod_id>` with the unique identifier of the {pac} controller pod. To find the pod name, use `oc get pods -n openshift-pipelines`.
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://tekton.dev/docs/pipelines/pipelineruns/[Tekton PipelineRun documentation]
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/creating-pipeline-runs-pac.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="parameters-pipeline-run-using-pipelines-as-code_{context}"]
+= Dynamic variables in a pipeline run specification
+
+[role="_abstract"]
+You can use dynamic variables in a pipeline run specification to give information about the triggering commit. You can also use these variables with the temporary GitHub App token for GitHub API operations.
+
+[IMPORTANT]
+====
+Using {pac} dynamic variables in default values for pipeline or task parameters is currently not supported. You can use a dynamic variable in a `value:` field, but not in a `default:` field.
+====
+
+[id="commits-parameters-pipeline-run-using-pipelines-as-code_{context}"]
+== Commit and URL information
+
+You can specify the parameters of your commit and URL by using dynamic, expandable variables with the `{{<var>}}` format. Currently, you can use the following variables:
+
+* `{{repo_owner}}`: The repository owner.
+* `{{repo_name}}`: The repository name.
+* `{{repo_url}}`: The repository full URL.
+* `{{revision}}`: Full SHA revision of a commit.
+* `{{sender}}`: The username or account ID of the sender of the commit.
+* `{{source_branch}}`: The branch name where the event originated.
+* `{{target_branch}}`: The branch name that the event targets. For push events, it is the same as the `source_branch`.
+* `{{pull_request_number}}`: The pull or merge request number, defined only for a `pull_request` event type.
+* `{{git_auth_secret}}`: The secret name that {pac} generates automatically with the Git provider token for checking out private repositories.
+
+[id="token-parameters-pipeline-run-using-pipelines-as-code_{context}"]
+== Temporary GitHub App token for GitHub API operations
+
+You can use the temporary installation token generated by {pac} from the GitHub App to access the GitHub API. The GitHub App generates a key for private repositories in the `git-provider-token` key. You can use the `{{git_auth_secret}}` dynamic variable in pipeline runs to access this key.
+
+For example, if your pipeline run must add a comment to a pull request, you can use a {pac} annotation to fetch the `github-add-comment` task definition from {tekton-hub}. You can then define the task that adds the comment, as shown in the following example:
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: pipeline-with-comment
+annotations:
+  pipelinesascode.tekton.dev/task: "github-add-comment"
+spec:
+  pipelineSpec:
+    tasks:
+      - name: add-sample-comment
+        taskRef:
+          name: github-add-comment
+        params:
+          - name: REQUEST_URL
+            value: "{{ repo_url }}/pull/{{ pull_request_number }}"
+          - name: COMMENT_OR_FILE
+            value: "Pipelines as Code IS GREAT!"
+          - name: GITHUB_TOKEN_SECRET_NAME
+            value: "{{ git_auth_secret }}"
+          - name: GITHUB_TOKEN_SECRET_KEY
+            value: "git-provider-token"
+----
+`REQUEST_URL`:: By using the dynamic variables, you can reuse this snippet template for any pull request from any repository that you use with {pac}.
+
+[NOTE]
+====
+On GitHub Apps, the generated installation token is available for 8 hours and scoped to the repository from where the events originate. You can configure the scope differently, but GitHub determines the expiration time.
+====
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/about-authentication-with-a-github-app[GitHub App authentication]
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/creating-pipeline-runs-pac.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="pipelines-as-code-resolver-annotations_{context}"]
+= {pac} resolver annotations
+
+[role="_abstract"]
+You can use {pac} resolver annotations to reference `Task` and `Pipeline` custom resource (CR) definitions. The {pac} resolver fetches the definitions from the locations that you specify in the annotations.
+
+If you reference a remote task in a pipeline run, or a pipeline in a `PipelineRun` or a `PipelineSpec` object, the {pac} resolver automatically resolves the referenced resource and includes it in the resulting `PipelineRun` CR.
+
+[NOTE]
+====
+Red Hat deprecated the public instance of {tekton-hub} (`hub.tekton.dev`) and will remove it in a future release. Use link:https://artifacthub.io[{artifact-hub}] as an alternative for Tekton `Pipeline` and `Task` resources:
+
+* link:https://artifacthub.io/packages/search?repo=tekton-catalog-tasks[Tekton Catalog Tasks]
+* link:https://artifacthub.io/packages/search?repo=tekton-catalog-pipelines[Tekton Catalog Pipelines]
+
+{artifact-hub} is open source and supports self-hosting, providing greater flexibility for managing your Tekton `Pipeline` and `Task` resources.
+====
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://artifacthub.io/packages/search?repo=tekton-catalog-tasks[Tekton Catalog Tasks on Artifact Hub]
+
+
+:leveloffset!:
+
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * pac/creating-pipeline-runs-pac.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="using-remote-task-annotations-with-pipelines-as-code_{context}"]
+= Remote task annotations
+
+[role="_abstract"]
+Include remote tasks in your pipeline runs by using {pac} resolver annotations to reference tasks from {tekton-hub}, Artifact Hub, HTTP URLs, or local repository files. This enables task reuse across repositories without duplicating task definitions.
+
+*Reference remote tasks in {tekton-hub}*
+
+* Reference a single remote task in {tekton-hub}.
+
++
+[source,yaml]
+----
+...
+  pipelinesascode.tekton.dev/task: "git-clone"
+...
+----
+`pipelinesascode.tekton.dev/task`:: {pac} includes the latest version of the task from the {tekton-hub}.
+
+
+* Reference many remote tasks from {tekton-hub}
+
++
+[source,yaml]
+----
+...
+  pipelinesascode.tekton.dev/task: "[git-clone, golang-test, tkn]"
+...
+----
+
+* Reference many remote tasks from {tekton-hub} using the `-<NUMBER>` suffix.
+
++
+[source,yaml]
+----
+...
+  pipelinesascode.tekton.dev/task: "git-clone"
+  pipelinesascode.tekton.dev/task-1: "golang-test"
+  pipelinesascode.tekton.dev/task-2: "tkn"
+...
+----
+`pipelinesascode.tekton.dev/task-2`:: By default, {pac} interprets the string as the latest task to fetch from {tekton-hub}.
+
+
+* Reference a specific version of a remote task from {tekton-hub}.
+
++
+[source,yaml]
+----
+...
+  pipelinesascode.tekton.dev/task: "[git-clone:0.1]"
+...
+----
+`pipelinesascode.tekton.dev/task`:: Refers to the `0.1` version of the `git-clone` remote task from {tekton-hub}.
+
+
+.Remote tasks by using URLs
+
+[source,yaml]
+----
+...
+  pipelinesascode.tekton.dev/task: "<https://remote.url/task.yaml>"
+...
+----
+`pipelinesascode.tekton.dev/task`:: The public URL to the remote task.
++
+[NOTE]
+====
+* If you use GitHub and the remote task URL uses the same host as the `Repository` custom resource definition (CRD), {pac} uses the GitHub token and fetches the URL using the GitHub API.
++
+For example, if your repository URL is similar to `\https://github.com/<organization>/<repository>` and the remote HTTP URL references a GitHub blob, {pac} fetches the task definition files from that private repository by using the GitHub App token.
++
+When you work on a public GitHub repository, {pac} acts similarly for a GitHub raw URL such as `\https://raw.githubusercontent.com/<organization>/<repository>/<mainbranch>/<path>/<file>`.
+
+
+* {pac} scopes GitHub App tokens to the owner or organization that contains the repository. When you use the GitHub webhook method, you can fetch any private or public repository on any organization that allows the personal token.
+====
+
+.Reference a task from a YAML file inside your repository
+
+[source,yaml]
+----
+...
+pipelinesascode.tekton.dev/task: "<share/tasks/git-clone.yaml>"
+...
+----
+`pipelinesascode.tekton.dev/task`:: Relative path to the local file containing the task definition.
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://artifacthub.io/packages/search?repo=tekton-catalog-tasks[Tekton Catalog Tasks on Artifact Hub]
+
+:leveloffset!:
+
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * pac/creating-pipeline-runs-pac.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="using-remote-pipeline-annotations-with-pipelines-as-code_{context}"]
+= Remote pipeline annotations
+
+[role="_abstract"]
+You can share a pipeline definition across many repositories by using the remote pipeline annotation.
+
+[source,yaml]
+----
+...
+    pipelinesascode.tekton.dev/pipeline: "<https://git.provider/raw/pipeline.yaml>"
+...
+----
+`pipelinesascode.tekton.dev/pipeline`:: URL to the remote pipeline definition. You can also give locations for files inside the same repository.
+
+[NOTE]
+====
+You can reference only one pipeline definition using the annotation.
+====
+
+[id="overriding-tasks-in-remote-pipeline_{context}"]
+== Overriding a task in a remote pipeline
+
+By default, if you use a remote pipeline annotation in a pipeline run, {pac} uses all the tasks that are a part of the remote pipeline.
+
+You can override a task in a remote pipeline by adding a task annotation to the pipeline run. The added task must have the same name as a task in the remote pipeline.
+
+For example, you might use the following pipeline run definition:
+
+.Example pipeline run definition referencing a remote pipeline and overriding a task
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  annotations:
+    pipelinesascode.tekton.dev/pipeline: "https://git.provider/raw/pipeline.yaml"
+    pipelinesascode.tekton.dev/task: "./my-git-clone-task.yaml"
+----
+
+For this example, assume the remote task found at `\https://git.provider/raw/pipeline.yaml` includes a task named `git-clone` and the task that the `my-git-clone-task.yaml` file defines is also named `git-clone`.
+
+In this case, the pipeline run executes the remote pipeline, but replaces the task named `git-clone` in the pipeline with the task you defined.
+
+[role="_additional-resources"]
+.Additional resources
+
+* xref:../pac/creating-pipeline-runs-pac.adoc#pipelines-as-code-resolver-annotations_creating-pipeline-runs-pac[{pac} resolver annotations]
+* xref:../pac/creating-pipeline-runs-pac.adoc#using-remote-task-annotations-with-pipelines-as-code_creating-pipeline-runs-pac[Remote task annotations]
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/creating-pipeline-runs-pac.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="matching-pipeline-run-using-pipelines-as-code_{context}"]
+= Annotations for matching events to a pipeline run
+
+[role="_abstract"]
+You can match different Git provider events with each pipeline run by using annotations on the pipeline run. If there are many pipeline runs matching an event, {pac} runs them in parallel and posts the results to the Git provider as soon as a pipeline run finishes.
+
+[id="pull-matching-pipeline-run-using-pipelines-as-code_{context}"]
+== Matching a pull request event to a pipeline run
+
+You can use the following example to match the `pipeline-pr-main` pipeline run with a `pull_request` event that targets the `main` branch:
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: pipeline-pr-main
+annotations:
+  pipelinesascode.tekton.dev/on-target-branch: "[main]"
+  pipelinesascode.tekton.dev/on-event: "[pull_request]"
+# ...
+----
+`pipelinesascode.tekton.dev/on-target-branch`:: You can specify many branches by adding comma-separated entries. For example, `"[main, release-nightly]"`. In addition, you can specify the following items:
+* Full references to branches such as `"refs/heads/main"`
+* Globs with pattern matching such as `"refs/heads/\*"`
+* Tags such as `"refs/tags/1.\*"`
+
+[id="push-matching-pipeline-run-using-pipelines-as-code_{context}"]
+== Matching a push event to a pipeline run
+
+You can use the following example to match the `pipeline-push-on-main` pipeline run with a `push` event targeting the `refs/heads/main` branch:
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: pipeline-push-on-main
+annotations:
+  pipelinesascode.tekton.dev/on-target-branch: "[refs/heads/main]"
+  pipelinesascode.tekton.dev/on-event: "[push]"
+# ...
+----
+`pipelinesascode.tekton.dev/on-target-branch`:: You can specify many branches by adding comma-separated entries. For example, `"[main, release-nightly]"`. In addition, you can specify the following items:
+* Full references to branches such as `"refs/heads/main"`
+* Globs with pattern matching such as `"refs/heads/\*"`
+* Tags such as `"refs/tags/1.\*"`
+
+
+[id="comment-matching-pipeline-run-using-pipelines-as-code_{context}"]
+== Matching a comment event to a pipeline run
+
+:FeatureName: Matching a comment event to a pipeline run
+:_mod-docs-content-type: SNIPPET
+// When including this file, ensure that {FeatureName} is set immediately before
+// the include. Otherwise it will result in an incorrect replacement.
+
+[IMPORTANT]
+====
+[subs="attributes+"]
+{FeatureName} is a Technology Preview feature only. Technology Preview features are not supported with Red Hat production service level agreements (SLAs) and might not be functionally complete. Red Hat does not recommend using them in production. These features provide early access to upcoming product features, enabling customers to test functionality and provide feedback during the development process.
+
+For more information about the support scope of Red Hat Technology Preview features, see link:https://access.redhat.com/support/offerings/techpreview/[Technology Preview Features Support Scope].
+====
+// Undefine {FeatureName} attribute, so that any mistakes are easily spotted
+:!FeatureName:
+
+You can use the following example to match the `pipeline-comment` pipeline run with a comment on a pull request, when the text of the comment matches the `^/merge-pr` regular expression:
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: pipeline-comment
+annotations:
+  pipelinesascode.tekton.dev/on-comment: "^/merge-pr"
+# ...
+----
+
+The pipeline run starts only if the comment author meets one of the following requirements:
+
+* The author is the owner of the repository.
+* The author is a collaborator on the repository.
+* The author is a public member on the organization of the repository.
+* The `OWNERS` file lists the comment author in the `approvers` or `reviewers` section in the root of the repository, as defined in the https://www.kubernetes.dev/docs/guide/owners/[Kubernetes documentation]. {pac} supports the specification for the `OWNERS` and `OWNERS_ALIASES` files. If the `OWNERS` file includes a https://github.com/kubernetes/community/blob/master/contributors/guide/owners.md#filters[filters] section, {pac} matches approvers and reviewers only against the `.*` filter.
+
+[id="advanced-matching-pipeline-run-using-pipelines-as-code_{context}"]
+== Advanced event matching
+
+{pac} supports by using Common Expression Language (CEL) based filtering for advanced event matching. If you have the `pipelinesascode.tekton.dev/on-cel-expression` annotation in your pipeline run, {pac} uses the CEL expression and skips the `on-target-branch` annotation. Compared to the simple `on-target-branch` annotation matching, the CEL expressions allow complex filtering and negation.
+
+[IMPORTANT]
+====
+If you use the `on-cel-expression` annotation in the same pipeline run as an `on-event`, `on-target-branch`, `on-label`, `on-path-change`, or `on-path-change-ignore` annotation, the `on-cel-expression` annotation takes priority and {pac} ignores the other annotations.
+====
+
+To use CEL-based filtering with {pac}, consider the following examples of annotations:
+
+* To match a `pull_request` event targeting the `main` branch and coming from the `wip` branch:
++
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: pipeline-advanced-pr
+annotations:
+  pipelinesascode.tekton.dev/on-cel-expression: |
+    event == "pull_request" && target_branch == "main" && source_branch == "wip"
+...
+----
+
+* To run a pipeline only if a path has changed, you can use the `.pathChanged` suffix function with a glob pattern:
++
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: pipeline-advanced-pr-pathchanged
+annotations:
+  pipelinesascode.tekton.dev/on-cel-expression: |
+    event == "pull_request" && "docs/\*.md".pathChanged()
+# ...
+----
+`.pathChanged()`:: Matches all markdown files in the `docs` directory.
+
+* To match all pull requests starting with the title `[DOWNSTREAM]`:
++
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: pipeline-advanced-pr-downstream
+annotations:
+  pipelinesascode.tekton.dev/on-cel-expression: |
+    event == "pull_request && event_title.startsWith("[DOWNSTREAM]")
+# ...
+----
+
+* To run a pipeline on a `pull_request` event, but skip the `experimental` branch:
++
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: pipeline-advanced-pr-not-experimental
+annotations:
+  pipelinesascode.tekton.dev/on-cel-expression: |
+    event == "pull_request" && target_branch != experimental"
+# ...
+----
+
+For advanced CEL-based filtering while using {pac}, you can use the following fields and suffix functions:
+
+* `event`: A `push` or `pull_request` event.
+* `target_branch`: The target branch.
+* `source_branch`: The branch of origin of a `pull_request` event. For `push` events, it is same as the `target_branch`.
+* `event_title`: Matches the title of the event, such as the commit title for a `push` event, and the title of a pull or merge request for a `pull_request` event. Currently, only GitHub, GitLab, and Bitbucket Cloud are the supported providers.
+* `.pathChanged`: A suffix function to a string. The string can be a glob of a path to check if the path has changed. Currently, {pac} supports only GitHub and GitLab as providers.
+
+In addition, you can access the full payload as passed by the Git repository provider. Use the `headers` field to access the headers of the payload, for example, `headers['x-github-event']`. Use the `body` field to access the body of the payload, for example, `body.pull_request.state`.
+
+:FeatureName: Using the header and body of the payload for CEL-based filtering with {pac}
+:_mod-docs-content-type: SNIPPET
+// When including this file, ensure that {FeatureName} is set immediately before
+// the include. Otherwise it will result in an incorrect replacement.
+
+[IMPORTANT]
+====
+[subs="attributes+"]
+{FeatureName} is a Technology Preview feature only. Technology Preview features are not supported with Red Hat production service level agreements (SLAs) and might not be functionally complete. Red Hat does not recommend using them in production. These features provide early access to upcoming product features, enabling customers to test functionality and provide feedback during the development process.
+
+For more information about the support scope of Red Hat Technology Preview features, see link:https://access.redhat.com/support/offerings/techpreview/[Technology Preview Features Support Scope].
+====
+// Undefine {FeatureName} attribute, so that any mistakes are easily spotted
+:!FeatureName:
+
+In the following example, the pipeline run starts only if all of the following conditions are true:
+
+* The pull request is targeting the `main` branch.
+* The author of the pull request is `superuser`.
+* The action is `synchronize`; this action triggers when an update occurs on a pull request.
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  annotations:
+    pipelinesascode.tekton.dev/on-cel-expression: |
+      body.pull_request.base.ref == "main" &&
+        body.pull_request.user.login == "superuser" &&
+        body.action == "synchronize"
+# ...
+----
+
+[NOTE]
+====
+If you use the `header` or `body` field for event matching, you might be unable to trigger the pipeline run using Git commands such as `retest`. If you use a Git command, the payload body is the comment that has this command, and not the original payload.
+
+If you want to trigger the pipeline run again when using the `body` field for event matching, you can close and reopen the pull request or merge request, or add a new SHA commit. To add a new SHA commit, use the following command:
+
+[source,terminal]
+----
+$ git commit --amend --no-edit && git push --force-with-lease
+----
+====
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://cel.dev/[Common Expression Language (CEL)]
+* link:https://www.kubernetes.dev/docs/guide/owners/[Kubernetes OWNERS file specification]
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/creating-pipeline-runs-pac.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="filtering-pipeline-run-using-pipelines-as-code_{context}"]
+= Annotations for filtering events matched to a pipeline run
+
+[role="_abstract"]
+Add annotations to a pipeline run to filter events that {pac} matches, ensuring the pipeline run starts only when all annotations match the event.
+
+You can add one or more annotations to a pipeline run to filter the events that {pac} matches to this pipeline run. In this case, when the defined matching event (such as a pull request, a push event, or a comment) happens, {pac} checks if these annotations also match. The pipeline run starts only if all the annotations that you added match the event.
+
+[id="path-matching-pipeline-run-using-pipelines-as-code_{context}"]
+== Matching changes in paths to a pipeline run
+
+You can match a pipeline run to changes in a set of paths. {pac} starts the pipeline run only if the pull request or push event includes changes in any of the paths that you list.
+
+The `pass:[*]` wildcard denotes any file in the directory. The `pass:[**]` wildcard denotes any file in the directory or any subdirectories on any level under the directory.
+
+You can use the following example to match the `pipeline-pkg-or-cli` pipeline run when a pull request changes any files in the `pkg` directory, the `cli` directory, or any subdirectories under the `cli` directory.
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: pipeline-pkg-or-cli
+annotations:
+  pipelinesascode.tekton.dev/on-path-changed: "[pkg/*, cli/**]"
+# ...
+----
+
+[id="exclude-path-matching-pipeline-run-using-pipelines-as-code_{context}"]
+== Excluding changes in paths from matching a pipeline run
+
+You can configure a pipeline run to exclude matching if a pull request makes changes only to files in a specified set of paths. If the pipeline run matches an event but the pull request includes changes only to files in the paths that you list, {pac} does not start the pipeline run.
+
+The following example matches the `pipeline-docs-not-generated` pipeline run when a pull request changes any files under the `docs` directory or its subdirectories. The match excludes changes that apply only to the `docs/generated` directory or its subdirectories.
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: pipeline-docs-not-generated
+annotations:
+  pipelinesascode.tekton.dev/on-path-changed: "[docs/**]"
+  pipelinesascode.tekton.dev/on-path-changed-ignore: "[docs/generated/**]"
+# ...
+----
+
+You can use the following example to match the `pipeline-main-not-docs` pipeline run when a pull request targets the `main` branch, except when the changes apply only to the `docs` directory or its subdirectories.
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: pipeline-main-not-docs
+annotations:
+  pipelinesascode.tekton.dev/on-target-branch: "[main]"
+  pipelinesascode.tekton.dev/on-event: "[pull_request]"
+  pipelinesascode.tekton.dev/on-path-changed-ignore: "[docs/**]"
+# ...
+----
+
+[id="label-matching-pipeline-run-using-pipelines-as-code_{context}"]
+== Matching a pull request label to a pipeline run
+
+:FeatureName: Matching pull request labels to a pipeline run
+:_mod-docs-content-type: SNIPPET
+// When including this file, ensure that {FeatureName} is set immediately before
+// the include. Otherwise it will result in an incorrect replacement.
+
+[IMPORTANT]
+====
+[subs="attributes+"]
+{FeatureName} is a Technology Preview feature only. Technology Preview features are not supported with Red Hat production service level agreements (SLAs) and might not be functionally complete. Red Hat does not recommend using them in production. These features provide early access to upcoming product features, enabling customers to test functionality and provide feedback during the development process.
+
+For more information about the support scope of Red Hat Technology Preview features, see link:https://access.redhat.com/support/offerings/techpreview/[Technology Preview Features Support Scope].
+====
+// Undefine {FeatureName} attribute, so that any mistakes are easily spotted
+:!FeatureName:
+
+You can match a pipeline run to one or several pull request labels. {pac} starts the pipeline run only when the pull request has any of these labels. When you update the pull request with a new commit, if the label is still present, {pac} starts the pipeline run again.
+
+The following example matches the `pipeline-bug-or-defect` pipeline run when you add the `bug` or `defect` label to a pull request. It also matches when you update a labeled pull request with a new commit:
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: pipeline-bug-or-defect
+annotations:
+  pipelinesascode.tekton.dev/on-label: "[bug, defect]"
+# ...
+----
+
+[NOTE]
+====
+The current version of {pac} supports matching events to pull request labels only for the GitHub, Gitea, and GitLab repository hosting service providers.
+====
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://cel.dev/[Common Expression Language (CEL)]
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/managing-pipeline-runs-pac.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="speccancel-pipeline-run-using-pipelines-as-code_{context}"]
+= Annotations for specifying automatic cancellation-in-progress for a pipeline run
+
+[role="_abstract"]
+Configure automatic cancellation-in-progress for pipeline runs to prevent many copies from consuming excessive cluster resources when rapid Git events occur. Use the `cancel-in-progress` annotation to automatically cancel older pipeline runs when a new copy starts for the same pull request or branch.
+
+For example, if a pull request triggers a pipeline run and then the user pushes new commits into the pull request source branch, each push triggers a new copy of the pipeline run. If several pushes happen, several copies can run, which can consume excessive cluster resources.
+
+You can configure a pipeline run to enable automatic cancellation-in-progress. If you enable automatic cancellation for a pipeline run, {pac} cancels the pipeline run in the following situations:
+
+* {pac} has successfully started a copy of the same pipeline run for the same pull request or the same source branch.
+
+* A user merges or closes the pull request that triggered the pipeline run.
+
+You can use the following example to enable automatic cancellation when you create the `sample-pipeline` pipeline run:
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: sample-pipeline
+annotations:
+  pipelinesascode.tekton.dev/cancel-in-progress: "true"
+# ...
+----
+
+:FeatureName: Automatic cancellation-in-progress of pipeline runs
+:_mod-docs-content-type: SNIPPET
+// When including this file, ensure that {FeatureName} is set immediately before
+// the include. Otherwise it will result in an incorrect replacement.
+
+[IMPORTANT]
+====
+[subs="attributes+"]
+{FeatureName} is a Technology Preview feature only. Technology Preview features are not supported with Red Hat production service level agreements (SLAs) and might not be functionally complete. Red Hat does not recommend using them in production. These features provide early access to upcoming product features, enabling customers to test functionality and provide feedback during the development process.
+
+For more information about the support scope of Red Hat Technology Preview features, see link:https://access.redhat.com/support/offerings/techpreview/[Technology Preview Features Support Scope].
+====
+// Undefine {FeatureName} attribute, so that any mistakes are easily spotted
+:!FeatureName:
+
+[NOTE]
+====
+* {pac} cancels a pipeline run _after_ starting a new copy of this pipeline run successfully. The `pipelinesascode.tekton.dev/cancel-in-progress` setting does _not_ ensure that only one copy of the pipeline run is executing at any time.
+
+* To enable `cancellation-in-progress` for all default pipeline runs, use the `enable-cancel-in-progress-on-pull-requests` and the `enable-cancel-in-progress-on-push` settings. These settings are available in the `platforms.openshift.pipelinesAsCode.settings` spec of the `TektonConfig` custom resource (CR) configure {pac}.
+====
+
+[role="_additional-resources"]
+.Additional resources
+
+* xref:../pac/install-config-pipelines-as-code.adoc#customizing-pipelines-as-code-configuration_install-config-pipelines-as-code[Customizing {pac} configuration]
+
+:leveloffset!:
+
+[role="_additional-resources"]
+.Additional resources
+
+* xref:../pac/using-pipelines-as-code-repos.adoc#scoping-github-token_using-pipelines-as-code-repos[Scoping the GitHub token to additional repositories]
+
+* link:https://cel.dev/[Common Expression Language (CEL)]
+
+* xref:../pac/install-config-pipelines-as-code.adoc#customizing-pipelines-as-code-configuration_install-config-pipelines-as-code[Customizing {pac} configuration]

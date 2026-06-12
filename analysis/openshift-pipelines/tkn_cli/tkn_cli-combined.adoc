@@ -1,0 +1,1052 @@
+= Installing tkn
+
+:_mod-docs-content-type: ASSEMBLY
+:_mod-docs-content-type: SNIPPET
+// The {product-title} attribute provides the context-sensitive name of the relevant OpenShift distribution, for example, "OpenShift Container Platform" or "OKD". The {product-version} attribute provides the product version relative to the distribution, for example "4.9".
+// {product-title} and {product-version} are parsed when AsciiBinder queries the _distro_map.yml file in relation to the base branch of a pull request.
+// See https://github.com/openshift/openshift-docs/blob/main/contributing_to_docs/doc_guidelines.adoc#product-name-and-version for more information on this topic.
+// Other common attributes are defined in the following lines:
+:data-uri:
+:icons:
+:experimental:
+:toc: macro
+:toc-title:
+:imagesdir: images
+:prewrap!:
+
+:pipelines-title: Red Hat OpenShift Pipelines
+:pipelines-shortname: OpenShift Pipelines
+:pipelines-ver: pipelines-1.22
+:pipelines-version-number: 1.22
+:osp-version-patch: 0
+:tekton-cache: Tekton Cache
+:tekton-chains: Tekton Chains
+:tekton-results: Tekton Results
+:tekton-triggers: Tekton Triggers
+:tekton-hub: Tekton Hub
+:artifact-hub: Artifact Hub
+:pac: Pipelines as Code
+:product-registry: OpenShift image registry
+// IBM Power
+:ibmpowerProductName: IBM Power
+// IBM zSystems
+:ibmzProductName: IBM zSystems
+:linuxoneProductName: IBM(R) LinuxONE
+:kebab: image:kebab.png[title="Options menu"]
+
+:op-system-base: RHEL
+:op-system-base-full: Red Hat Enterprise Linux (RHEL)
+
+:cluster-manager-first: Red Hat OpenShift Cluster Manager
+:cluster-manager: OpenShift Cluster Manager
+:cluster-manager-url: link:https://console.redhat.com/openshift[OpenShift Cluster Manager Hybrid Cloud Console]
+:cluster-manager-url-pull: link:https://console.redhat.com/openshift/install/pull-secret[pull secret from the Red Hat OpenShift Cluster Manager]
+
+:oc-first: pass:quotes[OpenShift CLI (`oc`)]
+
+// Attributes not present in the main branch
+:OCP: OpenShift Container Platform
+
+//We should use lowercase like regular OCP docs and deprecate the above.
+:ocp: OpenShift Container Platform
+
+
+:ols-official: Red{nbsp}Hat OpenShift Lightspeed
+:ols: OpenShift Lightspeed
+
+// Attributes not present in the main branch
+:rhosp: Red Hat OpenStack Platform
+[id='installing-tkn']
+= Installing tkn
+:context: installing-tkn
+
+toc::[]
+
+[role="_abstract"]
+Use the CLI tool to manage {pipelines-title} from a terminal. You can install the CLI tool on different platforms.
+
+[NOTE]
+====
+Both the archives and the RPMs contain the following executables:
+
+* `tkn`
+* `tkn-pac`
+* `opc`
+====
+:FeatureName: Running {pipelines-title} with the `opc` CLI tool
+:_mod-docs-content-type: SNIPPET
+// When including this file, ensure that {FeatureName} is set immediately before
+// the include. Otherwise it will result in an incorrect replacement.
+
+[IMPORTANT]
+====
+[subs="attributes+"]
+{FeatureName} is a Technology Preview feature only. Technology Preview features are not supported with Red Hat production service level agreements (SLAs) and might not be functionally complete. Red Hat does not recommend using them in production. These features provide early access to upcoming product features, enabling customers to test functionality and provide feedback during the development process.
+
+For more information about the support scope of Red Hat Technology Preview features, see link:https://access.redhat.com/support/offerings/techpreview/[Technology Preview Features Support Scope].
+====
+// Undefine {FeatureName} attribute, so that any mistakes are easily spotted
+:!FeatureName:
+
+// Install tkn on Linux
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * tkn_cli/installing-tkn.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="installing-tkn-on-linux"]
+
+= Installing the {pipelines-title} CLI on Linux
+
+[role="_abstract"]
+For Linux distributions, you can download the CLI as a `tar.gz` archive.
+
+.Procedure
+
+. Download the relevant CLI tool.
+
+* link:https://mirror.openshift.com/pub/cgw/pipelines/{pipelines-version-number}.{osp-version-patch}/tkn-linux-amd64.tar.gz[Linux (x86_64, amd64)]
+
+* link:https://mirror.openshift.com/pub/cgw/pipelines/{pipelines-version-number}.{osp-version-patch}/tkn-linux-s390x.tar.gz[Linux on {ibmzProductName} and {linuxoneProductName} (s390x)]
+
+* link:https://mirror.openshift.com/pub/cgw/pipelines/{pipelines-version-number}.{osp-version-patch}/tkn-linux-ppc64le.tar.gz[Linux on {ibmpowerProductName} (ppc64le)]
+
+* link:https://mirror.openshift.com/pub/cgw/pipelines/{pipelines-version-number}.{osp-version-patch}/tkn-linux-arm64.tar.gz[Linux on ARM (aarch64, arm64)]
+
+// Binaries also need to be updated in the following modules:
+// op-installing-pipelines-as-code-cli.adoc
+// op-installing-tkn-on-windows.adoc
+// op-installing-tkn-on-macos.adoc
+
+. Unpack the archive:
++
+[source,terminal]
+----
+$ tar xvzf <file>
+----
+. Add the location of your `tkn`, `tkn-pac`, and `opc` files to your `PATH` environment variable.
+
+
+. To check your `PATH`, run the following command:
++
+[source,terminal]
+----
+$ echo $PATH
+----
+
+:leveloffset!:
+
+// Install tkn on Linux using RPM
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * tkn_cli/installing-tkn.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="installing-tkn-on-linux-using-rpm"]
+
+= Installing the {pipelines-title} CLI on Linux using an RPM
+
+[role="_abstract"]
+For {op-system-base-full} version 8, you can install the {pipelines-title} CLI as an RPM.
+
+.Prerequisites
+
+* You have an active {OCP} subscription on your Red Hat account.
+* You have root or sudo privileges on your local system.
+
+.Procedure
+
+. Register with Red Hat Subscription Manager:
++
+[source,terminal]
+----
+# subscription-manager register
+----
+
+. Pull the latest subscription data:
++
+[source,terminal]
+----
+# subscription-manager refresh
+----
+
+. List the available subscriptions:
++
+[source,terminal]
+----
+# subscription-manager list --available --matches '*pipelines*'
+----
+
+. In the output for the earlier command, find the pool ID for your {OCP} subscription and attach the subscription to the registered system:
++
+[source,terminal]
+----
+# subscription-manager attach --pool=<pool_id>
+----
+
+. Enable the repositories required by {pipelines-title}:
++
+* Linux (x86_64, amd64)
++
+[source,terminal,subs="attributes"]
+----
+# subscription-manager repos --enable="pipelines-{pipelines-version-number}-for-rhel-8-x86_64-rpms"
+----
++
+* Linux on {ibmzProductName} and {linuxoneProductName} (s390x)
++
+[source,terminal,subs="attributes"]
+----
+# subscription-manager repos --enable="pipelines-{pipelines-version-number}-for-rhel-8-s390x-rpms"
+----
++
+* Linux on {ibmpowerProductName} (ppc64le)
++
+[source,terminal,subs="attributes"]
+----
+# subscription-manager repos --enable="pipelines-{pipelines-version-number}-for-rhel-8-ppc64le-rpms"
+----
++
+* Linux on ARM (aarch64, arm64)
++
+[source,terminal,subs="attributes"]
+----
+# subscription-manager repos --enable="pipelines-{pipelines-version-number}-for-rhel-8-aarch64-rpms"
+----
+. Install the `openshift-pipelines-client` package:
++
+[source,terminal]
+----
+# yum install openshift-pipelines-client
+----
++
+After you install the CLI, you can use it with the `tkn` command:
++
+[source,terminal]
+----
+$ tkn version
+----
+
+:leveloffset!:
+
+//Install tkn on Windows
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * tkn_cli/installing-tkn.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="installing-tkn-on-windows"]
+
+= Installing the {pipelines-title} CLI on Windows
+
+[role="_abstract"]
+For Windows, you can download the CLI as a `zip` archive.
+
+.Procedure
+
+.  Download the link:https://mirror.openshift.com/pub/cgw/pipelines/{pipelines-version-number}.{osp-version-patch}/tkn-windows-amd64.zip[CLI tool].
+
+// Binaries also need to be updated in the following modules:
+// op-installing-tkn-on-linux.adoc
+// op-installing-pipelines-as-code-cli.adoc
+// op-installing-tkn-on-macos.adoc
+
+. Extract the archive with a ZIP program.
+. Add the location of your `tkn`, `tkn-pac`, and `opc` files to your `PATH` environment variable.
+
+. To check your `PATH`, run the following command:
++
+[source,terminal]
+----
+C:\> path
+----
+
+:leveloffset!:
+
+//Install tkn on macOS
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * tkn_cli/installing-tkn.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="installing-tkn-on-macos"]
+
+= Installing the {pipelines-title} CLI on macOS
+
+[role="_abstract"]
+For macOS, you can download the CLI as a `tar.gz` archive.
+
+.Procedure
+
+. Download the relevant CLI tool.
+
+* link:https://mirror.openshift.com/pub/cgw/pipelines/{pipelines-version-number}.{osp-version-patch}/tkn-macos-amd64.tar.gz[macOS]
+
+* link:https://mirror.openshift.com/pub/cgw/pipelines/{pipelines-version-number}.{osp-version-patch}/tkn-macos-arm64.tar.gz[macOS on ARM]
+
+// Binaries also need to be updated in the following modules:
+// op-installing-tkn-on-linux.adoc
+// op-installing-pipelines-as-code-cli.adoc
+// op-installing-tkn-on-windows.adoc
+
+. Unpack and extract the archive.
+
+. Add the location of your `tkn`, `tkn-pac`, and `opc` files to your `PATH` environment variable.
+
+
+. To check your `PATH`, run the following command:
++
+[source,terminal]
+----
+$ echo $PATH
+----
+
+:leveloffset!:
+
+= Configuring tkn
+
+:_mod-docs-content-type: ASSEMBLY
+[id="op-configuring-tkn"]
+= Configuring the {pipelines-shortname} tkn CLI
+:_mod-docs-content-type: SNIPPET
+:context: configuring-tkn
+
+toc::[]
+
+[role="_abstract"]
+Configure the {pipelines-title} `tkn` CLI to enable tab completion.
+
+// Enabling tab completion
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * tkn_cli/op-configuring-tkn.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="op-tkn-enabling-tab-completion_{context}"]
+= Enabling tab completion
+
+After you install the `tkn` CLI, you can enable tab completion to automatically complete `tkn` commands or suggest options when you press Tab.
+[role="_abstract"]
+After you install the `tkn` CLI, you can enable tab completion to automatically complete `tkn` commands or suggest options when you press Tab.
+
+.Prerequisites
+
+* You must have the `tkn` CLI tool installed.
+* You must have `bash-completion` installed on your local system.
+
+.Procedure
+
+
+. Save the Bash completion code to a file:
++
+[source,terminal]
+----
+$ tkn completion bash > tkn_bash_completion
+----
+
+. Copy the file to `/etc/bash_completion.d/`:
++
+[source,terminal]
+----
+$ sudo cp tkn_bash_completion /etc/bash_completion.d/
+----
++
+Or, you can save the file to a local directory and source it from your `.bashrc` file instead.
++
+Opening a new terminal enables tab completion.
+
+:leveloffset!:
+
+= Basic tkn commands
+
+:_mod-docs-content-type: ASSEMBLY
+:_mod-docs-content-type: SNIPPET
+[id='op-tkn-reference']
+= {pipelines-shortname} tkn reference
+:context: op-tkn-reference
+
+toc::[]
+
+[role="_abstract"]
+Use the `tkn` CLI to manage pipelines, tasks, pipeline runs, and other {pipelines-shortname} resources from the command line.
+
+Basic syntax::
++
+[source,terminal]
+----
+$ tkn [command or options] [arguments...]
+----
+
+Global options::
++
+[source,terminal]
+----
+--help, -h
+----
+
+// Utility commands
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * tkn_cli/op-tkn-reference.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="op-tkn-utility-commands_{context}"]
+= Utility commands
+
+[role="_abstract"]
+You can use utility commands in the `tkn` CLI to manage the CLI environment. These commands allow you to check the version and enable shell prompt completion.
+
+== tkn
+Parent command for `tkn` CLI.
+
+.Example: Display all options
+[source,terminal]
+----
+$ tkn
+----
+
+== completion [shell]
+Print shell prompt completion code that you must evaluate to give interactive completion. Supported shells are `bash` and `zsh`.
+
+.Example: Completion code for the `bash` shell prompt
+[source,terminal]
+----
+$ tkn completion bash
+----
+
+== version
+Print version information of the `tkn` CLI.
+
+.Example: Check the `tkn` version
+[source,terminal]
+----
+$ tkn version
+----
+
+:leveloffset!:
+
+// Pipeline management commands
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * tkn_cli/op-tkn-reference.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="op-tkn-pipeline-management_{context}"]
+= Pipelines management commands
+
+[role="_abstract"]
+Use the `tkn pipeline` commands to create, list, start, delete, and describe pipelines from the command line.
+
+== pipeline
+Manage pipelines.
+
+.Example: Display help
+[source,terminal]
+----
+$ tkn pipeline --help
+----
+
+== pipeline delete
+
+Delete a pipeline.
+
+.Example: Delete a pipeline from a namespace
+[source,terminal]
+----
+$ tkn pipeline delete <pipeline_name> -n <namespace_name>
+----
+
+== pipeline describe
+Describe a pipeline.
+
+.Example: Describe a pipeline
+[source,terminal]
+----
+$ tkn pipeline describe <pipeline_name>
+----
+
+== pipeline list
+Display a list of pipelines.
+
+.Example: Display a list of pipelines
+[source,terminal]
+-----
+$ tkn pipeline list
+-----
+
+== pipeline logs
+Display the logs for a specific pipeline.
+
+.Example: Stream the live logs for a pipeline
+[source,terminal]
+----
+$ tkn pipeline logs -f <pipeline_name>
+----
+
+== pipeline start
+Start a pipeline.
+
+.Example: Start a pipeline
+[source,terminal]
+----
+$ tkn pipeline start <pipeline_name>
+----
+
+:leveloffset!:
+
+// Pipeline run commands
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * tkn_cli/op-tkn-reference.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="op-tkn-pipeline-run_{context}"]
+= Pipeline run commands
+
+
+[role="_abstract"]
+Use the `tkn pipelinerun` commands to list, describe, cancel, and delete pipeline runs from the command line.
+
+== `pipelinerun`
+Manage pipeline runs.
+
+.Example: Display help
+[source,terminal]
+----
+$ tkn pipelinerun -h
+----
+
+== pipelinerun cancel
+Cancel a pipeline run.
+
+.Example: Cancel a pipeline run from a namespace
+[source,terminal]
+----
+$ tkn pipelinerun cancel <pipeline_run_name> -n <namespace_name>
+----
+
+== pipelinerun delete
+Delete a pipeline run.
+
+.Example: Delete pipeline runs from a namespace
+[source,terminal]
+----
+$ tkn pipelinerun delete <pipeline_run_name_1> <pipeline_run_name_2> -n <namespace_name>
+----
+
+.Example: Delete all pipeline runs from a namespace, except the five most recently executed pipeline runs
+[source,terminal]
+----
+$ tkn pipelinerun delete -n <namespace_name> --keep 5
+----
+`<namespace_name>`:: Replace `5` with the number of most recently executed pipeline runs you want to retain.
+
+.Example: Delete all pipelines
+[source,terminal]
+----
+$ tkn pipelinerun delete --all
+----
+
+[NOTE]
+====
+Starting with {pipelines-title} 1.6, the `tkn pipelinerun delete --all` command does not delete any resources that are in the running state.
+====
+
+== pipelinerun describe
+Describe a pipeline run.
+
+.Example: Describe a pipeline run in a namespace
+[source,terminal]
+----
+$ tkn pipelinerun describe <pipeline_run_name> -n <namespace_name>
+----
+
+== pipelinerun list
+List pipeline runs.
+
+.Example: Display a list of pipeline runs in a namespace
+[source,terminal]
+----
+$ tkn pipelinerun list -n <namespace_name>
+----
+
+== pipelinerun logs
+Display the logs of a pipeline run.
+
+.Example: Display the logs of a pipeline run with all tasks and steps in a namespace
+[source,terminal]
+----
+$ tkn pipelinerun logs <pipeline_run_name> -a -n <namespace_name>
+----
+
+:leveloffset!:
+
+// Task management commands
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * tkn_cli/op-tkn-reference.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="op-tkn-task-management_{context}"]
+= Task management commands
+
+[role="_abstract"]
+Use the `tkn task` commands to create, list, start, delete, and describe tasks from the command line.
+
+== task
+Manage tasks.
+
+.Example: Display help
+[source,terminal]
+----
+$ tkn task -h
+----
+
+== task delete
+Delete a task.
+
+.Example: Delete tasks from a namespace
+[source,terminal]
+----
+$ tkn task delete <task_name_1> <task_name_2> -n <namespace_name>
+----
+
+== task describe
+Describe a task.
+
+.Example: Describe a task in a namespace
+[source,terminal]
+----
+$ tkn task describe <task_name> -n <namespace_name>
+----
+
+== task list
+List tasks.
+
+.Example: List all the tasks in a namespace
+[source,terminal]
+----
+$ tkn task list -n <namespace_name>
+----
+
+== task start
+Start a task.
+
+.Example: Start a task in a namespace
+[source,terminal]
+----
+$ tkn task start <task_name> -s <service_account_name> -n <namespace_name>
+----
+
+:leveloffset!:
+
+// Task run commands
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+//
+// * tkn_cli/op-tkn-reference.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="op-tkn-task-run_{context}"]
+= Task run commands
+
+[role="_abstract"]
+Use the `tkn taskrun` commands to list, describe, cancel, and delete task runs from the command line.
+
+== `taskrun`
+Manage task runs.
+
+.Example: Display help
+[source,terminal]
+----
+$ tkn taskrun -h
+----
+
+== taskrun cancel
+Cancel a task run.
+
+.Example: Cancel a task run from a namespace
+[source,terminal]
+----
+$ tkn taskrun cancel <task_run_name> -n <namespace_name>
+----
+
+== taskrun delete
+Delete a `TaskRun`.
+
+.Example: Delete task runs from a namespace
+[source,terminal]
+----
+$ tkn taskrun delete <task_run_name_1> <task_run_name_2> -n <namespace_name>
+----
+
+.Example: Delete all but the five most recently executed task runs from a namespace
+[source,terminal]
+----
+$ tkn taskrun delete -n <namespace_name> --keep 5
+----
+`<namespace_name>`:: Replace `5` with the number of most recently executed task runs you want to retain.
+
+== taskrun describe
+Describe a task run.
+
+.Example: Describe a task run in a namespace
+[source,terminal]
+----
+$ tkn taskrun describe <task_run_name> -n <namespace_name>
+----
+
+== taskrun list
+List task runs.
+
+.Example: List all the task runs in a namespace
+[source,terminal]
+----
+$ tkn taskrun list -n <namespace_name>
+----
+
+
+== taskrun logs
+Display task run logs.
+
+.Example: Display live logs for a task run in a namespace
+
+[source,terminal]
+----
+$ tkn taskrun logs -f <task_run_name> -n <namespace_name>
+----
+
+:leveloffset!:
+
+// Pipeline resources commands
+:leveloffset: +1
+
+:_mod-docs-content-type: REFERENCE
+// This module is included in the following assemblies:
+// * tkn_cli/op-tkn-reference.adoc
+
+[id="op-tkn-pipeline-resource-management_{context}"]
+= Pipeline resource management commands
+
+[role="_abstract"]
+You can use the `tkn resource` commands to manage, create, view, and interact with pipeline resources in your namespace.
+
+`resource`::
+Manage pipeline resources.
++
+.Example: Display help
+[source,terminal]
+----
+$ tkn resource -h
+----
+
+`resource create`::
+Create a pipeline resource.
++
+.Example: Create a pipeline resource in a namespace
+[source,terminal]
+----
+$ tkn resource create -n myspace
+----
++
+This is an interactive command that asks for input on the name of the resource, type of the resource, and the values based on the type of the resource.
+
+`resource delete`::
+Delete a pipeline resource.
++
+.Example: Delete the `myresource` pipeline resource from a namespace
+[source,terminal]
+----
+$ tkn resource delete myresource -n myspace
+----
+
+`resource describe`::
+Describe a pipeline resource.
++
+.Example: Describe the `myresource` pipeline resource
+[source,terminal]
+----
+$ tkn resource describe myresource -n myspace
+----
+
+`resource list`::
+List pipeline resources.
++
+.Example: List all pipeline resources in a namespace
+[source,terminal]
+----
+$ tkn resource list -n myspace
+----
+
+:leveloffset!:
+
+// Trigger management commands
+:leveloffset: +1
+
+:_mod-docs-content-type: REFERENCE
+// This module is included in the following assemblies:
+// * tkn_cli/op-tkn-reference.adoc
+
+[id="op-tkn-trigger-management_{context}"]
+= Trigger management commands
+
+[role="_abstract"]
+You can use the `tkn` trigger management commands to manage, creating, viewing, and interacting with `EventListener`, `TriggerBinding`, `TriggerTemplate`, and `ClusterTriggerBinding` resources in your namespace.
+
+`eventlistener`::
+Manage event listeners.
++
+.Example: Display help
+[source,terminal]
+----
+$ tkn eventlistener -h
+----
+
+`eventlistener delete`::
+Delete an event listener.
++
+.Example: Delete `mylistener1` and `mylistener2` event listeners in a namespace
+[source,terminal]
+----
+$ tkn eventlistener delete mylistener1 mylistener2 -n myspace
+----
+`eventlistener describe`::
+Describe an event listener.
++
+.Example: Describe the `mylistener` event listener in a namespace
+[source,terminal]
+----
+$ tkn eventlistener describe mylistener -n myspace
+----
+
+`eventlistener list`::
+List event listeners.
++
+.Example: List all the event listeners in a namespace
+[source,terminal]
+----
+$ tkn eventlistener list -n myspace
+----
+
+`eventlistener logs`::
+Display logs of an event listener.
++
+.Example: Display the logs of the `mylistener` event listener in a namespace
+[source,terminal]
+----
+$ tkn eventlistener logs mylistener -n myspace
+----
+
+`triggerbinding`::
+Manage trigger bindings.
++
+.Example: Display trigger bindings help
+[source,terminal]
+----
+$ tkn triggerbinding -h
+----
+
+`triggerbinding delete`::
+Delete a trigger binding.
++
+.Example: Delete `mybinding1` and `mybinding2` trigger bindings in a namespace
+[source,terminal]
+----
+$ tkn triggerbinding delete mybinding1 mybinding2 -n myspace
+----
+`triggerbinding describe`::
+Describe a trigger binding.
++
+.Example: Describe the `mybinding` trigger binding in a namespace
+[source,terminal]
+----
+$ tkn triggerbinding describe mybinding -n myspace
+----
+
+`triggerbinding list`::
+List trigger bindings.
++
+.Example: List all the trigger bindings in a namespace
+[source,terminal]
+----
+$ tkn triggerbinding list -n myspace
+----
+
+`triggertemplate`::
+Manage trigger templates.
++
+.Example: Display trigger template help
+[source,terminal]
+----
+$ tkn triggertemplate -h
+----
+`triggertemplate delete`::
+Delete a trigger template.
++
+.Example: Delete `mytemplate1` and `mytemplate2` trigger templates in a namespace
+[source,terminal]
+----
+$ tkn triggertemplate delete mytemplate1 mytemplate2 -n `myspace`
+----
+`triggertemplate describe`::
+Describe a trigger template.
++
+.Example: Describe the `mytemplate` trigger template in a namespace
+[source,terminal]
+----
+$ tkn triggertemplate describe mytemplate -n `myspace`
+----
+
+`triggertemplate list`::
+List trigger templates.
++
+.Example: List all the trigger templates in a namespace
+[source,terminal]
+----
+$ tkn triggertemplate list -n myspace
+----
+`clustertriggerbinding`::
+Manage cluster trigger bindings.
++
+.Example: Display cluster trigger bindings help
+[source,terminal]
+----
+$ tkn clustertriggerbinding -h
+----
+
+`clustertriggerbinding delete`::
+Delete a cluster trigger binding.
++
+.Example: Delete `myclusterbinding1` and `myclusterbinding2` cluster trigger bindings
+[source,terminal]
+----
+$ tkn clustertriggerbinding delete myclusterbinding1 myclusterbinding2
+----
+`clustertriggerbinding describe`::
+Describe a cluster trigger binding.
++
+.Example: Describe the `myclusterbinding` cluster trigger binding
+[source,terminal]
+----
+$ tkn clustertriggerbinding describe myclusterbinding
+----
+
+`clustertriggerbinding list`::
+List cluster trigger bindings.
++
+.Example: List all cluster trigger bindings
+[source,terminal]
+----
+$ tkn clustertriggerbinding list
+----
+
+:leveloffset!:
+
+// Hub interaction commands
+:leveloffset: +1
+
+:_mod-docs-content-type: REFERENCE
+// This module is included in the following assemblies:
+// * tkn_cli/op-tkn-reference.adoc
+
+[id="op-tkn-hub-interaction_{context}"]
+= Hub interaction commands
+
+[role="_abstract"]
+You can use the `tkn hub` commands to interact with the {tekton-hub} and manage resources such as tasks and pipelines.
+
+`hub`::
+Interact with hub.
++
+.Example: Display help
+[source,terminal]
+----
+$ tkn hub -h
+----
++
+.Example: Interact with a hub API server
+[source,terminal]
+----
+$ tkn hub --api-server https://api.hub.tekton.dev
+----
++
+[NOTE]
+====
+For each example, to get the corresponding sub-commands and flags, run `tkn hub <command> --help`.
+====
+
+`hub downgrade`::
+Roll back an installed resource to an earlier version.
++
+.Example: Roll back the `mytask` task in the `mynamespace` namespace to its older version
+[source,terminal]
+----
+$ tkn hub downgrade task mytask --to version -n mynamespace
+----
+
+`hub get`::
+Get a resource manifest by its name, kind, catalog, and version.
++
+.Example: Get the manifest for a specific version of the `myresource` pipeline or task from the `tekton` catalog
+[source,terminal]
+----
+$ tkn hub get [pipeline | task] myresource --from tekton --version version
+----
+
+`hub info`::
+Display information about a resource by its name, kind, catalog, and version.
++
+.Example: Display information about a specific version of the `mytask` task from the `tekton` catalog
+[source,terminal]
+----
+$ tkn hub info task mytask --from tekton --version version
+----
+
+`hub install`::
+Install a resource from a catalog by its kind, name, and version.
++
+.Example: Install a specific version of the `mytask` task from the `tekton` catalog in the `mynamespace` namespace
+[source,terminal]
+----
+$ tkn hub install task mytask --from tekton --version version -n mynamespace
+----
+
+`hub reinstall`::
+Reinstall a resource by its kind and name.
++
+.Example: Reinstall a specific version of the `mytask` task from the `tekton` catalog in the `mynamespace` namespace
+[source,terminal]
+----
+$ tkn hub reinstall task mytask --from tekton --version version -n mynamespace
+----
+
+`hub search`::
+Search a resource by a combination of name, kind, and tags.
++
+.Example: Search a resource with a tag `cli`
+[source,terminal]
+----
+$ tkn hub search --tags cli
+----
+
+`hub upgrade`::
+Upgrade an installed resource.
++
+.Example: Upgrade the installed `mytask` task in the `mynamespace` namespace to a new version
+[source,terminal]
+----
+$ tkn hub upgrade task mytask --to version -n mynamespace
+----
+
+
+:leveloffset!:

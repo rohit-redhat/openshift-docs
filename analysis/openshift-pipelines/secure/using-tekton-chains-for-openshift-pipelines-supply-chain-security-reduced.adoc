@@ -1,0 +1,1242 @@
+:_mod-docs-content-type: ASSEMBLY
+:_mod-docs-content-type: SNIPPET
+// The {product-title} attribute provides the context-sensitive name of the relevant OpenShift distribution, for example, "OpenShift Container Platform" or "OKD". The {product-version} attribute provides the product version relative to the distribution, for example "4.9".
+// {product-title} and {product-version} are parsed when AsciiBinder queries the _distro_map.yml file in relation to the base branch of a pull request.
+// See https://github.com/openshift/openshift-docs/blob/main/contributing_to_docs/doc_guidelines.adoc#product-name-and-version for more information on this topic.
+// Other common attributes are defined in the following lines:
+:data-uri:
+:icons:
+:experimental:
+:toc: macro
+:toc-title:
+:imagesdir: images
+:prewrap!:
+
+:pipelines-title: Red Hat OpenShift Pipelines
+:pipelines-shortname: OpenShift Pipelines
+:pipelines-ver: pipelines-1.22
+:pipelines-version-number: 1.22
+:osp-version-patch: 0
+:tekton-cache: Tekton Cache
+:tekton-chains: Tekton Chains
+:tekton-results: Tekton Results
+:tekton-triggers: Tekton Triggers
+:tekton-hub: Tekton Hub
+:artifact-hub: Artifact Hub
+:pac: Pipelines as Code
+:product-registry: OpenShift image registry
+// IBM Power
+:ibmpowerProductName: IBM Power
+// IBM zSystems
+:ibmzProductName: IBM zSystems
+:linuxoneProductName: IBM(R) LinuxONE
+:kebab: image:kebab.png[title="Options menu"]
+
+:op-system-base: RHEL
+:op-system-base-full: Red Hat Enterprise Linux (RHEL)
+
+:cluster-manager-first: Red Hat OpenShift Cluster Manager
+:cluster-manager: OpenShift Cluster Manager
+:cluster-manager-url: link:https://console.redhat.com/openshift[OpenShift Cluster Manager Hybrid Cloud Console]
+:cluster-manager-url-pull: link:https://console.redhat.com/openshift/install/pull-secret[pull secret from the Red Hat OpenShift Cluster Manager]
+
+:oc-first: pass:quotes[OpenShift CLI (`oc`)]
+
+// Attributes not present in the main branch
+:OCP: OpenShift Container Platform
+
+//We should use lowercase like regular OCP docs and deprecate the above.
+:ocp: OpenShift Container Platform
+
+
+:ols-official: Red{nbsp}Hat OpenShift Lightspeed
+:ols: OpenShift Lightspeed
+
+// Attributes not present in the main branch
+:rhosp: Red Hat OpenStack Platform
+[id="using-tekton-chains-for-openshift-pipelines-supply-chain-security"]
+= Using {tekton-chains} for {pipelines-shortname} supply chain security
+:context: using-tekton-chains-for-openshift-pipelines-supply-chain-security
+
+toc::[]
+
+[role="_abstract"]
+{tekton-chains} is a Kubernetes Custom Resource Definition (CRD) controller. You can use it to manage the supply chain security of the tasks and pipelines created using {pipelines-title}.
+
+By default, {tekton-chains} observes all task run executions in your {OCP} cluster. When the task runs complete, {tekton-chains} takes a snapshot of the task runs. It then converts the snapshot to one or more standard payload formats, and finally signs and stores all artifacts.
+
+To capture information about task runs, {tekton-chains} uses `Result` objects. When the objects are unavailable, {tekton-chains} the URLs and qualified digests of the OCI images.
+
+You can perform the following key tasks with {tekton-chains}:
+
+* You can sign task runs, task run results, and OCI registry images with cryptographic keys that tools such as `cosign` and `skopeo` generate.
+
+* You can use attestation formats such as `in-toto`.
+
+* You can securely store signatures and signed artifacts using OCI repository as a storage backend.
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * secure/using-tekton-chains-for-openshift-pipelines-supply-chain-security.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id="configuring-tekton-chains_{context}"]
+= Configuring {tekton-chains}
+
+[role="_abstract"]
+The {pipelines-title} Operator installs {tekton-chains} by default. You can configure {tekton-chains} by modifying the `TektonConfig` custom resource; the Operator automatically applies the changes that you make in this custom resource.
+
+To edit the custom resource, use the following command:
+
+[source,terminal]
+----
+$ oc edit TektonConfig config
+----
+
+The custom resource includes a `chain:` array. You can add any supported configuration parameters to this array, as shown in the following example:
+
+[source,yaml]
+----
+apiVersion: operator.tekton.dev/v1alpha1
+kind: TektonConfig
+metadata:
+  name: config
+spec:
+  addon: {}
+  chain:
+    artifacts.taskrun.format: tekton
+  config: {}
+----
+
+:leveloffset!:
+
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * secure/using-tekton-chains-for-openshift-pipelines-supply-chain-security.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="supported-parameters-tekton-chains-configuration_{context}"]
+= Supported parameters for {tekton-chains} configuration
+
+[role="_abstract"]
+Cluster administrators can use various supported parameter keys and values to configure specifications about task runs, Open Container Initiative (OCI) images, and storage.
+
+* Supported parameters for task run artifacts
++
+.Chains configuration: Supported parameters for task run artifacts
+[options="header"]
+|===
+
+| Key | Description | Supported values | Default value
+
+| `artifacts.taskrun.format`
+| The format for storing task run payloads.
+| `in-toto`, `slsa/v1`
+| `in-toto`
+
+| `artifacts.taskrun.storage`
+| The storage backend for task run signatures. You can specify many backends as a comma-separated list, such as `”tekton,oci”`. To disable storing task run artifacts, give an empty string `””`.
+| `tekton`, `oci`, `gcs`, `docdb`, `grafeas`
+| `oci`
+
+| `artifacts.taskrun.signer`
+| The signature backend for signing task run payloads.
+| `x509`,`kms`
+| `x509`
+
+|===
++
+[NOTE]
+====
+`slsa/v1` is an alias of `in-toto` for backwards compatibility.
+====
+
+* Supported parameters for pipeline run artifacts
++
+.Chains configuration: Supported parameters for pipeline run artifacts
+[options="header"]
+|===
+
+| Parameter | Description | Supported values | Default value
+
+| `artifacts.pipelinerun.format`
+| The format for storing pipeline run payloads.
+| `in-toto`, `slsa/v1`
+| `in-toto`
+
+| `artifacts.pipelinerun.storage`
+| The storage backend for storing pipeline run signatures. You can specify many backends as a comma-separated list, such as `”tekton,oci”`. To disable storing pipeline run artifacts, give an empty string `””`.
+| `tekton`, `oci`, `gcs`, `docdb`, `grafeas`
+| `oci`
+
+| `artifacts.pipelinerun.signer`
+| The signature backend for signing pipeline run payloads.
+| `x509`, `kms`
+| `x509`
+
+| `artifacts.pipelinerun.enable-deep-inspection`
+| When this parameter is `true`, {tekton-chains} records the results of the child task runs of a pipeline run. When this parameter is `false`, {tekton-chains} records the results of the pipeline run, but not of its child task runs.
+| `"true", "false"`
+| `"false"`
+|===
++
+[NOTE]
+====
+* `slsa/v1` is an alias of `in-toto` for backwards compatibility.
+* For the `grafeas` storage backend, {tekton-chains} supports only Container Analysis. You cannot configure the `grafeas` server address in the current version of {tekton-chains}.
+====
+
+* Supported parameters for OCI artifacts
++
+.Chains configuration: Supported parameters for OCI artifacts
+[options="header"]
+|===
+
+| Parameter | Description | Supported values | Default value
+
+| `artifacts.oci.format`
+| The format for storing OCI payloads.
+| `simplesigning`
+| `simplesigning`
+
+| `artifacts.oci.storage`
+| The storage backend for storing OCI signatures. You can specify many backends as a comma-separated list, such as `”oci,tekton”`. To disable storing OCI artifacts, give an empty string `””`.
+| `tekton`, `oci`, `gcs`, `docdb`, `grafeas`
+| `oci`
+
+| `artifacts.oci.signer`
+| The signature backend for signing OCI payloads.
+| `x509`, `kms`
+| `x509`
+
+|===
+
+[id="chains-supported-parameters-kms_{context}"]
+== Supported parameters for Key Management Service (KMS) signers
+
+
+.Chains configuration: Supported parameters for KMS signers
+[options="header"]
+|===
+| Parameter | Description | Supported values | Default value
+
+| `signers.kms.kmsref`
+| The URI reference to a KMS service to use in `kms` signers.
+| Supported schemes: `gcpkms://`, `awskms://`, `azurekms://`, `hashivault://`. See link:https://docs.sigstore.dev/cosign/key_management/overview/#providers[Providers] in the Sigstore documentation for more details.
+|
+|===
+
+* Supported parameters for storage
++
+.Chains configuration: Supported parameters for storage
+[options="header"]
+|===
+
+| Parameter | Description | Supported values | Default value
+
+| `storage.gcs.bucket`
+| The Google Cloud Storage (GCS) bucket for storage
+|
+|
+
+| `storage.oci.repository`
+| The OCI repository for storing OCI signatures and attestation.
+| If you configure one of the artifact storage backends to `oci` and do not define this key, {tekton-chains} stores the attestation alongside the stored OCI artifact itself. If you define this key, the attestation is not stored alongside the OCI artifact and is instead stored in the designated location. See the link:https://github.com/sigstore/cosign#specifying-registry[cosign documentation] for additional information.
+|
+
+| `builder.id`
+| The builder ID to set for in-toto attestations
+|
+| `+https://tekton.dev/chains/v2+`
+
+| `builddefinition.buildtype`
+| The build type for in-toto attestation. When this parameter is `\https://tekton.dev/chains/v2/slsa`, {tekton-chains} records in-toto attestations in strict conformance with the Supply chain Levels for Software Artifacts (SLSA) v1.0 specification. When this parameter is `\https://tekton.dev/chains/v2/slsa-tekton`, {tekton-chains} records in-toto attestations with additional information, such as the labels and annotations in each `TaskRun` and `PipelineRun` object, and also adds each task in a `PipelineRun` object under `resolvedDependencies`.
+| `\https://tekton.dev/chains/v2/slsa`,`\https://tekton.dev/chains/v2/slsa-tekton`
+| `\https://tekton.dev/chains/v2/slsa`
+
+
+|===
+
+* Supported parameters for docstore storage
++
+If you enable the `docdb` storage method for any artifacts, configure docstore storage options. For more information about the go-cloud docstore URI format, see the link:https://gocloud.dev/howto/docstore/[docstore package documentation]. {pipelines-title} supports the following docstore services:
++
+--
+** `firestore`
+** `dynamodb`
+--
++
+.Chains configuration: Supported parameters for `docstore` storage
+[options="header"]
+|===
+
+| Parameter | Description | Supported values | Default value
+
+
+| `storage.docdb.url`
+| The go-cloud URI reference to a `docstore` collection. Used if you enable the `docdb` storage method for any artifacts.
+| `firestore://projects/[PROJECT]/databases/(default)/documents/[COLLECTION]?name_field=name`
+|
+
+| `storage.docdb.mongo-server-url`
+| The value for the Mongo server URL to use for `docdb` storage (`MONGO_SERVER_URL`). This URL can include authentication information. For production environments, providing authentication information as plain text configuration might be insecure. Use the alternative `storage.docdb.mongo-server-url-dir` configuration setting for production environments.
+|
+|
+
+| `storage.docdb.mongo-server-url-dir`
+| The directory containing a file named `MONGO_SERVER_URL`. This file has the Mongo server URL to use for `docdb` storage (`MONGO_SERVER_URL`). Give this file as a secret and configure mounting this file for the {tekton-chains} controller, as described in _Creating and mounting the Mongo server URL secret_.
+| Example value: `/tmp/mongo-url`
+|
+
+|===
+
+* Supported parameters for Grafeas storage
++
+If you enable the `grafeas` storage method for any artifacts, configure Grafeas storage options. For more information about Grafeas notes and occurrences, see link:https://github.com/grafeas/grafeas/blob/master/docs/grafeas_concepts.md[Grafeas concepts].
+
+To create occurrences, {pipelines-title} must first create notes that link occurrences. {pipelines-title} creates two types of occurrences: `ATTESTATION` Occurrence and `BUILD` Occurrence.
+
+
+{pipelines-title} uses the configurable `noteid` as the prefix of the note name. It appends the suffix `-simplesigning` for the `ATTESTATION` note and the suffix `-intoto` for the `BUILD` note. If the `noteid` field is not configured, {pipelines-title} uses `tekton-<NAMESPACE>` as the prefix.
++
+.Chains configuration: Supported parameters for Grafeas storage
+[options="header"]
+|===
+
+| Parameter | Description | Supported values | Default value
+
+| `storage.grafeas.projectid`
+| The {OCP} project containing the Grafeas server for storing occurrences.
+|
+|
+
+| `storage.grafeas.noteid`
+| Optional: the prefix to use for the name of all created notes.
+| A string without spaces.
+|
+
+| `storage.grafeas.notehint`
+| Optional: the https://github.com/grafeas/grafeas/blob/cd23d4dc1bef740d6d6d90d5007db5c9a2431c41/proto/v1/attestation.proto#L49[`human_readable_name`] field for the Grafeas `ATTESTATION` note.
+|
+|`This attestation note was generated by Tekton Chains`
+|===
+
+* Supported parameters for transparency attestation storage
++
+Optionally, you can enable additional uploads of binary transparency attestations.
++
+.Chains configuration: Supported parameters for transparency attestation storage
+[options="header"]
+|===
+
+| Parameter | Description | Supported values | Default value
+
+| `transparency.enabled`
+| Enable or disable automatic binary transparency uploads.
+| `true`, `false`, `manual`
+| `false`
+
+| `transparency.url`
+| The URL for uploading binary transparency attestations, if enabled.
+|
+| `+https://rekor.sigstore.dev+`
+|===
+
+NOTE: If you set `transparency.enabled` to `manual`, {tekton-chains} uploads only task runs and pipeline runs with the following annotation to the transparency log:
+
+
+[source,yaml]
+----
+chains.tekton.dev/transparency-upload: "true"
+----
+
+* Supported parameters for `x509` keyless signing with Fulcio
++
+If you configure the `x509` signature backend, you can optionally enable keyless signing with Fulcio.
++
+.Chains configuration: Supported parameters for `x509` keyless signing with Fulcio
+[options="header"]
+|===
+
+| Parameter | Description | Supported values | Default value
+
+| `signers.x509.fulcio.enabled`
+| Enable or disable requesting automatic certificates from Fulcio.
+| `true`, `false`
+| `false`
+
+| `signers.x509.fulcio.address`
+| The Fulcio address for requesting certificates, if enabled.
+|
+| `+https://v1.fulcio.sigstore.dev+`
+
+| `signers.x509.fulcio.issuer`
+| The expected OpenID Connect (OIDC) issuer.
+|
+| `+https://oauth2.sigstore.dev/auth+`
+
+| `signers.x509.fulcio.provider`
+| The provider from which to request the ID Token.
+| `google`, `spiffe`, `github`, `filesystem`
+| {pipelines-title} attempts to use every provider
+
+| `signers.x509.identity.token.file`
+| Path to the file containing the ID Token.
+|
+|
+
+| `signers.x509.tuf.mirror.url`
+| The URL for the The Update Framework (TUF) server. `$TUF_URL/root.json` must be present.
+|
+| `+https://sigstore-tuf-root.storage.googleapis.com+`
+|===
+
+* Supported parameters for specific KMS authentication
++
+If you configure the `kms` signature backend, set the KMS configuration, including OIDC and Spire, as necessary.
++
+.Chains configuration: Supported parameters for KMS signing
+[options="header"]
+|===
+
+| Parameter | Description | Supported values | Default value
+
+| `signers.kms.auth.address`
+| URI of the KMS server (the value of `VAULT_ADDR`).
+|
+|
+
+| `signers.kms.auth.token`
+| Authentication token for the KMS server (the value of `VAULT_TOKEN`). Providing the token as plain text configuration might be insecure. Use the alternative `signers.kms.auth.token-path` configuration setting for production environments.
+|
+|
+
+
+| `signers.kms.auth.token-path`
+| The full path name of the file that has the authentication token for the KMS server (the value of `VAULT_TOKEN`).
+Give this file as a secret and configure mounting this file for the {tekton-chains} controller, as described in _Creating and mounting the KMS authentication token secret_.
+| Example value: `/etc/kms-secrets/KMS_AUTH_TOKEN`
+|
+
+| `signers.kms.auth.oidc.path`
+| The path for OIDC authentication (for example, `jwt` for Vault).
+|
+|
+
+
+| `signers.kms.auth.oidc.role`
+| The role for OIDC authentication.
+|
+|
+
+| `signers.kms.auth.spire.sock`
+| The URI of the Spire socket for the KMS token (for example, `unix:///tmp/spire-agent/public/api.sock`).
+|
+|
+
+| `signers.kms.auth.spire.audience`
+| The audience for requesting a SPIFFE Verifiable Identity Document (SVID) from Spire.
+|
+|
+|===
+
+:leveloffset!:
+
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * secure/using-tekton-chains-for-openshift-pipelines-supply-chain-security.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="creating-mounting-mongo-server-url-secret_{context}"]
+= Creating and mounting the Mongo server URL secret
+
+[role="_abstract"]
+You can give the value of the Mongo server URL to use for `docdb` storage (`MONGO_SERVER_URL`) using a secret. You must create this secret, mount it on the {tekton-chains} controller, and set the `storage.docdb.mongo-server-url-dir` parameter to the directory where you mount the secret.
+
+.Prerequisites
+
+* You installed the {oc-first} utility.
+* You logged in to your {OCP} cluster with administrative rights for the `openshift-pipelines` namespace.
+
+.Procedure
+
+. Create a secret named `mongo-url` with the `MONGO_SERVER_URL` file that has the Mongo server URL value by entering the following command:
++
+[source, terminal]
+----
+$ oc create secret generic mongo-url -n tekton-chains \
+  --from-file=MONGO_SERVER_URL=<path>/MONGO_SERVER_URL
+----
++
+`<path>`:: The full path and name of the `MONGO_SERVER_URL` file that has the Mongo server URL value.
+
+. In the `TektonConfig` custom resource (CR), in the `chain` section, configure mounting the secret on the {tekton-chains} controller and set the `storage.docdb.mongo-server-url-dir` parameter to the directory where you mount the secret, as shown in the following example:
++
+.Example configuration for mounting the `mongo-url` secret
+[source,yaml]
+----
+apiVersion: operator.tekton.dev/v1
+kind: TektonConfig
+metadata:
+  name: config
+spec:
+# ...
+  chain:
+    disabled: false
+    storage.docdb.mongo-server-url-dir: /tmp/mongo-url
+    options:
+      deployments:
+        tekton-chains-controller:
+          spec:
+            template:
+              spec:
+                containers:
+                - name: tekton-chains-controller
+                  volumeMounts:
+                  - mountPath: /tmp/mongo-url
+                    name: mongo-url
+                volumes:
+                -  name: mongo-url
+                   secret:
+                    secretName: mongo-url
+# ...
+----
+
+:leveloffset!:
+
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * secure/using-tekton-chains-for-openshift-pipelines-supply-chain-security.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="creating-mounting-kms-authentication-token-secret_{context}"]
+= Creating and mounting the Key Management Service (KMS) authentication token secret
+
+[role="_abstract"]
+You can give the authentication token for the Key Management Service (KMS) server by using a secret. For example, if the KMS provider is Hashicorp Vault, the secret must contain the value of `VAULT_TOKEN`.
+
+You must create this secret, mount it on the {tekton-chains} controller, and set the `signers.kms.auth.token-path` parameter to the full path name of the authentication token file.
+
+.Prerequisites
+
+* You installed the {oc-first} utility.
+* Log in to your {OCP} cluster with administrative rights for the `openshift-pipelines` namespace.
+
+.Procedure
+
+. Create a secret named `kms-secrets` with the `KMS_AUTH_TOKEN` file that has the authentication token for the KMS server by entering the following command:
++
+[source, terminal]
+----
+$ oc create secret generic kms-secrets -n tekton-chains \
+  --from-file=KMS_AUTH_TOKEN=<path_and_name>
+----
++
+`<path_and_name>`:: The full path and name of the file that has the authentication token for the KMS server, for example, `/home/user/KMS_AUTH_TOKEN`. You can use another file name instead of `KMS_AUTH_TOKEN`.
+
+. In the `TektonConfig` custom resource (CR), in the `chain` section, configure mounting the secret on the {tekton-chains} controller and set the `signers.kms.auth.token-path` parameter to the full path name of the authentication token file, as shown in the following example:
++
+.Example configuration for mounting the `kms-secrets` secret
+[source,yaml]
+----
+apiVersion: operator.tekton.dev/v1
+kind: TektonConfig
+metadata:
+  name: config
+spec:
+# ...
+  chain:
+    disabled: false
+    signers.kms.auth.token-path: /etc/kms-secrets/KMS_AUTH_TOKEN
+    options:
+      deployments:
+        tekton-chains-controller:
+          spec:
+            template:
+              spec:
+                containers:
+                - name: tekton-chains-controller
+                  volumeMounts:
+                  - mountPath: /etc/kms-secrets
+                    name: kms-secrets
+                volumes:
+                -  name: kms-secrets
+                   secret:
+                    secretName: kms-secrets
+# ...
+----
+
+:leveloffset!:
+
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * secure/using-tekton-chains-for-openshift-pipelines-supply-chain-security.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="enabling-tekton-chains-to-operate-only-in-selected-namespaces_{context}"]
+= Enabling {tekton-chains} to operate only in selected namespaces
+
+[role="_abstract"]
+By default, the {tekton-chains} controller monitors resources in all namespaces. You can customize {tekton-chains} to run only in specific namespaces, which provides granular control over its operation.
+
+.Prerequisites
+* You logged in to your {OCP} cluster with `cluster-admin` privileges.
+
+.Procedure
+
+* In the `TektonConfig` CR, in the `chain` section, add the `--namespace=` argument to contain the namespaces that the controller should watch.
++
+The following example shows the configuration for the {tekton-chains} controller to only watch resources within the `dev` and `test` namespaces, filtering `PipelineRun` and `TaskRun` objects so:
++
+[source,yaml]
+----
+apiVersion: operator.tekton.dev/v1alpha1
+kind: TektonConfig
+metadata:
+  name: config
+spec:
+  chain:
+    disabled: false
+    options:
+      deployments:
+        tekton-chains-controller:
+          spec:
+            template:
+              spec:
+                containers:
+                - args:
+                  - --namespace=dev, test
+                  name: tekton-chains-controller
+----
++
+`--namespace`:: If you do not give the `--namespace` argument or leave it empty, the controller watches all namespaces by default.
+
+:leveloffset!:
+
+:leveloffset: 0
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * secure/using-tekton-chains-for-openshift-pipelines-supply-chain-security.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id="signing-secrets-in-tekton-chains_{context}"]
+= Secrets for signing data in {tekton-chains}
+
+[role="_abstract"]
+Cluster administrators can generate a key pair and use {tekton-chains} to sign artifacts by using a Kubernetes secret. For {tekton-chains} to work, a private key and a password for encrypted keys must exist as part of the `signing-secrets` secret in the `openshift-pipelines` namespace.
+
+Currently, {tekton-chains} supports the `x509` and `cosign` signature schemes.
+
+[NOTE]
+====
+Use only one of the supported signature schemes.
+====
+
+* To use the `x509` signing scheme with {tekton-chains}, you must fulfill the following requirements:
+
+** Store the private key in the `signing-secrets` with the `x509.pem` structure.
+** Store the private key as an unencrypted `PKCS #8` Privacy-Enhanced Mail (PEM) file.
+** The key is of `ed25519` or `ecdsa` type.
+
+* To use the `cosign` signing scheme with {tekton-chains}, you must fulfill the following requirements:
+
+** Store the private key in the `signing-secrets` with the `cosign.key` structure.
+** Store the password in the `signing-secrets` with the `cosign.password` structure.
+** Store the private key as an encrypted PEM file of type `ENCRYPTED COSIGN PRIVATE KEY`.
+
+:leveloffset: 0
+
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * secure/using-tekton-chains-for-openshift-pipelines-supply-chain-security.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="chains-generating-cosign-secret_{context}"]
+= Generating the cosign key pair by using the TektonConfig CR
+
+[role="_abstract"]
+To use the `cosign` signing scheme for {tekton-chains} secrets, you can generate a `cosign` key pair that uses Elliptic Curve Digital Signature Algorithm (ECDSA) encryption by setting the `generateSigningSecret` field in the `TektonConfig` custom resource (CR) to `true`.
+
+.Prerequisites
+
+* You installed the {oc-first} utility.
+* You logged in to your {OCP} cluster with administrative rights for the `openshift-pipelines` namespace.
+
+.Procedure
+
+. Edit the `TektonConfig` CR by running the following command:
++
+[source,terminal]
+----
+$ oc edit TektonConfig config
+----
+
+. In the `TektonConfig` CR, set the `generateSigningSecret` value to `true`:
++
+.Example of creating an ECDSA cosign key pair by using the `TektonConfig` CR
+[source,yaml]
+----
+apiVersion: operator.tekton.dev/v1
+kind: TektonConfig
+metadata:
+  name: config
+spec:
+# ...
+  chain:
+    disabled: false
+    generateSigningSecret: true
+# ...
+----
++
+`generateSigningSecret`:: The default value is `false`. Setting the value to `true` generates the `ecdsa` key pair.
+
+. After a few minutes, extract the public key from the secret and store it, so that you can use it to verify artifact attestations. Run the following command to extract the key:
++
+[source,terminal]
+----
+$ oc extract -n openshift-pipelines secret/signing-secrets --keys=cosign.pub
+----
++
+The {pipelines-shortname} Operator generates an `ecdsa` type `cosign` key pair and stores it in the `signing-secrets` secret in the `openshift-pipelines` namespace. The secret includes the following files:
++
+* `cosign.key`: The private key
+* `cosign.password`: The password for decrypting the private key
+* `cosign.pub` The public key
++
+If a `signing-secrets` secret already exists, the Operator does not overwrite the secret.
++
+The `cosign.pub` file in your current directory has the public key extracted from the secret.
++
+[WARNING]
+====
+If you set the `generateSigningSecret` field from `true` to `false`, the {pipelines-title} Operator overrides and empties any value in the `signing-secrets` secret.
+====
++
+The {pipelines-title} Operator does not offer the following security functions:
+
+* Key rotation
+* Auditing key usage
+* Proper access control to the key
+
+:leveloffset: 0
+
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * secure/using-tekton-chains-for-openshift-pipelines-supply-chain-security.adoc
+
+:_mod-docs-content-type: PROCEDURE
+
+[id="chains-signing-secrets-cosign_{context}"]
+= Manually generating signing secrets with the cosign tool
+
+[role="_abstract"]
+You can use the `cosign` signing scheme with {tekton-chains} using the `cosign` tool.
+
+.Prerequisites
+
+* You installed the Cosign tool. For information about installing the Cosign tool, see the link:https://docs.sigstore.dev/cosign/system_config/installation/[Sigstore documentation for Cosign].
+
+.Procedure
+
+. Generate the `cosign.key` and `cosign.pub` key pairs by running the following command:
++
+[source,terminal]
+----
+$ cosign generate-key-pair k8s://openshift-pipelines/signing-secrets
+----
++
+Cosign prompts you for a password and then creates a Kubernetes secret.
+
+. Store the encrypted `cosign.key` private key and the `cosign.password` decryption password in the `signing-secrets` Kubernetes secret. Ensure that you store the private key as an encrypted Privacy Enhanced Mail (PEM) file of the `ENCRYPTED COSIGN PRIVATE KEY` type.
+
+:leveloffset: 0
+
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * secure/using-tekton-chains-for-openshift-pipelines-supply-chain-security.adoc
+
+:_mod-docs-content-type: PROCEDURE
+
+[id="chains-signing-secrets-skopeo_{context}"]
+= Manually generating signing secrets with the skopeo tool
+
+[role="_abstract"]
+You can generate keys by using the `skopeo` tool and use them in the `cosign` signing scheme with {tekton-chains}.
+
+.Prerequisites
+
+* You installed the `skopeo` package on your Linux system.
+
+.Procedure
+
+. Generate a public/private key pair by running the following command:
++
+[source,terminal]
+----
+$ skopeo generate-sigstore-key --output-prefix <mykey>
+----
++
+`<mykey>`:: Replace `<mykey>` with a key name of your choice.
++
+Skopeo prompts you for a passphrase for the private key and then creates the key files named `<mykey>.private` and `<mykey>.pub`.
+
+. Encode the `<mykey>.pub` file by using the `base64` tool and running the following command:
++
+[source,terminal]
+----
+$ base64 -w 0 <mykey>.pub > b64.pub
+----
+
+. Encode the `<mykey>.private` file by using the `base64` tool and running the following command:
++
+[source,terminal]
+----
+$ base64 -w 0 <mykey>.private > b64.private
+----
+
+. Encode the passphrase using the `base64` tool by running the following command:
++
+[source,terminal]
+----
+$ echo -n '<passphrase>' | base64 -w 0 > b64.passphrase
+----
++
+`<passphrase>`:: Replace `<passphrase>` with the passphrase that you used for the key pair.
+
+. Create the `signing-secrets` secret in the `openshift-pipelines` namespace by running the following command:
++
+[source,terminal]
+----
+$ oc create secret generic signing-secrets -n openshift-pipelines
+----
+
+. Edit the `signing-secrets` secret by running the following command:
++
+[source,terminal]
+----
+$ oc edit secret -n openshift-pipelines signing-secrets
+----
++
+Add the encoded keys in the data of the secret in the following way:
++
+[source,yaml]
+----
+apiVersion: v1
+data:
+  cosign.key: <Encoded <mykey>.private>
+  cosign.password: <Encoded passphrase>
+  cosign.pub: <Encoded <mykey>.pub>
+immutable: true
+kind: Secret
+metadata:
+  name: signing-secrets
+# ...
+type: Opaque
+----
++
+`<Encoded <mykey>.private>`:: Replace with the content of the `b64.private` file.
+`<Encoded passphrase>`:: Replace with the content of the `b64.passphrase` file.
+`<Encoded <mykey>.pub>`:: Replace with the content of the `b64.pub` file.
+
+:leveloffset: 0
+
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * secure/using-tekton-chains-for-openshift-pipelines-supply-chain-security.adoc
+
+:_mod-docs-content-type: PROCEDURE
+
+[id="chains-resolving-existing-secret_{context}"]
+= Resolving the "secret already exists" error
+
+[role="_abstract"]
+If the `signing-secret` secret is already populated, the command to create this secret might output the following error message:
+
+.Example output
+[source,terminal]
+----
+Error from server (AlreadyExists): secrets "signing-secrets" already exists
+----
+
+You can resolve this error by deleting the secret.
+
+.Procedure
+
+. Delete the `signing-secret` secret by running the following command:
++
+[source,terminal]
+----
+$ oc delete secret signing-secrets -n openshift-pipelines
+----
+
+. Re-create the key pairs and store them in the secret using your preferred signing scheme.
+
+:leveloffset: 0
+
+:leveloffset: 0
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * secure/using-tekton-chains-for-openshift-pipelines-supply-chain-security.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="authenticating-to-an-oci-registry_{context}"]
+= Authenticating to an OCI registry
+
+[role="_abstract"]
+Set up a service account with the necessary credentials so that {tekton-chains} can push signatures to an OCI registry.
+
+The {tekton-chains} controller uses the same service account that starts task runs. To configure authentication with an OCI registry, create the required credentials and associate them with this service account.
+
+.Procedure
+
+. Set the namespace and name of the Kubernetes service account.
++
+[source,terminal]
+----
+$ export NAMESPACE=<namespace>
+$ export SERVICE_ACCOUNT_NAME=<service_account>
+----
++
+`<namespace>`:: The namespace associated with the service account.
+`<service_account>`:: The name of the service account.
+
+. Create a Kubernetes secret.
++
+[source,terminal]
+----
+$ oc create secret registry-credentials \
+  --from-file=.dockerconfigjson \
+  --type=kubernetes.io/dockerconfigjson \
+  -n $NAMESPACE
+----
++
+`--from-file`:: Substitute with the path to your Docker config file. Default path is `~/.docker/config.json`.
+
+. Give the service account access to the secret.
++
+[source,terminal]
+----
+$ oc patch serviceaccount $SERVICE_ACCOUNT_NAME \
+  -p "{\"imagePullSecrets\": [{\"name\": \"registry-credentials\"}]}" -n $NAMESPACE
+----
++
+If you patch the default `pipeline` service account that {pipelines-title} assigns to all task runs, the {pipelines-title} Operator will override the service account. As a best practice, you can perform the following steps:
+
+.. Create a separate service account to assign to user's task runs.
++
+[source,terminal]
+----
+$ oc create serviceaccount <service_account_name>
+----
+
+.. Associate the service account to the task runs by setting the value of the `serviceaccountname` field in the task run template.
++
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: TaskRun
+metadata:
+  name: build-push-task-run-2
+spec:
+  taskRunTemplate:
+    serviceAccountName: build-bot
+  taskRef:
+    name: build-push
+...
+----
++
+`serviceAccountName`:: Substitute with the name of the newly created service account.
+
+:leveloffset: 0
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * secure/using-tekton-chains-for-openshift-pipelines-supply-chain-security.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="creating-and-verifying-task-run-signatures-without-any-additional-authentication_{context}"]
+= Creating and verifying task run signatures without any additional authentication
+
+[role="_abstract"]
+To verify signatures of task runs by using {tekton-chains} with any additional authentication, perform the following tasks:
+
+* Generate an encrypted `x509` or `cosign` key pair and store it as a Kubernetes secret.
+* Configure the {tekton-chains} backend storage.
+* Create a task run, sign it, and store the signature and the payload as annotations on the task run itself.
+* Retrieve the signature and payload from the signed task run.
+* Verify the signature of the task run.
+
+.Prerequisites
+Ensure that you install the following components on the cluster:
+
+* {pipelines-title} Operator
+* {tekton-chains}
+* link:https://docs.sigstore.dev/cosign/system_config/installation/[Cosign]
+
+.Procedure
+
+. Generate an encrypted `x509` or `cosign` key pair. For more information about creating a key pair and saving it as a secret, see "Secrets for signing data in {tekton-chains}".
+
+. In the {tekton-chains} configuration, disable the Open Container Initiative (OCI) storage, and set the task run storage and format to `tekton`. In the `TektonConfig` custom resource set the following values:
++
+[source,yaml]
+----
+apiVersion: operator.tekton.dev/v1alpha1
+kind: TektonConfig
+metadata:
+  name: config
+spec:
+# ...
+    chain:
+      artifacts.oci.storage: ""
+      artifacts.taskrun.format: tekton
+      artifacts.taskrun.storage: tekton
+# ...
+----
++
+For more information about configuring {tekton-chains} using the `TektonConfig` custom resource, see "Configuring {tekton-chains}".
+. To restart the {tekton-chains} controller to apply the modified configuration, enter the following command:
++
+[source.terminal]
+----
+$ oc delete po -n openshift-pipelines -l app=tekton-chains-controller
+----
+
+. Create a task run by entering the following command:
++
+[source,terminal]
+----
+$ oc create -f https://raw.githubusercontent.com/tektoncd/chains/main/examples/taskruns/task-output-image.yaml
+----
++
+`-f`:: Replace the example URI with the URI or file path pointing to your task run.
++
+.Example output
+[source,terminal]
+----
+taskrun.tekton.dev/build-push-run-output-image-qbjvh created
+----
+
+. Check the status of the steps by entering the following command. Wait until the process finishes.
++
+[source,terminal]
+----
+$ tkn tr describe --last
+----
++
+.Example output
+[source,terminal]
+----
+[...truncated output...]
+NAME                            STATUS
+∙ create-dir-builtimage-9467f   Completed
+∙ git-source-sourcerepo-p2sk8   Completed
+∙ build-and-push                Completed
+∙ echo                          Completed
+∙ image-digest-exporter-xlkn7   Completed
+----
+
+. To retrieve the signature from the object stored as `base64` encoded annotations, enter the following commands:
++
+[source,terminal]
+----
+$ tkn tr describe --last -o jsonpath="{.metadata.annotations.chains\.tekton\.dev/signature-taskrun-$TASKRUN_UID}" | base64 -d > sig
+----
++
+[source,terminal]
+----
+$ export TASKRUN_UID=$(tkn tr describe --last -o  jsonpath='{.metadata.uid}')
+----
+
+. To verify the signature using the public key that you created, enter the following command:
++
+[source,terminal]
+----
+$ cosign verify-blob-attestation --insecure-ignore-tlog --key path/to/cosign.pub --signature sig --type slsaprovenance --check-claims=false /dev/null
+----
++
+`--insecure-ignore-tlog`:: Replace `path/to/cosign.pub` with the path name of the public key file.
++
+.Example output
+[source,terminal]
+----
+Verified OK
+----
+
+:leveloffset: 0
+
+[role="_additional-resources"]
+.Additional resources
+* xref:../secure/using-tekton-chains-for-openshift-pipelines-supply-chain-security.adoc#signing-secrets-in-tekton-chains_using-tekton-chains-for-openshift-pipelines-supply-chain-security[Secrets for signing data in {tekton-chains}]
+
+* xref:../secure/using-tekton-chains-for-openshift-pipelines-supply-chain-security.adoc#configuring-tekton-chains_using-tekton-chains-for-openshift-pipelines-supply-chain-security[Configuring {tekton-chains}]
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * secure/using-tekton-chains-for-openshift-pipelines-supply-chain-security.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="using-tekton-chains-to-sign-and-verify-image-and-provenance_{context}"]
+= Using {tekton-chains} to sign and verify image and provenance
+
+[role="_abstract"]
+Cluster administrators can use {tekton-chains} to sign and verify images and provenances, by performing the following tasks:
+
+* Generate an encrypted `x509` or `cosign` key pair and store it as a Kubernetes secret.
+* Set up authentication for the Open Container Initiative (OCI) registry to store images, image signatures, and signed image attestations.
+* Configure {tekton-chains} to generate and sign provenance.
+* Create an image with Kaniko in a task run.
+* Verify the signed image and the signed provenance.
+
+.Prerequisites
+Ensure that you install the following tools on the cluster:
+
+* {pipelines-title} Operator
+* {tekton-chains}
+* link:https://docs.sigstore.dev/cosign/system_config/installation/[Cosign]
+* link:https://docs.sigstore.dev/logging/installation/[Rekor]
+* link:https://stedolan.github.io/jq/[jq]
+
+.Procedure
+
+. Generate an encrypted `x509` or `cosign` key pair. For more information about creating a key pair and saving it as a secret, see "Secrets for signing data in {tekton-chains}".
+
+. Configure authentication for the image registry.
+
+.. To configure the {tekton-chains} controller for pushing signature to an OCI registry, use the credentials associated with the service account of the task run. For detailed information, see the "Authenticating to an OCI registry" section.
+
+.. To configure authentication for a Kaniko task that builds and pushes image to the registry, create a Kubernetes secret of the docker `config.json` file containing the required credentials.
++
+[source,terminal]
+----
+$ oc create secret generic <docker_config_secret_name> \
+  --from-file <path_to_config.json>
+----
++
+`<docker_config_secret_name>`:: Substitute with the name of the docker config secret.
+`<path_to_config.json>`:: Substitute with the path to docker `config.json` file.
+
+. Configure {tekton-chains} by setting the `artifacts.taskrun.format`, `artifacts.taskrun.storage`, and `transparency.enabled` parameters in the `chains-config` object:
++
+[source,terminal]
+----
+$ oc patch configmap chains-config -n openshift-pipelines -p='{"data":{"artifacts.taskrun.format": "in-toto"}}'
+----
++
+[source,terminal]
+----
+$ oc patch configmap chains-config -n openshift-pipelines -p='{"data":{"artifacts.taskrun.storage": "oci"}}'
+----
++
+[source,terminal]
+----
+$ oc patch configmap chains-config -n openshift-pipelines -p='{"data":{"transparency.enabled": "true"}}'
+----
+
+. Start the Kaniko task.
+
+.. Apply the Kaniko task to the cluster.
++
+[source,terminal]
+----
+$ oc apply -f examples/kaniko/kaniko.yaml
+----
++
+`examples/kaniko/kaniko.yaml`:: Substitute with the URI or file path to your Kaniko task.
+
+.. Set the appropriate environment variables.
++
+[source,terminal]
+----
+$ export REGISTRY=<url_of_registry>
+
+$ export DOCKERCONFIG_SECRET_NAME=<name_of_the_secret_in_docker_config_json>
+----
++
+`<url_of_registry>`:: Substitute with the URL of the registry where you want to push the image.
+`<name_of_the_secret_in_docker_config_json>`:: Substitute with the name of the secret in the docker `config.json` file.
+
+.. Start the Kaniko task.
++
+[source,terminal]
+----
+$ tkn task start --param IMAGE=$REGISTRY/kaniko-chains --use-param-defaults --workspace name=source,emptyDir="" --workspace name=dockerconfig,secret=$DOCKERCONFIG_SECRET_NAME kaniko-chains
+----
++
+Observe the logs of this task until all steps complete. On successful authentication, the task pushes the final image to `$REGISTRY/kaniko-chains`.
+
+. Wait for a minute to allow {tekton-chains} to generate the provenance and sign it, and then check the availability of the `chains.tekton.dev/signed=true` annotation on the task run.
++
+[source,terminal]
+----
+$ oc get tr <task_run_name> \
+-o json | jq -r .metadata.annotations
+
+{
+  "chains.tekton.dev/signed": "true",
+  ...
+}
+----
++
+`<task_run_name>`:: Substitute with the name of the task run.
+
+. Verify the image and the attestation.
++
+[source,terminal]
+----
+$ cosign verify --key cosign.pub $REGISTRY/kaniko-chains
+
+$ cosign verify-attestation --key cosign.pub $REGISTRY/kaniko-chains
+----
+
+. Find the provenance for the image in Rekor.
+
+.. Get the digest of the $REGISTRY/kaniko-chains image. You can search for it in the task run, or pull the image to extract the digest.
+
+.. Search Rekor to find all entries that match the `sha256` digest of the image.
++
+[source,terminal]
+----
+$ rekor-cli search --sha <image_digest>
+
+<uuid_1>
+<uuid_2>
+...
+----
++
+`<image_digest>`:: Substitute with the `sha256` digest of the image.
+`<uuid_1>`:: The first matching universally unique identifier (UUID).
+`<uuid_2>`:: The second matching UUID.
++
+The search result displays universally unique identifiers (UUIDs) of the matching entries. One of those UUIDs holds the attestation.
+
+.. Check the attestation.
++
+[source,terminal]
+----
+$ rekor-cli get --uuid <uuid> --format json | jq -r .Attestation | base64 --decode | jq
+----
+
+:leveloffset: 0
+
+[role="_additional-resources"]
+.Additional resources
+
+* xref:../secure/using-tekton-chains-for-openshift-pipelines-supply-chain-security.adoc#signing-secrets-in-tekton-chains_using-tekton-chains-for-openshift-pipelines-supply-chain-security[Secrets for signing data in {tekton-chains}]
+
+* xref:../install_config/installing-pipelines.adoc#installing-pipelines[Installing {pipelines-shortname}]

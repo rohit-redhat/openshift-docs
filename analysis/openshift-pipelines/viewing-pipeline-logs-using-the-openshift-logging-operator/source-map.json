@@ -1,0 +1,13 @@
+{
+  "document": "viewing-pipeline-logs-using-the-openshift-logging-operator",
+  "assembly": "records/viewing-pipeline-logs-using-the-openshift-logging-operator.adoc",
+  "includes": [
+    {
+      "path": "modules/op-viewing-pipeline-logs-in-kibana.adoc",
+      "type": "PROCEDURE",
+      "id": "op-viewing-pipeline-logs-in-kibana",
+      "title": "Viewing pipeline logs in Kibana",
+      "line_range": "1-111"
+    }
+  ]
+}

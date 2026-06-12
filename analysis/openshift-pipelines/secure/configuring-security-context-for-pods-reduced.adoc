@@ -1,0 +1,308 @@
+:_mod-docs-content-type: ASSEMBLY
+:_mod-docs-content-type: SNIPPET
+// The {product-title} attribute provides the context-sensitive name of the relevant OpenShift distribution, for example, "OpenShift Container Platform" or "OKD". The {product-version} attribute provides the product version relative to the distribution, for example "4.9".
+// {product-title} and {product-version} are parsed when AsciiBinder queries the _distro_map.yml file in relation to the base branch of a pull request.
+// See https://github.com/openshift/openshift-docs/blob/main/contributing_to_docs/doc_guidelines.adoc#product-name-and-version for more information on this topic.
+// Other common attributes are defined in the following lines:
+:data-uri:
+:icons:
+:experimental:
+:toc: macro
+:toc-title:
+:imagesdir: images
+:prewrap!:
+
+:pipelines-title: Red Hat OpenShift Pipelines
+:pipelines-shortname: OpenShift Pipelines
+:pipelines-ver: pipelines-1.22
+:pipelines-version-number: 1.22
+:osp-version-patch: 0
+:tekton-cache: Tekton Cache
+:tekton-chains: Tekton Chains
+:tekton-results: Tekton Results
+:tekton-triggers: Tekton Triggers
+:tekton-hub: Tekton Hub
+:artifact-hub: Artifact Hub
+:pac: Pipelines as Code
+:product-registry: OpenShift image registry
+// IBM Power
+:ibmpowerProductName: IBM Power
+// IBM zSystems
+:ibmzProductName: IBM zSystems
+:linuxoneProductName: IBM(R) LinuxONE
+:kebab: image:kebab.png[title="Options menu"]
+
+:op-system-base: RHEL
+:op-system-base-full: Red Hat Enterprise Linux (RHEL)
+
+:cluster-manager-first: Red Hat OpenShift Cluster Manager
+:cluster-manager: OpenShift Cluster Manager
+:cluster-manager-url: link:https://console.redhat.com/openshift[OpenShift Cluster Manager Hybrid Cloud Console]
+:cluster-manager-url-pull: link:https://console.redhat.com/openshift/install/pull-secret[pull secret from the Red Hat OpenShift Cluster Manager]
+
+:oc-first: pass:quotes[OpenShift CLI (`oc`)]
+
+// Attributes not present in the main branch
+:OCP: OpenShift Container Platform
+
+//We should use lowercase like regular OCP docs and deprecate the above.
+:ocp: OpenShift Container Platform
+
+
+:ols-official: Red{nbsp}Hat OpenShift Lightspeed
+:ols: OpenShift Lightspeed
+
+// Attributes not present in the main branch
+:rhosp: Red Hat OpenStack Platform
+[id="configuring-security-context-for-pods"]
+= Configuring the security context for pods
+:context: configuring-security-context-for-pods
+
+toc::[]
+
+[role="_abstract"]
+The default service account for pods that {pipelines-shortname} starts is `pipeline`. The security context constraint (SCC) associated with the `pipeline` service account is `pipelines-scc`. The `pipelines-scc` SCC extends the `anyuid` SCC with the minor differences shown in the following YAML specification:
+
+.Example `pipelines-scc.yaml` snippet
+[source,yaml,subs="attributes+"]
+----
+apiVersion: security.openshift.io/v1
+kind: SecurityContextConstraints
+# ...
+allowedCapabilities:
+  - SETFCAP
+# ...
+fsGroup:
+  type: MustRunAs
+# ...
+----
+
+In addition, the `Buildah` task, shipped as part of {pipelines-shortname}, uses `vfs` as the default storage driver.
+
+You can configure the security context for pods that {pipelines-shortname} creates for pipeline runs and task runs. You can make the following changes:
+
+* Change the default and maximum SCC for all pods
+* Change the default SCC for pods created for pipeline runs and task runs in a particular namespace
+* Configure a particular pipeline run or task run to use a custom SCC and service account
+
+[NOTE]
+====
+The simplest way to run `buildah` that ensures all images can build is to run it as root in a pod with the `privileged` SCC. For instructions about running `buildah` with more restrictive security settings, see xref:../secure/unprivileged-building-of-container-images-using-buildah.adoc#unprivileged-building-of-container-images-using-buildah[Building of container images using Buildah as a non-root user].
+====
+
+:leveloffset: +1
+
+// This module is included in the following assembly:
+//
+// *openshift_pipelines/configuring-security-context-for-pods.adoc
+:_mod-docs-content-type: PROCEDURE
+[id="op-configuring-default-maximum-scc_{context}"]
+= Configuring the default and maximum SCC for pods that {pipelines-shortname} creates
+
+[role="_abstract"]
+You can configure the default security context constraint (SCC) for all pods that {pipelines-shortname} creates for task runs and pipeline runs. You can also configure the maximum SCC, which is the least restrictive SCC that you can configure for these pods in any namespace.
+
+.Procedure
+
+* Edit the `TektonConfig` custom resource (CR) by entering the following command:
++
+[source,terminal]
+----
+$ oc edit TektonConfig config
+----
++
+Set the default and maximum SCC in the spec, as in the following example:
++
+[source,yaml]
+----
+apiVersion: operator.tekton.dev/v1alpha1
+kind: TektonConfig
+metadata:
+  name: config
+spec:
+#  ...
+  platforms:
+    openshift:
+      scc:
+        default: "restricted-v2"
+        maxAllowed: "privileged"
+----
++
+`default`:: `spec.platforms.openshift.scc.default` specifies the default SCC that {pipelines-shortname} attaches to the service account (SA) used for workloads, which is, by default, the `pipeline` SA. {pipelines-shortname} uses this SCC for all pipeline run and task run pods.
+`maxAllowed`:: `spec.platforms.openshift.scc.maxAllowed` specifies the least restrictive SCC that you can configure for pipeline run and task run pods in any namespace. This setting does not apply when you configure a custom SA and SCC in a particular pipeline run or task run.
+
+:leveloffset!:
+
+[role="_additional-resources"]
+.Additional resources
+* xref:../install_config/customizing-configurations-in-the-tektonconfig-cr.adoc#op-changing-default-service-account_customizing-configurations-in-the-tektonconfig-cr[Changing the default service account for {pipelines-shortname}]
+
+:leveloffset: +1
+
+// This module is included in the following assembly:
+//
+// *openshift_pipelines/configuring-security-context-for-pods.adoc
+:_mod-docs-content-type: PROCEDURE
+[id="op-configuring-scc-namespace_{context}"]
+= Configuring the SCC for pods in a namespace
+
+[role="_abstract"]
+Configure the security context constraint (SCC) for all pods that {pipelines-shortname} creates for pipeline runs and task runs in a particular namespace.
+
+The SCC must not be less restrictive than the maximum SCC that you configured by using the `TektonConfig` CR, in the `spec.platforms.openshift.scc.maxAllowed` spec.
+
+.Procedure
+
+* Set the `operator.tekton.dev/scc` annotation for the namespace to the name of the SCC.
++
+.Example namespace annotation for configuring the SCC for {pipelines-shortname} pods
+[source,yaml]
+----
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test-namespace
+  annotations:
+    operator.tekton.dev/scc: nonroot
+----
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * secure/configuring-security-context-for-pods.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="op-running-pipeline-run-and-task-run-with-custom-scc-and-service-account_{context}"]
+= Running pipeline run and task run by using a custom security context constraint (SCC) and a custom service account
+
+[role="_abstract"]
+When using the `pipelines-scc` SCC associated with the default `pipelines` service account, the pipeline run and task run pods might face timeouts. This happens because the default `pipelines-scc` SCC sets the `fsGroup.type` parameter to `MustRunAs`.
+
+[NOTE]
+====
+For more information about pod timeouts, see link:https://bugzilla.redhat.com/show_bug.cgi?id=1995779[BZ#1995779].
+====
+
+To avoid pod timeouts, you can create a custom SCC with the `fsGroup.type` parameter set to `RunAsAny`, and associate it with a custom service account.
+
+[NOTE]
+====
+As a best practice, use a custom SCC and a custom service account for pipeline runs and task runs. This approach provides greater flexibility and does not break the runs when an upgrade modifies the defaults.
+====
+
+.Procedure
+
+. Define a custom SCC with the `fsGroup.type` parameter set to `RunAsAny`:
++
+.Example: Custom SCC
+[source,yaml]
+----
+apiVersion: security.openshift.io/v1
+kind: SecurityContextConstraints
+metadata:
+  annotations:
+    kubernetes.io/description: my-scc is a close replica of anyuid scc. pipelines-scc has fsGroup - RunAsAny.
+  name: my-scc
+allowHostDirVolumePlugin: false
+allowHostIPC: false
+allowHostNetwork: false
+allowHostPID: false
+allowHostPorts: false
+allowPrivilegeEscalation: true
+allowPrivilegedContainer: false
+allowedCapabilities: null
+defaultAddCapabilities: null
+fsGroup:
+  type: RunAsAny
+groups:
+- system:cluster-admins
+priority: 10
+readOnlyRootFilesystem: false
+requiredDropCapabilities:
+- MKNOD
+runAsUser:
+  type: RunAsAny
+seLinuxContext:
+  type: MustRunAs
+supplementalGroups:
+  type: RunAsAny
+volumes:
+- configMap
+- downwardAPI
+- emptyDir
+- persistentVolumeClaim
+- projected
+- secret
+----
+
+. Create the custom SCC:
++
+.Example: Create the `my-scc` SCC
+[source,terminal]
+----
+$ oc create -f my-scc.yaml
+----
+
+. Create a custom service account:
++
+.Example: Create a `fsgroup-runasany` service account
+[source,terminal]
+----
+$ oc create serviceaccount fsgroup-runasany
+----
+
+. Associate the custom SCC with the custom service account:
++
+.Example: Associate the `my-scc` SCC with the `fsgroup-runasany` service account
+[source,terminal]
+----
+$ oc adm policy add-scc-to-user my-scc -z fsgroup-runasany
+----
++
+If you want to use the custom service account for privileged tasks, you can associate the `privileged` SCC with the custom service account by running the following command:
++
+.Example: Associate the `privileged` SCC with the `fsgroup-runasany` service account
+[source,terminal]
+----
+$ oc adm policy add-scc-to-user privileged -z fsgroup-runasany
+----
+
+. Use the custom service account in the pipeline run and task run:
++
+.Example: Pipeline run YAML with `fsgroup-runasany` custom service account
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: <pipeline_run_name>
+spec:
+  pipelineRef:
+    name: <pipeline_cluster_task_name>
+  taskRunTemplate:
+    serviceAccountName: 'fsgroup-runasany'
+----
++
+.Example: Task run YAML with `fsgroup-runasany` custom service account
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: TaskRun
+metadata:
+  name: <task_run_name>
+spec:
+  taskRef:
+    name: <cluster_task_name>
+  taskRunTemplate:
+    serviceAccountName: 'fsgroup-runasany'
+----
+
+:leveloffset!:
+
+[id="additional-references_configuring-security-context-for-pods"]
+[role="_additional-resources"]
+== Additional resources
+
+* link:https://docs.openshift.com/container-platform/latest/authentication/managing-security-context-constraints.html[Managing security context constraints]

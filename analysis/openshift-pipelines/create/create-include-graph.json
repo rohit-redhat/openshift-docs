@@ -1,0 +1,490 @@
+[
+  {
+    "assembly": "creating-applications-with-cicd-pipelines",
+    "assembly_topic": "Creating CI/CD solutions for applications using OpenShift Pipelines",
+    "module_path": "modules/op-creating-project-and-checking-pipeline-service-account.adoc",
+    "module_file": "op-creating-project-and-checking-pipeline-service-account.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+1"
+  },
+  {
+    "assembly": "creating-applications-with-cicd-pipelines",
+    "assembly_topic": "Creating CI/CD solutions for applications using OpenShift Pipelines",
+    "module_path": "modules/op-creating-pipeline-tasks.adoc",
+    "module_file": "op-creating-pipeline-tasks.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+1"
+  },
+  {
+    "assembly": "creating-applications-with-cicd-pipelines",
+    "assembly_topic": "Creating CI/CD solutions for applications using OpenShift Pipelines",
+    "module_path": "modules/op-assembling-a-pipeline.adoc",
+    "module_file": "op-assembling-a-pipeline.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+1"
+  },
+  {
+    "assembly": "creating-applications-with-cicd-pipelines",
+    "assembly_topic": "Creating CI/CD solutions for applications using OpenShift Pipelines",
+    "module_path": "modules/op-mirroring-images-to-run-pipelines-in-restricted-environment.adoc",
+    "module_file": "op-mirroring-images-to-run-pipelines-in-restricted-environment.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+1"
+  },
+  {
+    "assembly": "creating-applications-with-cicd-pipelines",
+    "assembly_topic": "Creating CI/CD solutions for applications using OpenShift Pipelines",
+    "module_path": "modules/op-running-a-pipeline.adoc",
+    "module_file": "op-running-a-pipeline.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+1"
+  },
+  {
+    "assembly": "creating-applications-with-cicd-pipelines",
+    "assembly_topic": "Creating CI/CD solutions for applications using OpenShift Pipelines",
+    "module_path": "modules/op-adding-triggers.adoc",
+    "module_file": "op-adding-triggers.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+1"
+  },
+  {
+    "assembly": "creating-applications-with-cicd-pipelines",
+    "assembly_topic": "Creating CI/CD solutions for applications using OpenShift Pipelines",
+    "module_path": "modules/op-configuring-eventlisteners-to-serve-multiple-namespaces.adoc",
+    "module_file": "op-configuring-eventlisteners-to-serve-multiple-namespaces.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+1"
+  },
+  {
+    "assembly": "creating-applications-with-cicd-pipelines",
+    "assembly_topic": "Creating CI/CD solutions for applications using OpenShift Pipelines",
+    "module_path": "modules/op-creating-webhooks.adoc",
+    "module_file": "op-creating-webhooks.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+1"
+  },
+  {
+    "assembly": "creating-applications-with-cicd-pipelines",
+    "assembly_topic": "Creating CI/CD solutions for applications using OpenShift Pipelines",
+    "module_path": "modules/op-triggering-a-pipelinerun.adoc",
+    "module_file": "op-triggering-a-pipelinerun.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+1"
+  },
+  {
+    "assembly": "creating-applications-with-cicd-pipelines",
+    "assembly_topic": "Creating CI/CD solutions for applications using OpenShift Pipelines",
+    "module_path": "modules/op-enabling-monitoring-of-event-listeners-for-triggers-for-user-defined-projects.adoc",
+    "module_file": "op-enabling-monitoring-of-event-listeners-for-triggers-for-user-defined-projects.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+1"
+  },
+  {
+    "assembly": "creating-applications-with-cicd-pipelines",
+    "assembly_topic": "Creating CI/CD solutions for applications using OpenShift Pipelines",
+    "module_path": "modules/op-configuring-pull-request-capabilities-in-GitHub-interceptor.adoc",
+    "module_file": "op-configuring-pull-request-capabilities-in-GitHub-interceptor.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+1"
+  },
+  {
+    "assembly": "creating-applications-with-cicd-pipelines",
+    "assembly_topic": "Creating CI/CD solutions for applications using OpenShift Pipelines",
+    "module_path": "modules/op-filtering-pull-requests-using-GitHub-interceptor.adoc",
+    "module_file": "op-filtering-pull-requests-using-GitHub-interceptor.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+2"
+  },
+  {
+    "assembly": "creating-applications-with-cicd-pipelines",
+    "assembly_topic": "Creating CI/CD solutions for applications using OpenShift Pipelines",
+    "module_path": "modules/op-validating-pull-requests-using-GitHub-interceptors.adoc",
+    "module_file": "op-validating-pull-requests-using-GitHub-interceptors.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+2"
+  },
+  {
+    "assembly": "working-with-pipelines-web-console",
+    "assembly_topic": "Working with OpenShift Pipelines in the web console",
+    "module_path": "modules/op-odc-pipelines-abstract.adoc",
+    "module_file": "op-odc-pipelines-abstract.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+1"
+  },
+  {
+    "assembly": "working-with-pipelines-web-console",
+    "assembly_topic": "Working with OpenShift Pipelines in the web console",
+    "module_path": "modules/op-constructing-pipelines-using-pipeline-builder.adoc",
+    "module_file": "op-constructing-pipelines-using-pipeline-builder.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+2"
+  },
+  {
+    "assembly": "working-with-pipelines-web-console",
+    "assembly_topic": "Working with OpenShift Pipelines in the web console",
+    "module_path": "modules/op-creating-pipelines-along-with-applications.adoc",
+    "module_file": "op-creating-pipelines-along-with-applications.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+2"
+  },
+  {
+    "assembly": "working-with-pipelines-web-console",
+    "assembly_topic": "Working with OpenShift Pipelines in the web console",
+    "module_path": "modules/odc-adding-a-GitHub-repository-containing-pipelines.adoc",
+    "module_file": "odc-adding-a-GitHub-repository-containing-pipelines.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+2"
+  },
+  {
+    "assembly": "working-with-pipelines-web-console",
+    "assembly_topic": "Working with OpenShift Pipelines in the web console",
+    "module_path": "modules/op-interacting-with-pipelines-using-the-developer-perspective.adoc",
+    "module_file": "op-interacting-with-pipelines-using-the-developer-perspective.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+2"
+  },
+  {
+    "assembly": "working-with-pipelines-web-console",
+    "assembly_topic": "Working with OpenShift Pipelines in the web console",
+    "module_path": "modules/op-starting-pipelines-from-pipelines-view.adoc",
+    "module_file": "op-starting-pipelines-from-pipelines-view.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+2"
+  },
+  {
+    "assembly": "working-with-pipelines-web-console",
+    "assembly_topic": "Working with OpenShift Pipelines in the web console",
+    "module_path": "modules/op-starting-pipelines-from-topology-view.adoc",
+    "module_file": "op-starting-pipelines-from-topology-view.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+2"
+  },
+  {
+    "assembly": "working-with-pipelines-web-console",
+    "assembly_topic": "Working with OpenShift Pipelines in the web console",
+    "module_path": "modules/op-interacting-pipelines-from-topology-view.adoc",
+    "module_file": "op-interacting-pipelines-from-topology-view.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+2"
+  },
+  {
+    "assembly": "working-with-pipelines-web-console",
+    "assembly_topic": "Working with OpenShift Pipelines in the web console",
+    "module_path": "modules/op-editing-pipelines.adoc",
+    "module_file": "op-editing-pipelines.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+2"
+  },
+  {
+    "assembly": "working-with-pipelines-web-console",
+    "assembly_topic": "Working with OpenShift Pipelines in the web console",
+    "module_path": "modules/op-deleting-pipelines.adoc",
+    "module_file": "op-deleting-pipelines.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+2"
+  },
+  {
+    "assembly": "working-with-pipelines-web-console",
+    "assembly_topic": "Working with OpenShift Pipelines in the web console",
+    "module_path": "modules/op-creating-pipeline-templates-admin-console.adoc",
+    "module_file": "op-creating-pipeline-templates-admin-console.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+1"
+  },
+  {
+    "assembly": "working-with-pipelines-web-console",
+    "assembly_topic": "Working with OpenShift Pipelines in the web console",
+    "module_path": "modules/op-console-statistics.adoc",
+    "module_file": "op-console-statistics.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+1"
+  },
+  {
+    "assembly": "working-with-pipelines-web-console",
+    "assembly_topic": "Working with OpenShift Pipelines in the web console",
+    "module_path": "modules/op-enabling-plugin.adoc",
+    "module_file": "op-enabling-plugin.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+2"
+  },
+  {
+    "assembly": "working-with-pipelines-web-console",
+    "assembly_topic": "Working with OpenShift Pipelines in the web console",
+    "module_path": "modules/op-webstat-general.adoc",
+    "module_file": "op-webstat-general.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+2"
+  },
+  {
+    "assembly": "working-with-pipelines-web-console",
+    "assembly_topic": "Working with OpenShift Pipelines in the web console",
+    "module_path": "modules/op-webstat-pipeline.adoc",
+    "module_file": "op-webstat-pipeline.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+2"
+  },
+  {
+    "assembly": "remote-pipelines-tasks-resolvers",
+    "assembly_topic": "Specifying remote pipelines and tasks using resolvers",
+    "module_path": "modules/op-resolver-hub-about.adoc",
+    "module_file": "op-resolver-hub-about.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+1"
+  },
+  {
+    "assembly": "remote-pipelines-tasks-resolvers",
+    "assembly_topic": "Specifying remote pipelines and tasks using resolvers",
+    "module_path": "modules/op-resolver-hub-config.adoc",
+    "module_file": "op-resolver-hub-config.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+2"
+  },
+  {
+    "assembly": "remote-pipelines-tasks-resolvers",
+    "assembly_topic": "Specifying remote pipelines and tasks using resolvers",
+    "module_path": "modules/op-resolver-hub.adoc",
+    "module_file": "op-resolver-hub.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+2"
+  },
+  {
+    "assembly": "remote-pipelines-tasks-resolvers",
+    "assembly_topic": "Specifying remote pipelines and tasks using resolvers",
+    "module_path": "modules/op-resolver-bundles-about.adoc",
+    "module_file": "op-resolver-bundles-about.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+1"
+  },
+  {
+    "assembly": "remote-pipelines-tasks-resolvers",
+    "assembly_topic": "Specifying remote pipelines and tasks using resolvers",
+    "module_path": "modules/op-resolver-bundle-config.adoc",
+    "module_file": "op-resolver-bundle-config.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+2"
+  },
+  {
+    "assembly": "remote-pipelines-tasks-resolvers",
+    "assembly_topic": "Specifying remote pipelines and tasks using resolvers",
+    "module_path": "modules/op-resolver-bundle.adoc",
+    "module_file": "op-resolver-bundle.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+2"
+  },
+  {
+    "assembly": "remote-pipelines-tasks-resolvers",
+    "assembly_topic": "Specifying remote pipelines and tasks using resolvers",
+    "module_path": "modules/op-resolver-git-anon-about.adoc",
+    "module_file": "op-resolver-git-anon-about.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+1"
+  },
+  {
+    "assembly": "remote-pipelines-tasks-resolvers",
+    "assembly_topic": "Specifying remote pipelines and tasks using resolvers",
+    "module_path": "modules/op-resolver-git-config-anon.adoc",
+    "module_file": "op-resolver-git-config-anon.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+2"
+  },
+  {
+    "assembly": "remote-pipelines-tasks-resolvers",
+    "assembly_topic": "Specifying remote pipelines and tasks using resolvers",
+    "module_path": "modules/op-resolver-git-anon.adoc",
+    "module_file": "op-resolver-git-anon.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+2"
+  },
+  {
+    "assembly": "remote-pipelines-tasks-resolvers",
+    "assembly_topic": "Specifying remote pipelines and tasks using resolvers",
+    "module_path": "modules/op-resolver-git-scm-about.adoc",
+    "module_file": "op-resolver-git-scm-about.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+1"
+  },
+  {
+    "assembly": "remote-pipelines-tasks-resolvers",
+    "assembly_topic": "Specifying remote pipelines and tasks using resolvers",
+    "module_path": "modules/op-resolver-git-config-scm.adoc",
+    "module_file": "op-resolver-git-config-scm.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+2"
+  },
+  {
+    "assembly": "remote-pipelines-tasks-resolvers",
+    "assembly_topic": "Specifying remote pipelines and tasks using resolvers",
+    "module_path": "modules/op-resolver-git-config-multiple-providers.adoc",
+    "module_file": "op-resolver-git-config-multiple-providers.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+2"
+  },
+  {
+    "assembly": "remote-pipelines-tasks-resolvers",
+    "assembly_topic": "Specifying remote pipelines and tasks using resolvers",
+    "module_path": "modules/op-resolver-git-scm.adoc",
+    "module_file": "op-resolver-git-scm.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+2"
+  },
+  {
+    "assembly": "remote-pipelines-tasks-resolvers",
+    "assembly_topic": "Specifying remote pipelines and tasks using resolvers",
+    "module_path": "modules/op-resolver-git-specify-multiple-providers.adoc",
+    "module_file": "op-resolver-git-specify-multiple-providers.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+2"
+  },
+  {
+    "assembly": "remote-pipelines-tasks-resolvers",
+    "assembly_topic": "Specifying remote pipelines and tasks using resolvers",
+    "module_path": "modules/op-resolver-git-override-scm.adoc",
+    "module_file": "op-resolver-git-override-scm.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+2"
+  },
+  {
+    "assembly": "remote-pipelines-tasks-resolvers",
+    "assembly_topic": "Specifying remote pipelines and tasks using resolvers",
+    "module_path": "modules/op-resolver-http-about.adoc",
+    "module_file": "op-resolver-http-about.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+1"
+  },
+  {
+    "assembly": "remote-pipelines-tasks-resolvers",
+    "assembly_topic": "Specifying remote pipelines and tasks using resolvers",
+    "module_path": "modules/op-resolver-http-config.adoc",
+    "module_file": "op-resolver-http-config.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+2"
+  },
+  {
+    "assembly": "remote-pipelines-tasks-resolvers",
+    "assembly_topic": "Specifying remote pipelines and tasks using resolvers",
+    "module_path": "modules/op-resolver-http.adoc",
+    "module_file": "op-resolver-http.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+2"
+  },
+  {
+    "assembly": "remote-pipelines-tasks-resolvers",
+    "assembly_topic": "Specifying remote pipelines and tasks using resolvers",
+    "module_path": "modules/op-resolver-cluster-about.adoc",
+    "module_file": "op-resolver-cluster-about.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+1"
+  },
+  {
+    "assembly": "remote-pipelines-tasks-resolvers",
+    "assembly_topic": "Specifying remote pipelines and tasks using resolvers",
+    "module_path": "modules/op-resolver-cluster-config.adoc",
+    "module_file": "op-resolver-cluster-config.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+2"
+  },
+  {
+    "assembly": "remote-pipelines-tasks-resolvers",
+    "assembly_topic": "Specifying remote pipelines and tasks using resolvers",
+    "module_path": "modules/op-resolver-cluster.adoc",
+    "module_file": "op-resolver-cluster.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+2"
+  },
+  {
+    "assembly": "remote-pipelines-tasks-resolvers",
+    "assembly_topic": "Specifying remote pipelines and tasks using resolvers",
+    "module_path": "modules/op-resolver-cluster-tasks-ref.adoc",
+    "module_file": "op-resolver-cluster-tasks-ref.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+1"
+  },
+  {
+    "assembly": "remote-pipelines-tasks-resolvers",
+    "assembly_topic": "Specifying remote pipelines and tasks using resolvers",
+    "module_path": "modules/op-resolver-community-tasks-ref.adoc",
+    "module_file": "op-resolver-community-tasks-ref.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+1"
+  },
+  {
+    "assembly": "remote-pipelines-tasks-resolvers",
+    "assembly_topic": "Specifying remote pipelines and tasks using resolvers",
+    "module_path": "modules/op-resolver-stepactions-ref.adoc",
+    "module_file": "op-resolver-stepactions-ref.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+1"
+  },
+  {
+    "assembly": "remote-pipelines-tasks-resolvers",
+    "assembly_topic": "Specifying remote pipelines and tasks using resolvers",
+    "module_path": "modules/op-resolver-tasks-step-actions-about.adoc",
+    "module_file": "op-resolver-tasks-step-actions-about.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+1"
+  },
+  {
+    "assembly": "using-manual-approval",
+    "assembly_topic": "Using manual approval in OpenShift Pipelines",
+    "module_path": "modules/op-enabling-manual-approval-gate.adoc",
+    "module_file": "op-enabling-manual-approval-gate.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+1"
+  },
+  {
+    "assembly": "using-manual-approval",
+    "assembly_topic": "Using manual approval in OpenShift Pipelines",
+    "module_path": "modules/op-specifying-manual-approval-task.adoc",
+    "module_file": "op-specifying-manual-approval-task.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+1"
+  },
+  {
+    "assembly": "using-manual-approval",
+    "assembly_topic": "Using manual approval in OpenShift Pipelines",
+    "module_path": "modules/op-approving-manual-approval-task-about.adoc",
+    "module_file": "op-approving-manual-approval-task-about.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+1"
+  },
+  {
+    "assembly": "using-manual-approval",
+    "assembly_topic": "Using manual approval in OpenShift Pipelines",
+    "module_path": "modules/op-approving-task-web-console.adoc",
+    "module_file": "op-approving-task-web-console.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+2"
+  },
+  {
+    "assembly": "using-manual-approval",
+    "assembly_topic": "Using manual approval in OpenShift Pipelines",
+    "module_path": "modules/op-approving-task-command-line.adoc",
+    "module_file": "op-approving-task-command-line.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+2"
+  },
+  {
+    "assembly": "using-manual-approval",
+    "assembly_topic": "Using manual approval in OpenShift Pipelines",
+    "module_path": "modules/op-behavior-of-approvaltask-with-groups-and-users.adoc",
+    "module_file": "op-behavior-of-approvaltask-with-groups-and-users.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+1"
+  },
+  {
+    "assembly": "using-rh-entitlements-pipelines",
+    "assembly_topic": "Using Red Hat entitlements in pipelines",
+    "module_path": "modules/op-entitlements-manual-copying.adoc",
+    "module_file": "op-entitlements-manual-copying.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+1"
+  },
+  {
+    "assembly": "using-rh-entitlements-pipelines",
+    "assembly_topic": "Using Red Hat entitlements in pipelines",
+    "module_path": "modules/op-entitlements-shared-csi-driver.adoc",
+    "module_file": "op-entitlements-shared-csi-driver.adoc",
+    "module_type": "UNKNOWN",
+    "leveloffset": "+1"
+  }
+]

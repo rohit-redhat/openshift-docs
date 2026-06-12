@@ -1,0 +1,1088 @@
+:_mod-docs-content-type: ASSEMBLY
+:_mod-docs-content-type: SNIPPET
+// The {product-title} attribute provides the context-sensitive name of the relevant OpenShift distribution, for example, "OpenShift Container Platform" or "OKD". The {product-version} attribute provides the product version relative to the distribution, for example "4.9".
+// {product-title} and {product-version} are parsed when AsciiBinder queries the _distro_map.yml file in relation to the base branch of a pull request.
+// See https://github.com/openshift/openshift-docs/blob/main/contributing_to_docs/doc_guidelines.adoc#product-name-and-version for more information on this topic.
+// Other common attributes are defined in the following lines:
+:data-uri:
+:icons:
+:experimental:
+:toc: macro
+:toc-title:
+:imagesdir: images
+:prewrap!:
+
+:pipelines-title: Red Hat OpenShift Pipelines
+:pipelines-shortname: OpenShift Pipelines
+:pipelines-ver: pipelines-1.22
+:pipelines-version-number: 1.22
+:osp-version-patch: 0
+:tekton-cache: Tekton Cache
+:tekton-chains: Tekton Chains
+:tekton-results: Tekton Results
+:tekton-triggers: Tekton Triggers
+:tekton-hub: Tekton Hub
+:artifact-hub: Artifact Hub
+:pac: Pipelines as Code
+:product-registry: OpenShift image registry
+// IBM Power
+:ibmpowerProductName: IBM Power
+// IBM zSystems
+:ibmzProductName: IBM zSystems
+:linuxoneProductName: IBM(R) LinuxONE
+:kebab: image:kebab.png[title="Options menu"]
+
+:op-system-base: RHEL
+:op-system-base-full: Red Hat Enterprise Linux (RHEL)
+
+:cluster-manager-first: Red Hat OpenShift Cluster Manager
+:cluster-manager: OpenShift Cluster Manager
+:cluster-manager-url: link:https://console.redhat.com/openshift[OpenShift Cluster Manager Hybrid Cloud Console]
+:cluster-manager-url-pull: link:https://console.redhat.com/openshift/install/pull-secret[pull secret from the Red Hat OpenShift Cluster Manager]
+
+:oc-first: pass:quotes[OpenShift CLI (`oc`)]
+
+// Attributes not present in the main branch
+:OCP: OpenShift Container Platform
+
+//We should use lowercase like regular OCP docs and deprecate the above.
+:ocp: OpenShift Container Platform
+
+
+:ols-official: Red{nbsp}Hat OpenShift Lightspeed
+:ols: OpenShift Lightspeed
+
+// Attributes not present in the main branch
+:rhosp: Red Hat OpenStack Platform
+[id="using-tekton-hub-with-openshift-pipelines"]
+= Using {tekton-hub} with {pipelines-shortname}
+:context: using-tekton-hub-with-openshift-pipelines
+
+toc::[]
+
+:FeatureName: {tekton-hub}
+:_mod-docs-content-type: SNIPPET
+// When including this file, ensure that {FeatureName} is set immediately before
+// the include. Otherwise it will result in an incorrect replacement.
+
+[IMPORTANT]
+====
+[subs="attributes+"]
+{FeatureName} is a Technology Preview feature only. Technology Preview features are not supported with Red Hat production service level agreements (SLAs) and might not be functionally complete. Red Hat does not recommend using them in production. These features provide early access to upcoming product features, enabling customers to test functionality and provide feedback during the development process.
+
+For more information about the support scope of Red Hat Technology Preview features, see link:https://access.redhat.com/support/offerings/techpreview/[Technology Preview Features Support Scope].
+====
+// Undefine {FeatureName} attribute, so that any mistakes are easily spotted
+:!FeatureName:
+
+[role="_abstract"]
+{tekton-hub} helps you discover, search, and share reusable tasks and pipelines for your CI/CD workflows. A public instance of {tekton-hub} is available at link:https://hub.tekton.dev/[hub.tekton.dev]. Cluster administrators can also install and deploy a custom instance of {tekton-hub} by modifying the configurations in the `TektonHub` custom resource (CR).
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * hub/using-tekton-hub-with-openshift-pipelines.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id="installing-and-deploying-tekton-hub-on-an-openshift-cluster_{context}"]
+= Installing and deploying {tekton-hub} on a {OCP} cluster
+
+[role="_abstract"]
+{tekton-hub} is an optional component; cluster administrators cannot install it by using the `TektonConfig` custom resource (CR). To install and manage {tekton-hub}, use the `TektonHub` CR.
+
+You can install {tekton-hub} on your cluster by using two modes:
+
+* _Without_ login authorization and ratings for {tekton-hub} artifacts
+* _with_ login authorization and ratings for {tekton-hub} artifacts
+
+[NOTE]
+====
+If you are using GitHub Enterprise or GitLab Enterprise, install and deploy {tekton-hub} in the same network as the enterprise server. For example, if the enterprise server is running behind a VPN, deploy {tekton-hub} on a cluster that is also behind the VPN.
+====
+
+:leveloffset!:
+
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * hub/using-tekton-hub-with-openshift-pipelines.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="installing-tekton-hub-without-login-and-rating.adoc_{context}"]
+= Installing {tekton-hub} without login and rating
+
+[role="_abstract"]
+You can install {tekton-hub} on your cluster automatically with default configuration. When using the default configuration, {tekton-hub} does not support login with authorization and ratings for {tekton-hub} artifacts.
+
+.Prerequisites
+* You installed the {pipelines-title} Operator in the default `openshift-pipelines` namespace on the cluster.
+
+.Procedure
+
+. Create a `TektonHub` CR similar to the following example.
++
+[source,yaml]
+----
+apiVersion: operator.tekton.dev/v1alpha1
+kind: TektonHub
+metadata:
+  name: hub
+spec:
+  targetNamespace: openshift-pipelines
+  db:                      # Optional: If you want to use custom database
+    secret: tekton-hub-db  # Name of db secret should be `tekton-hub-db`
+
+  categories:              # Optional: If you want to use custom categories
+    - Automation
+    - Build Tools
+    - CLI
+    - Cloud
+    - Code Quality
+    - ...
+
+  catalogs:                # Optional: If you want to use custom catalogs
+    - name: tekton
+      org: tektoncd
+      type: community
+      provider: github
+      url: https://github.com/tektoncd/catalog
+      revision: main
+
+  scopes:                   # Optional: If you want to add new users
+    - name: agent:create
+      users: [abc, qwe, pqr]
+    - name: catalog:refresh
+      users: [abc, qwe, pqr]
+    - name: config:refresh
+      users: [abc, qwe, pqr]
+
+  default:                   # Optional: If you want to add custom default scopes
+    scopes:
+      - rating:read
+      - rating:write
+
+  api:
+    catalogRefreshInterval: 30m
+----
+`spec.targetNamespace`:: The namespace in which you install {tekton-hub}; default is `openshift-pipelines`.
+`spec.api.catalogRefreshInterval`:: The time interval after which the catalog refreshes automatically. The supported units of time are seconds (`s`), minutes (`m`), hours (`h`), days (`d`), and weeks (`w`). The default interval is 30 minutes.
++
+[NOTE]
+====
+If you do not give custom values for the optional fields in the `TektonHub` CR, the system uses the default values configured in the {tekton-hub} API config map.
+====
+
+. Apply the `TektonHub` CR.
++
+[source,terminal]
+----
+$ oc apply -f <tekton_hub_cr>.yaml
+----
+
+. Check the status of the installation. The `TektonHub` CR might take some time to reach steady state.
++
+[source,terminal]
+----
+$ oc get tektonhub.operator.tekton.dev
+----
++
+.Sample output
+[source,terminal]
+----
+NAME   VERSION   READY   REASON   APIURL                    UIURL
+hub    v1.9.0    True             https://api.route.url/    https://ui.route.url/
+----
+
+:leveloffset!:
+
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * hub/using-tekton-hub-with-openshift-pipelines.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="installing-tekton-hub-with-login-and-rating_{context}"]
+= Installing {tekton-hub} with login and rating
+
+[role="_abstract"]
+You can install {tekton-hub} on your cluster with custom configuration that supports login with authorization and ratings for {tekton-hub} artifacts.
+
+.Prerequisites
+* You installed the {pipelines-title} Operator in the default `openshift-pipelines` namespace on the cluster.
+
+.Procedure
+
+. Create an OAuth application with your Git repository hosting provider, and note the Client ID and Client Secret. The supported providers are GitHub, GitLab, and Bitbucket.
+
+** For a link:https://docs.github.com/en/developers/apps/creating-an-oauth-app[GitHub OAuth application], set the Homepage URL and the Authorization callback URL as `<auth_route>`.
+
+** For a link:https://docs.gitlab.com/ee/integration/oauth_provider.html#user-owned-applications[GitLab OAuth application], set the `REDIRECT_URI` as `<auth_route>/auth/gitlab/callback`.
+
+** For a link:https://support.atlassian.com/bitbucket-cloud/docs/use-oauth-on-bitbucket-cloud[Bitbucket OAuth application], set the `Callback URL` as `<auth_route>`.
+
+. Edit the `<tekton_hub_root>/config/02-api/20-api-secret.yaml` file to include the {tekton-hub} API secrets. For example:
++
+[source,yaml]
+----
+apiVersion: v1
+kind: Secret
+metadata:
+  name: tekton-hub-api
+  namespace: openshift-pipelines
+type: Opaque
+stringData:
+  GH_CLIENT_ID:
+  GH_CLIENT_SECRET:
+  GL_CLIENT_ID:
+  GL_CLIENT_SECRET:
+  BB_CLIENT_ID:
+  BB_CLIENT_SECRET:
+  JWT_SIGNING_KEY:
+  ACCESS_JWT_EXPIRES_IN:
+  REFRESH_JWT_EXPIRES_IN:
+  AUTH_BASE_URL:
+  GHE_URL:
+  GLE_URL:
+----
+`GH_CLIENT_ID`:: The Client ID from the GitHub OAuth application.
+`GH_CLIENT_SECRET`:: The Client Secret from the GitHub OAuth application.
+`GL_CLIENT_ID`:: The Client ID from the GitLab OAuth application.
+`GL_CLIENT_SECRET`:: The Client Secret from the GitLab OAuth application.
+`BB_CLIENT_ID`:: The Client ID from the Bitbucket OAuth application.
+`BB_CLIENT_SECRET`:: The Client Secret from the Bitbucket OAuth application.
+`JWT_SIGNING_KEY`:: A long, random string used to sign the JSON Web Token (JWT) created for users.
+`ACCESS_JWT_EXPIRES_IN`:: Add the time limit after which the access token expires. For example, `1m`, where m denotes minutes. The supported units of time are seconds (`s`), minutes (`m`), hours (`h`), days (`d`), and weeks (`w`).
+`REFRESH_JWT_EXPIRES_IN`:: Add the time limit after which the refresh token expires. For example, `1m`, where `m` denotes minutes. The supported units of time are seconds (`s`), minutes (`m`), hours (`h`), days (`d`), and weeks (`w`). Ensure that the expiry time set for token refresh is greater than the expiry time set for token access.
+`AUTH_BASE_URL`:: Route URL for the OAuth application.
+`GHE_URL`:: GitHub Enterprise URL, if you are authenticating using GitHub Enterprise. Do not give the URL to the catalog as a value for this field.
+`GLE_URL`:: GitLab Enterprise URL, if you are authenticating using GitLab Enterprise. Do not give the URL to the catalog as a value for this field.
++
+[NOTE]
+====
+You can delete the unused fields for the Git repository hosting service providers that are irrelevant to your deployment.
+====
+
+. Create a `TektonHub` CR similar to the following example.
++
+[source,yaml]
+----
+apiVersion: operator.tekton.dev/v1alpha1
+kind: TektonHub
+metadata:
+  name: hub
+spec:
+  targetNamespace: openshift-pipelines
+  db:
+    secret: tekton-hub-db
+
+  categories:
+    - Automation
+    - Build Tools
+    - CLI
+    - Cloud
+    - Code Quality
+      ...
+
+  catalogs:
+    - name: tekton
+      org: tektoncd
+      type: community
+      provider: github
+      url: https://github.com/tektoncd/catalog
+      revision: main
+
+  scopes:
+    - name: agent:create
+      users: [<username>]
+    - name: catalog:refresh
+      users: [<username>]
+    - name: config:refresh
+      users: [<username>]
+
+  default:
+    scopes:
+      - rating:read
+      - rating:write
+
+  api:
+    catalogRefreshInterval: 30m
+----
+`targetNamespace`:: The namespace in which you install {tekton-hub}; default is `openshift-pipelines`.
+`db`:: Optional: Custom database, such as a Crunchy Postgres database.
+`secret`:: The name of the database secret must be `tekton-hub-db`.
+`categories`:: Optional: Customized categories for tasks and pipelines in {tekton-hub}.
+`catalogs`:: Optional: Customized catalogs for {tekton-hub}.
+`scopes`:: Optional: Additional users. You can mention many users, such as `[<username_1>, <username_2>, <username_3>]`.
+`default`:: Optional: Customized default scopes.
+`catalogRefreshInterval`:: The time interval after which the catalog refreshes automatically. The supported units of time are seconds (`s`), minutes (`m`), hours (`h`), days (`d`), and weeks (`w`). The default interval is 30 minutes.
++
+[NOTE]
+====
+If you do not give custom values for the optional fields in the `TektonHub` CR, the system uses the default values configured in the {tekton-hub} API config map.
+====
+
+. Apply the `TektonHub` CR.
++
+[source,terminal]
+----
+$ oc apply -f <tekton_hub_cr>.yaml
+----
+
+. Check the status of the installation. The `TektonHub` CR might take some time to reach steady state.
++
+[source,terminal]
+----
+$ oc get tektonhub.operator.tekton.dev
+----
++
+.Sample output
+[source,terminal]
+----
+NAME   VERSION   READY   REASON   APIURL                    UIURL
+hub    v1.9.0    True             https://api.route.url/    https://ui.route.url/
+----
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * hub/using-tekton-hub-with-openshift-pipelines.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="using-a-custom-database-in-tekton-hub_{context}"]
+= Using a custom database in {tekton-hub}
+
+[role="_abstract"]
+Cluster administrators can use a custom database with {tekton-hub}, instead of the default PostgreSQL database installed by the Operator. You can associate a custom database at the time of installation, and use it with the `db-migration`, `api`, and `ui` interfaces provided by {tekton-hub}. Or, you can associate a custom database with {tekton-hub} even after the installation with the default database is complete.
+
+.Procedure
+
+. Create a secret named `tekton-hub-db` in the target namespace with the following keys:
+* `POSTGRES_HOST`
+* `POSTGRES_DB`
+* `POSTGRES_USER`
+* `POSTGRES_PASSWORD`
+* `POSTGRES_PORT`
++
+.Example: Custom database secrets
+[source,yaml]
+----
+apiVersion: v1
+kind: Secret
+metadata:
+  name: tekton-hub-db
+  labels:
+    app: tekton-hub-db
+type: Opaque
+stringData:
+  POSTGRES_HOST: <The name of the host of the database>
+  POSTGRES_DB: <Name of the database>
+  POSTGRES_USER: <username>
+  POSTGRES_PASSWORD: <password>
+  POSTGRES_PORT: <The port that the database is listening on>
+...
+----
++
+[NOTE]
+====
+The default target namespace is `openshift-pipelines`.
+====
+
+. In the `TektonHub` CR, set the value of the database secret attribute to `tekton-hub-db`.
++
+.Example: Adding custom database secret
+[source,yaml]
+----
+apiVersion: operator.tekton.dev/v1alpha1
+kind: TektonHub
+metadata:
+  name: hub
+spec:
+  targetNamespace: openshift-pipelines
+  db:
+    secret: tekton-hub-db
+  api:
+    hubConfigUrl: https://raw.githubusercontent.com/tektoncd/hub/main/config.yaml
+    catalogRefreshInterval: 30m
+...
+----
+
+. Use the updated `TektonHub` CR to associate the custom database with {tekton-hub}.
+
+.. If you are associating the custom database at the time of installing {tekton-hub} on your cluster, apply the updated `TektonHub` CR.
++
+[source,terminal]
+----
+$ oc apply -f <tekton_hub_cr>.yaml
+----
+
+.. Or, if you are associating the custom database after the installation of {tekton-hub} is complete, replace the existing `TektonHub` CR with the updated `TektonHub` CR.
++
+[source,terminal]
+----
+$ oc replace -f <tekton_hub_cr>.yaml
+----
+
+. Check the status of the installation. The `TektonHub` CR might take some time to reach steady state.
++
+[source,terminal]
+----
+$ oc get tektonhub.operator.tekton.dev
+----
++
+.Sample output
+[source,terminal]
+----
+NAME   VERSION   READY   REASON   APIURL                    UIURL
+hub    v1.9.0    True             https://api.route.url/    https://ui.route.url/
+----
+
+:leveloffset!:
+
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * hub/using-tekton-hub-with-openshift-pipelines.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="installing-crunchy-postgres-database-and-tekton-hub_{context}"]
+= Installing Crunchy Postgres database and {tekton-hub}
+
+[role="_abstract"]
+This is an optional procedure. Cluster administrators can install the Crunchy Postgres database and configure {tekton-hub} to use it instead of the default database.
+
+.Prerequisites
+
+* Install the Crunchy Postgres Operator from the OperatorHub.
+* Create a Postgres instance that initiates a Crunchy Postgres database.
+
+.Procedure
+
+. Get into the Crunchy Postgres pod.
++
+.Example output
+[source,terminal]
+----
+$ oc exec -it -n openshift-operators test-instance1-m7hh-0 -- /bin/sh
+
+Defaulting container name to database.
+Use 'oc describe pod/test-instance1-m7hh-0 -n openshift-operators' to see all of the containers in this pod.
+sh-4.4$ psql -U postgres
+psql (14.4)
+Type "help" for help.
+----
+
+. Find the `pg_hba.conf` file.
++
+[source,terminal]
+----
+postgres=# SHOW hba_file;
+         hba_file
+--------------------------
+ /pgdata/pg14/pg_hba.conf
+(1 row)
+
+postgres=#
+----
+
+. Exit from the database.
+
+. Check if the `pg_hba.conf` file has the entry `host all all 0.0.0.0/0 md5`, required to access all incoming connections. In addition, add the entry at the end of the `pg_hba.conf` file.
++
+.Example: `pg_hba.conf` file
+[source,terminal]
+----
+sh-4.4$ cat /pgdata/pg14/pg_hba.conf
+
+# Do not edit this file manually!
+# It will be overwritten by Patroni!
+local all "postgres" peer
+hostssl replication "_crunchyrepl" all cert
+hostssl "postgres" "_crunchyrepl" all cert
+host all "_crunchyrepl" all reject
+hostssl all all all md5
+host  all  all 0.0.0.0/0 md5
+----
+
+. Save the `pg_hba.conf` file and reload the database.
++
+[source,terminal]
+----
+sh-4.4$ psql -U postgres
+psql (14.4)
+Type "help" for help.
+
+postgres=# SHOW hba_file;
+         hba_file
+--------------------------
+ /pgdata/pg14/pg_hba.conf
+(1 row)
+
+postgres=# SELECT pg_reload_conf();
+ pg_reload_conf
+----------------
+ t
+(1 row)
+----
+
+. Exit the database.
+
+. Decode the secret value of the Crunchy Postgres host.
++
+.Example: Decode the secret value of a Crunchy Postgres host
+[source,terminal]
+----
+$ echo 'aGlwcG8tcHJpbWFyeS5vcGVuc2hpZnQtb3BlcmF0b3JzLnN2YyA=' | base64 --decode
+test-primary.openshift-operators.svc
+----
+
+. Create a secret named `tekton-hub-db` in the target namespace with the following keys:
+* `POSTGRES_HOST`
+* `POSTGRES_DB`
+* `POSTGRES_USER`
+* `POSTGRES_PASSWORD`
+* `POSTGRES_PORT`
+
++
+.Example: Custom database secrets
+[source,yaml]
+----
+apiVersion: v1
+kind: Secret
+metadata:
+  name: tekton-hub-db
+  labels:
+    app: tekton-hub-db
+type: Opaque
+stringData:
+  POSTGRES_HOST: test-primary.openshift-operators.svc
+  POSTGRES_DB: test
+  POSTGRES_USER: <username>
+  POSTGRES_PASSWORD: <password>
+  POSTGRES_PORT: '5432'
+...
+----
+
++
+[NOTE]
+====
+The default target namespace is `openshift-pipelines`.
+====
+
+. In the `TektonHub` CR, set the value of the database secret attribute to `tekton-hub-db`.
++
+.Example: Adding custom database secret
+[source,yaml]
+----
+apiVersion: operator.tekton.dev/v1alpha1
+kind: TektonHub
+metadata:
+  name: hub
+spec:
+  targetNamespace: openshift-pipelines
+  db:
+    secret: tekton-hub-db
+...
+----
+
+. Use the updated `TektonHub` CR to associate the custom database with {tekton-hub}.
++
+[source,terminal]
+----
+$ oc apply -f <tekton_hub_cr>.yaml
+----
+
+. Check the status of the installation. The `TektonHub` CR might take some time to reach a steady state.
++
+[source,terminal]
+----
+$ oc get tektonhub.operator.tekton.dev
+----
++
+.Sample output
+[source,terminal]
+----
+NAME   VERSION   READY   REASON   APIURL                    UIURL
+hub    v1.9.0    True             https://api.route.url/    https://ui.route.url/
+----
+
+:leveloffset!:
+
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * hub/using-tekton-hub-with-openshift-pipelines.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="migrating-tekton-hub-data-to-an-existing-crunchy-postgres-database_{context}"]
+= Migrating {tekton-hub} data to an existing Crunchy Postgres database
+
+[role="_abstract"]
+{tekton-hub} supports the use of Crunchy Postgres as a custom database. For a pre-installed {tekton-hub} with the default database, cluster administrators can migrate the data from the default database to an external Crunchy Postgres database.
+
+.Procedure
+
+. Dump the existing data from the internal or default database into a file in the pod.
++
+.Example
+[source,terminal]
+----
+$ pg_dump -Ft -h localhost -U postgres hub -f /tmp/hub.dump
+----
++
+. Copy the file containing the data dump to your local system.
++
+.Command format
+[source,terminal]
+----
+$ oc cp -n <namespace> <podName>:<path_to_hub.dump> <path_to_local_system>
+----
++
+.Example
+[source,terminal]
+----
+$ oc cp -n openshift-pipelines tekton-hub-db-7d6d888c67-p7mdr:/tmp/hub.dump /home/test_user/Downloads/hub.dump
+----
++
+. Copy the file that has the data dump from the local system to the pod running the external Crunchy Postgres database.
++
+.Command format
+[source,terminal]
+----
+$ oc cp -n <namespace> <path_to_local_system> <podName>:<path_to_hub.dump>
+----
++
+.Example
+[source,terminal]
+----
+$ oc cp -n openshift-operators /home/test_user/Downloads/hub.dump test-instance1-spnz-0:/tmp/hub.dump
+----
++
+. Restore the data in the Crunchy Postgres database.
++
+.Command format
+[source,terminal]
+----
+$ pg_restore -d <database_name> -h localhost -U postgres <path_where_file_is_copied>
+----
++
+.Example
+[source,terminal]
+----
+$ pg_restore -d test -h localhost -U postgres /tmp/hub.dump
+----
++
+. Get into the Crunchy Postgres pod.
++
+.Example: Get into the `test-instance1-m7hh-0` pod
+[source,terminal]
+----
+$ oc exec -it -n openshift-operators test-instance1-m7hh-0 -- /bin/sh
+
+Defaulting container name to database.
+Use 'oc describe pod/test-instance1-m7hh-0 -n openshift-operators' to see all of the containers in this pod.
+sh-4.4$ psql -U postgres
+psql (14.4)
+Type "help" for help.
+----
++
+. Find the `pg_hba.conf` file.
++
+[source,terminal]
+----
+postgres=# SHOW hba_file;
+         hba_file
+--------------------------
+ /pgdata/pg14/pg_hba.conf
+(1 row)
+
+postgres=#
+----
++
+. Exit from the database.
++
+. Check if the `pg_hba.conf` file has the entry `host all all 0.0.0.0/0 md5`, which is necessary for accessing all incoming connections. If necessary, add the entry at the end of the `pg_hba.conf` file.
++
+.Example: `pg_hba.conf` file
+[source,terminal]
+----
+sh-4.4$ cat /pgdata/pg14/pg_hba.conf
+
+# Do not edit this file manually!
+# It will be overwritten by Patroni!
+local all "postgres" peer
+hostssl replication "_crunchyrepl" all cert
+hostssl "postgres" "_crunchyrepl" all cert
+host all "_crunchyrepl" all reject
+hostssl all all all md5
+host  all  all 0.0.0.0/0 md5
+----
++
+. Save the `pg_hba.conf` file and reload the database.
++
+[source,terminal]
+----
+sh-4.4$ psql -U postgres
+psql (14.4)
+Type "help" for help.
+
+postgres=# SHOW hba_file;
+         hba_file
+--------------------------
+ /pgdata/pg14/pg_hba.conf
+(1 row)
+
+postgres=# SELECT pg_reload_conf();
+ pg_reload_conf
+----------------
+ t
+(1 row)
+----
++
+. Exit the database.
+. Verify that a secret named `tekton-hub-db` in the target namespace has the following keys:
+* `POSTGRES_HOST`
+* `POSTGRES_DB`
+* `POSTGRES_USER`
+* `POSTGRES_PASSWORD`
+* `POSTGRES_PORT`
++
+.Example: Custom database secrets
+[source,yaml]
+----
+apiVersion: v1
+kind: Secret
+metadata:
+  name: tekton-hub-db
+  labels:
+    app: tekton-hub-db
+type: Opaque
+stringData:
+  POSTGRES_HOST: test-primary.openshift-operators.svc
+  POSTGRES_DB: test
+  POSTGRES_USER: test
+  POSTGRES_PASSWORD: woXOisU5>ocJiTF7y{{;1[Q(
+  POSTGRES_PORT: '5432'
+...
+----
++
+[NOTE]
+====
+A secret encodes the value of the `POSTGRES_HOST` field. You can decode the value of the Crunchy Postgres host by using the following example.
+
+.Example: Decode the secret value of a Crunchy Postgres host
+[source,terminal]
+----
+$ echo 'aGlwcG8tcHJpbWFyeS5vcGVuc2hpZnQtb3BlcmF0b3JzLnN2YyA=' | base64 --decode
+test-primary.openshift-operators.svc
+----
+====
++
+. Verify that in the `TektonHub` CR, the value of the database secret attribute is `tekton-hub-db`.
++
+.Example: `TektonHub` CR with the name of the database secret
+[source,yaml]
+----
+apiVersion: operator.tekton.dev/v1alpha1
+kind: TektonHub
+metadata:
+  name: hub
+spec:
+  targetNamespace: openshift-pipelines
+  db:
+    secret: tekton-hub-db
+...
+----
++
+. To associate the external Crunchy Postgres database with {tekton-hub}, replace any existing `TektonHub` CR with the updated `TektonHub` CR.
++
+[source,terminal]
+----
+$ oc replace -f <updated_tekton_hub_cr>.yaml
+----
++
+. Check the status of the {tekton-hub}. The updated `TektonHub` CR might take some time to reach a steady state.
++
+[source,terminal]
+----
+$ oc get tektonhub.operator.tekton.dev
+----
++
+.Sample output
+[source,terminal]
+----
+NAME   VERSION   READY   REASON   APIURL                    UIURL
+hub    v1.9.0    True             https://api.route.url/    https://ui.route.url/
+----
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * hub/using-tekton-hub-with-openshift-pipelines.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="updating-tekton-hub-with-custom-categories-and-catalogs_{context}"]
+= Updating {tekton-hub} with custom categories and catalogs
+
+[role="_abstract"]
+Cluster administrators can update {tekton-hub} with custom categories, catalogs, scopes, and default scopes that reflect the context of their organization.
+
+.Procedure
+
+. Optional: Edit the `categories`, `catalogs`, `scopes`, and `default:scopes` fields in the {tekton-hub} CR.
++
+[NOTE]
+====
+The {tekton-hub} API config map gives the default information for categories, catalog, scopes, and default scopes. If you give custom values in the `TektonHub` CR, it overrides the default values.
+====
+
+. Apply the {tekton-hub} CR.
++
+[source,terminal]
+----
+$ oc apply -f <tekton_hub_cr>.yaml
+----
+
+. Observe the {tekton-hub} status.
++
+[source,terminal]
+----
+$ oc get tektonhub.operator.tekton.dev
+----
++
+.Sample output
+[source,terminal]
+----
+NAME   VERSION   READY   REASON   APIURL                  UIURL
+hub    v1.9.0    True             https://api.route.url   https://ui.route.url
+----
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * hub/using-tekton-hub-with-openshift-pipelines.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="modifying-catalog-refresh-interval-tekton-hub_{context}"]
+= Modifying the catalog refresh interval of {tekton-hub}
+
+[role="_abstract"]
+The default catalog refresh interval for {tekton-hub} is 30 minutes. Cluster administrators can change the automatic catalog refresh interval by modifying the value of the `catalogRefreshInterval` field in the `TektonHub` CR.
+
+.Procedure
+. Change the value of the `catalogRefreshInterval` field in the `TektonHub` CR.
++
+[source,yaml]
+----
+apiVersion: operator.tekton.dev/v1alpha1
+kind: TektonHub
+metadata:
+  name: hub
+spec:
+  targetNamespace: openshift-pipelines
+  api:
+    catalogRefreshInterval: 30m
+----
+`targetNamespace`:: The namespace that contains {tekton-hub}; default is `openshift-pipelines`.
+`catalogRefreshInterval`:: The time interval after which the catalog refreshes automatically. The supported units of time are seconds (`s`), minutes (`m`), hours (`h`), days (`d`), and weeks (`w`). The default interval is 30 minutes.
+
+. Apply the `TektonHub` CR.
++
+[source,terminal]
+----
+$ oc apply -f <tekton_hub_cr>.yaml
+----
+
+. Check the status of the installation. The `TektonHub` CR might take some time to reach steady state.
++
+[source,terminal]
+----
+$ oc get tektonhub.operator.tekton.dev
+----
++
+.Sample output
+[source,terminal]
+----
+NAME   VERSION   READY   REASON   APIURL                    UIURL
+hub    v1.9.0    True             https://api.route.url/    https://ui.route.url/
+----
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * hub/using-tekton-hub-with-openshift-pipelines.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="adding-new-users-in-tekton-hub-configuration_{context}"]
+= Adding new users in {tekton-hub} configuration
+
+[role="_abstract"]
+Cluster administrators can add new users to {tekton-hub} with different scopes.
+
+.Procedure
+. Change the `TektonHub` CR to add new users with different scopes.
++
+[source,yaml]
+----
+...
+scopes:
+  - name: agent:create
+    users: [<username_1>, <username_2>]
+  - name: catalog:refresh
+    users: [<username_3>, <username_4>]
+  - name: config:refresh
+    users: [<username_5>, <username_6>]
+
+default:
+  scopes:
+    - rating:read
+    - rating:write
+...
+----
+`<username_2>`:: The usernames registered with the Git repository hosting service provider.
++
+[NOTE]
+====
+A new user signing in to {tekton-hub} for the first time will have only the default scope. To activate additional scopes, ensure you add the user's username in the `scopes` field of the `TektonHub` CR.
+====
+
+. Apply the updated `TektonHub` CR.
++
+[source,terminal]
+----
+$ oc apply -f <tekton_hub_cr>.yaml
+----
+
+. Check the status of the {tekton-hub}. The updated `TektonHub` CR might take some time to reach a steady state.
++
+[source,terminal]
+----
+$ oc get tektonhub.operator.tekton.dev
+----
++
+.Sample output
+[source,terminal]
+----
+NAME   VERSION   READY   REASON   APIURL                    UIURL
+hub    v1.9.0    True             https://api.route.url/    https://ui.route.url/
+----
+
+. Refresh the configuration.
++
+[source,terminal]
+----
+$ curl -X POST -H "Authorization: <access_token>" \
+    --header "Content-Type: application/json" \
+    --data '{"force": true} \
+    <api_route>/system/config/refresh
+----
+`<access_token>`:: The JSON Web Token (JWT).
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * hub/using-tekton-hub-with-openshift-pipelines.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="disabling-tekton-hub-authorization-after-upgrade.adoc_{context}"]
+= Disabling {tekton-hub} authorization after upgrading the {pipelines-title} Operator from 1.7 to 1.8
+
+[role="_abstract"]
+When you install {tekton-hub} with {pipelines-title} Operator 1.8, the default installation disables login authorization and ratings for the {tekton-hub} artifacts. However, when you upgrade the Operator from 1.7 to 1.8, the instance of the {tekton-hub} on your cluster does not automatically disable the login authorization and ratings.
+
+To disable login authorization and ratings for {tekton-hub} after upgrading the Operator from 1.7 to 1.8, perform the steps in the following procedure.
+
+.Prerequisites
+* You installed the {pipelines-title} Operator in the default `openshift-pipelines` namespace on the cluster.
+
+.Procedure
+
+. Delete the existing {tekton-hub} API secret that you created while manually installing {tekton-hub} for Operator 1.7.
++
+[source,terminal]
+----
+$ oc delete secret tekton-hub-api -n <targetNamespace>
+----
+`<targetNamespace>`:: The common namespace for the {tekton-hub} API secret and the {tekton-hub} CR. By default, the target namespace is `openshift-pipelines`.
+
+. Delete the `TektonInstallerSet` object for the {tekton-hub} API.
++
+[source,terminal]
+----
+$ oc get tektoninstallerset -o name | grep tekton-hub-api | xargs oc delete
+----
++
+[NOTE]
+====
+After deletion, the Operator automatically creates a new {tekton-hub} API installer set.
+====
++
+Wait and check the status of the {tekton-hub}. Proceed to the next steps when the `READY` column displays `True`.
++
+[source,terminal]
+----
+$ oc get tektonhub hub
+----
++
+.Sample output
+[source,terminal]
+----
+NAME   VERSION        READY   REASON   APIURL                                                                                                  UIURL
+hub    1.8.0          True             https://tekton-hub-api-openshift-pipelines.apps.example.com   https://tekton-hub-ui-openshift-pipelines.apps.example.com
+
+----
+
+. Delete the `ConfigMap` object for the {tekton-hub} UI.
++
+[source,terminal]
+----
+$ oc delete configmap tekton-hub-ui -n <targetNamespace>
+----
+`<targetNamespace>`:: The common namespace for the {tekton-hub} UI and the {tekton-hub} CR. By default, the target namespace is `openshift-pipelines`.
+
+. Delete the `TektonInstallerSet` object for the {tekton-hub} UI.
++
+[source,terminal]
+----
+$ oc get tektoninstallerset -o name | grep tekton-hub-ui | xargs oc delete
+----
++
+[NOTE]
+====
+After deletion, the Operator automatically creates a new {tekton-hub} UI installer set.
+====
++
+Wait and check the status of the {tekton-hub}. Proceed to the next steps when the `READY` column displays `True`.
++
+[source,terminal]
+----
+$ oc get tektonhub hub
+----
++
+.Sample output
+[source,terminal]
+----
+NAME   VERSION        READY   REASON   APIURL                                                                                                  UIURL
+hub    1.8.0          True             https://tekton-hub-api-openshift-pipelines.apps.example.com   https://tekton-hub-ui-openshift-pipelines.apps.example.com
+
+----
+
+:leveloffset!:
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://github.com/tektoncd/hub[{tekton-hub}]
+
+* xref:../install_config/installing-pipelines.adoc#installing-pipelines[Installing {pipelines-shortname}]
+
+* xref:../release_notes/op-release-notes-1-22.adoc#op-release-notes-1-22[{pipelines-title} release notes]

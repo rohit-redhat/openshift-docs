@@ -1,0 +1,13 @@
+{
+  "book": {
+    "name": "Release notes",
+    "dir": "release_notes",
+    "distros": ["openshift-pipelines"]
+  },
+  "topics": [
+    {
+      "name": "OpenShift Pipelines release notes",
+      "file": "op-release-notes-1-22"
+    }
+  ]
+}

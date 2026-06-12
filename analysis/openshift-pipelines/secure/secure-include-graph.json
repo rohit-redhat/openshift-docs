@@ -1,0 +1,82 @@
+{
+  "assemblies": [
+    {
+      "file": "using-tekton-chains-for-openshift-pipelines-supply-chain-security.adoc",
+      "modules": [
+        {"path": "modules/op-configuring-tekton-chains.adoc", "type": "CONCEPT"},
+        {"path": "modules/op-supported-parameters-tekton-chains-configuration.adoc", "type": "REFERENCE"},
+        {"path": "modules/op-creating-mounting-mongo-server-url-secret.adoc", "type": "PROCEDURE"},
+        {"path": "modules/op-creating-mounting-kms-authentication-token-secret.adoc", "type": "PROCEDURE"},
+        {"path": "modules/op-enabling-tekton-chains-to-operate-only-in-selected-namespaces.adoc", "type": "PROCEDURE"},
+        {"path": "modules/op-signing-secrets-in-tekton-chains.adoc", "type": "CONCEPT"},
+        {"path": "modules/op-chains-generating-cosign-secret.adoc", "type": "PROCEDURE"},
+        {"path": "modules/op-chains-signing-secrets-cosign.adoc", "type": "PROCEDURE"},
+        {"path": "modules/op-chains-signing-secrets-skopeo.adoc", "type": "PROCEDURE"},
+        {"path": "modules/op-chains-resolving-existing-secret.adoc", "type": "PROCEDURE"},
+        {"path": "modules/op-authenticating-to-an-oci-registry.adoc", "type": "PROCEDURE"},
+        {"path": "modules/op-creating-and-verifying-task-run-signatures-without-any-additional-authentication.adoc", "type": "PROCEDURE"},
+        {"path": "modules/op-using-tekton-chains-to-sign-and-verify-image-and-provenance.adoc", "type": "PROCEDURE"}
+      ]
+    },
+    {
+      "file": "setting-up-openshift-pipelines-to-view-software-supply-chain-security-elements.adoc",
+      "modules": [
+        {"path": "modules/op-setting-up-openshift-pipelines-to-view-project-vulnerabilities.adoc", "type": "PROCEDURE"},
+        {"path": "modules/op-setting-up-openshift-pipelines-to-download-or-view-sboms.adoc", "type": "PROCEDURE"}
+      ]
+    },
+    {
+      "file": "configuring-security-context-for-pods.adoc",
+      "modules": [
+        {"path": "modules/op-configuring-default-maximum-scc.adoc", "type": "PROCEDURE"},
+        {"path": "modules/op-configuring-scc-namespace.adoc", "type": "PROCEDURE"},
+        {"path": "modules/op-running-pipeline-run-and-task-run-with-custom-scc-and-service-account.adoc", "type": "PROCEDURE"}
+      ]
+    },
+    {
+      "file": "securing-webhooks-with-event-listeners.adoc",
+      "modules": [
+        {"path": "modules/op-providing-secure-connection.adoc", "type": "PROCEDURE"},
+        {"path": "modules/op-setting-eventlistener-scc.adoc", "type": "PROCEDURE"},
+        {"path": "modules/op-sample-eventlistener-resource.adoc", "type": "PROCEDURE"}
+      ]
+    },
+    {
+      "file": "authenticating-pipelines-repos-using-secrets.adoc",
+      "modules": [
+        {"path": "modules/op-providing-secrets-service-accounts-about.adoc", "type": "CONCEPT"},
+        {"path": "modules/op-types-annotation-secrets.adoc", "type": "REFERENCE"},
+        {"path": "modules/op-configuring-basic-authentication-for-git.adoc", "type": "PROCEDURE"},
+        {"path": "modules/op-configuring-ssh-authentication-for-git.adoc", "type": "PROCEDURE"},
+        {"path": "modules/op-configuring-registry-authentication-sa.adoc", "type": "PROCEDURE"},
+        {"path": "modules/op-additional-considerations-authentication-sa.adoc", "type": "CONCEPT"},
+        {"path": "modules/op-using-ssh-authentication-in-git-type-tasks.adoc", "type": "REFERENCE"},
+        {"path": "modules/op-using-secrets-as-a-nonroot-user.adoc", "type": "REFERENCE"},
+        {"path": "modules/op-providing-secrets-workspaces-about.adoc", "type": "CONCEPT"},
+        {"path": "modules/op-configuring-git-ssh-authentication-using-workspaces.adoc", "type": "PROCEDURE"},
+        {"path": "modules/op-configuring-container-registry-authentication-using-workspaces.adoc", "type": "PROCEDURE"},
+        {"path": "modules/op-limiting-secret-workspace-to-step.adoc", "type": "PROCEDURE"}
+      ]
+    },
+    {
+      "file": "unprivileged-building-of-container-images-using-buildah.adoc",
+      "modules": [
+        {"path": "modules/op-nonroot-buildah-user-namespaces.adoc", "type": "PROCEDURE"},
+        {"path": "modules/op-buildah-nonroot-sa-scc-about.adoc", "type": "CONCEPT"},
+        {"path": "modules/op-configuring-custom-sa-and-scc.adoc", "type": "PROCEDURE"},
+        {"path": "modules/op-configuring-buildah-to-use-build-user.adoc", "type": "PROCEDURE"},
+        {"path": "modules/op-starting-a-task-run-pipeline-run-build-user.adoc", "type": "PROCEDURE"},
+        {"path": "modules/op-limitations-of-unprivileged-builds.adoc", "type": "CONCEPT"}
+      ]
+    },
+    {
+      "file": "using-buildah-ns-tekton-task.adoc",
+      "modules": [
+        {"path": "modules/op-differences-between-buildah-buildah-ns-tasks.adoc", "type": "CONCEPT"},
+        {"path": "modules/op-security-model-buildah-ns-task.adoc", "type": "CONCEPT"},
+        {"path": "modules/op-workspaces-parameters-results-buildah-ns-task.adoc", "type": "CONCEPT"},
+        {"path": "modules/op-running-buildah-ns-task.adoc", "type": "PROCEDURE"}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,344 @@
+:_mod-docs-content-type: ASSEMBLY
+:_mod-docs-content-type: SNIPPET
+// The {product-title} attribute provides the context-sensitive name of the relevant OpenShift distribution, for example, "OpenShift Container Platform" or "OKD". The {product-version} attribute provides the product version relative to the distribution, for example "4.9".
+// {product-title} and {product-version} are parsed when AsciiBinder queries the _distro_map.yml file in relation to the base branch of a pull request.
+// See https://github.com/openshift/openshift-docs/blob/main/contributing_to_docs/doc_guidelines.adoc#product-name-and-version for more information on this topic.
+// Other common attributes are defined in the following lines:
+:data-uri:
+:icons:
+:experimental:
+:toc: macro
+:toc-title:
+:imagesdir: images
+:prewrap!:
+
+:pipelines-title: Red Hat OpenShift Pipelines
+:pipelines-shortname: OpenShift Pipelines
+:pipelines-ver: pipelines-1.22
+:pipelines-version-number: 1.22
+:osp-version-patch: 0
+:tekton-cache: Tekton Cache
+:tekton-chains: Tekton Chains
+:tekton-results: Tekton Results
+:tekton-triggers: Tekton Triggers
+:tekton-hub: Tekton Hub
+:artifact-hub: Artifact Hub
+:pac: Pipelines as Code
+:product-registry: OpenShift image registry
+// IBM Power
+:ibmpowerProductName: IBM Power
+// IBM zSystems
+:ibmzProductName: IBM zSystems
+:linuxoneProductName: IBM(R) LinuxONE
+:kebab: image:kebab.png[title="Options menu"]
+
+:op-system-base: RHEL
+:op-system-base-full: Red Hat Enterprise Linux (RHEL)
+
+:cluster-manager-first: Red Hat OpenShift Cluster Manager
+:cluster-manager: OpenShift Cluster Manager
+:cluster-manager-url: link:https://console.redhat.com/openshift[OpenShift Cluster Manager Hybrid Cloud Console]
+:cluster-manager-url-pull: link:https://console.redhat.com/openshift/install/pull-secret[pull secret from the Red Hat OpenShift Cluster Manager]
+
+:oc-first: pass:quotes[OpenShift CLI (`oc`)]
+
+// Attributes not present in the main branch
+:OCP: OpenShift Container Platform
+
+//We should use lowercase like regular OCP docs and deprecate the above.
+:ocp: OpenShift Container Platform
+
+
+:ols-official: Red{nbsp}Hat OpenShift Lightspeed
+:ols: OpenShift Lightspeed
+
+// Attributes not present in the main branch
+:rhosp: Red Hat OpenStack Platform
+[id="using-rh-entitlements-pipelines"]
+= Using Red Hat entitlements in pipelines
+:context: using-rh-entitlements-pipelines
+
+toc::[]
+
+[role="_abstract"]
+If you have {op-system-base-full} entitlements, you can use these entitlements to build container images in your pipelines.
+
+The Insight Operator automatically manages your entitlements after you import them into this Operator from Simple Common Access (SCA). This operator provides a secret named `etc-pki-entitlement` in the `openshift-config-managed` namespace.
+
+You can use Red Hat entitlements in your pipelines in one of the following two ways:
+
+* Manually copy the secret into the namespace of the pipeline. This method is least complex if you have a limited number of pipeline namespaces.
+
+* Use the Shared Resources Container Storage Interface (CSI) Driver Operator to share the secret between namespaces automatically.
+
+== Prerequisites
+
+* You logged on to your {OCP} cluster using the `oc` command line tool.
+
+* You enabled the Insights Operator feature on your {OCP} cluster. If you want to use the Shared Resources CSI Driver operator to share the secret between namespaces, you must also enable the Shared Resources CSI driver. For information about enabling features, including the Insights Operator and Shared Resources CSI Driver, see link:https://docs.openshift.com/container-platform/latest/nodes/clusters/nodes-cluster-enabling-features.html[Enabling features using feature gates].
++
+
++
+[NOTE]
+====
+After you enable the Insights Operator, you must wait for some time to ensure that the cluster updates all the nodes with this operator. You can monitor the status of all nodes by entering the following command:
+
+[source,terminal]
+----
+$ oc get nodes -w
+----
+
+To verify that the Insights Operator is active, check that the `insights-operator` pod is running in the `openshift-insights` namespace by entering the following command:
+
+[source,terminal]
+----
+$ oc get pods -n openshift-insights
+----
+====
+
+* You configured the importing of your Red Hat entitlements into the Insights Operator. For information about importing the entitlements, see link:https://docs.openshift.com/container-platform/latest/support/remote_health_monitoring/insights-operator-simple-access.html[Importing simple content access entitlements with Insights Operator].
++
+[NOTE]
+====
+To verify that the Insights Operator made your entitlements available, is active, check that the `etc-pki-entitlement` secret is present in the `openshift-config-managed` namespace by entering the following command:
+
+[source,terminal]
+----
+$ oc get secret etc-pki-entitlement -n openshift-config-managed
+----
+====
+
+:leveloffset: +1
+
+// This module is included in the following assembly:
+//
+// *openshift_pipelines/configuring-security-context-for-pods.adoc
+:_mod-docs-content-type: PROCEDURE
+[id="op-entitlements-manual-copying_{context}"]
+= Using Red Hat entitlements by manually copying the etc-pki-entitlement secret
+
+[role="_abstract"]
+You can copy the `etc-pki-entitlement` secret from the `openshift-config-managed` namespace into the namespace of your pipeline. You can then configure your pipeline to use this secret for the Buildah task.
+
+.Prerequisites
+
+* You installed the `jq` package on your system. This package is available in {op-system-base-full}.
+
+.Procedure
+
+. Copy the `etc-pki-entitlement` secret from the `openshift-config-managed` namespace into the namespace of your pipeline by running the following command:
++
+[source,terminal]
+----
+$ oc get secret etc-pki-entitlement -n openshift-config-managed -o json | \
+  jq 'del(.metadata.resourceVersion)' | jq 'del(.metadata.creationTimestamp)' | \
+  jq 'del(.metadata.uid)' | jq 'del(.metadata.namespace)' | \
+  oc -n <pipeline_namespace> create -f -
+----
+`<pipeline_namespace>`:: Replace `<pipeline_namespace>` with the namespace of your pipeline.
+
+. In your Buildah task definition, use the `buildah` task provided in the `openshift-pipelines` namespace or a copy of this task and define the `rhel-entitlement` workspace, as shown in the following example.
+
+. In your task run or pipeline run that runs the Buildah task, assign the `etc-pki-entitlement` secret to the `rhel-entitlement` workspace, as in the following example.
++
+.Example pipeline run definition, including the pipeline and task definitions, that uses Red Hat entitlements
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: buildah-pr-test
+spec:
+  workspaces:
+    - name: shared-workspace
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 1Gi
+    - name: dockerconfig
+      secret:
+        secretName: regred
+    - name: rhel-entitlement
+      secret:
+        secretName: etc-pki-entitlement
+  pipelineSpec:
+    workspaces:
+      - name: shared-workspace
+      - name: dockerconfig
+      - name: rhel-entitlement
+    tasks:
+# ...
+      - name: buildah
+        taskRef:
+          resolver: cluster
+          params:
+          - name: kind
+            value: task
+          - name: name
+            value: buildah
+          - name: namespace
+            value: openshift-pipelines
+        workspaces:
+        - name: source
+          workspace: shared-workspace
+        - name: dockerconfig
+          workspace: dockerconfig
+        - name: rhel-entitlement
+          workspace: rhel-entitlement
+        params:
+        - name: IMAGE
+          value: <image_where_you_want_to_push>
+----
+`PipelineRun.workspaces.name`:: The definition of the `rhel-entitlement` workspace in the pipeline run, assigning the `etc-pki-entitlement` secret to the workspace
+`Pipeline.workspaces.name`:: The definition of the `rhel-entitlement` workspace in the pipeline definition
+`Task.workspaces.name`:: The definition of the `rhel-entitlement` workspace in the task definition
+
+:leveloffset!:
+:leveloffset: +1
+
+// This module is included in the following assembly:
+//
+// *openshift_pipelines/configuring-security-context-for-pods.adoc
+:_mod-docs-content-type: PROCEDURE
+[id="op-entitlements-shared-csi-driver_{context}"]
+= Using Red Hat entitlements by sharing the secret using the Shared Resources CSI driver operator
+
+[role="_abstract"]
+You can set up sharing of the `etc-pki-entitlement` secret from the `openshift-config-managed` namespace to other namespaces by using the Shared Resources Container Storage Interface (CSI) Driver Operator. You can then configure your pipeline to use this secret for the Buildah task.
+
+.Prerequisites
+
+* You have logged in to your {OCP} cluster using the `oc` command line utility as a user with cluster administrator permissions.
+* You have enabled the Shared Resources CSI Driver operator on your {OCP} cluster.
+
+.Procedure
+
+. Create a `SharedSecret` custom resource (CR) for sharing the `etc-pki-entitlement` secret by running the following command:
++
+[source,terminal]
+----
+$ oc apply -f - <<EOF
+apiVersion: sharedresource.openshift.io/v1alpha1
+kind: SharedSecret
+metadata:
+  name: shared-rhel-entitlement
+spec:
+  secretRef:
+    name: etc-pki-entitlement
+    namespace: openshift-config-managed
+EOF
+----
+
+. Create an RBAC role that permits access to the shared secret by running the following command:
++
+[source,terminal]
+----
+$ oc apply -f - <<EOF
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: shared-resource-rhel-entitlement
+  namespace: <pipeline_namespace>
+rules:
+  - apiGroups:
+      - sharedresource.openshift.io
+    resources:
+      - sharedsecrets
+    resourceNames:
+      - shared-rhel-entitlement
+    verbs:
+      - use
+EOF
+----
+`<pipeline_namespace>`:: Replace `<pipeline_namespace>` with the namespace of your pipeline.
+
+. Assign the role to the `pipeline` service account by running the following command:
++
+[source,terminal]
+----
+$ oc create rolebinding shared-resource-rhel-entitlement --role=shared-shared-resource-rhel-entitlement \
+  --serviceaccount=<pipeline_namespace>:pipeline
+----
+`<pipeline_namespace>`:: Replace `<pipeline_namespace>` with the namespace of your pipeline.
++
+[NOTE]
+====
+If you changed the default service account for {pipelines-shortname} or if you define a custom service account in the pipeline run or task run, assign the role to this account instead of the `pipeline` account.
+====
+
+. In your Buildah task definition, use the `buildah` task provided in the `openshift-pipelines` namespace or a copy of this task and define the `rhel-entitlement` workspace, as shown in the following example.
+
+. In your task run or pipeline run that runs the Buildah task, assign the shared secret to the `rhel-entitlement` workspace, as in the following example.
++
+.Example pipeline run definition, including the pipeline and task definitions, which uses Red Hat entitlements
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: buildah-pr-test-csi
+spec:
+  workspaces:
+    - name: shared-workspace
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+          - ReadWriteOnce
+          resources:
+            requests:
+              storage: 1Gi
+    - name: dockerconfig
+      secret:
+        secretName: regred
+    - name: rhel-entitlement
+      csi:
+        readOnly: true
+        driver: csi.sharedresource.openshift.io
+        volumeAttributes:
+          sharedSecret: shared-rhel-entitlement
+  pipelineSpec:
+    workspaces:
+    - name: shared-workspace
+    - name: dockerconfig
+    - name: rhel-entitlement
+    tasks:
+# ...
+    - name: buildah
+      taskRef:
+        resolver: cluster
+        params:
+        - name: kind
+          value: task
+        - name: name
+          value: buildah
+        - name: namespace
+          value: openshift-pipelines
+      workspaces:
+      - name: source
+        workspace: shared-workspace
+      - name: dockerconfig
+        workspace: dockerconfig
+      - name: rhel-entitlement
+        workspace: rhel-entitlement
+      params:
+      - name: IMAGE
+        value: <image_where_you_want_to_push>
+----
+`PipelineRun.workspaces.name`:: The definition of the `rhel-entitlement` workspace in the pipeline run, assigning the `shared-rhel-entitlement` CSI shared secret to the workspace
+`Pipeline.workspaces.name`:: The definition of the `rhel-entitlement` workspace in the pipeline definition
+`Task.workspaces.name`:: The definition of the `rhel-entitlement` workspace in the task definition
+
+:leveloffset!:
+
+
+[role="_additional-resources"]
+== Additional resources
+
+* link:https://access.redhat.com/articles/simple-content-access[Simple content access]
+* link:https://docs.openshift.com/container-platform/4.14/support/remote_health_monitoring/using-insights-operator.html[Using Insights Operator]
+* link:https://docs.openshift.com/container-platform/latest/support/remote_health_monitoring/insights-operator-simple-access.html[Importing simple content access entitlements with Insights Operator]
+* https://docs.openshift.com/container-platform/4.14/storage/container_storage_interface/ephemeral-storage-shared-resource-csi-driver-operator.html[Shared Resource CSI Driver Operator]
+* xref:../install_config/customizing-configurations-in-the-tektonconfig-cr.adoc#op-changing-default-service-account_customizing-configurations-in-the-tektonconfig-cr[Changing the default service account for {pipelines-shortname}]

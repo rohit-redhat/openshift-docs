@@ -1,0 +1,27 @@
+{
+  "book": "create",
+  "title": "Creating CI/CD pipelines",
+  "distro": "openshift-pipelines",
+  "topics": [
+    {
+      "name": "Creating CI/CD solutions for applications using OpenShift Pipelines",
+      "file": "creating-applications-with-cicd-pipelines"
+    },
+    {
+      "name": "Working with OpenShift Pipelines in the web console",
+      "file": "working-with-pipelines-web-console"
+    },
+    {
+      "name": "Specifying remote pipelines and tasks using resolvers",
+      "file": "remote-pipelines-tasks-resolvers"
+    },
+    {
+      "name": "Using manual approval in OpenShift Pipelines",
+      "file": "using-manual-approval"
+    },
+    {
+      "name": "Using Red Hat entitlements in pipelines",
+      "file": "using-rh-entitlements-pipelines"
+    }
+  ]
+}

@@ -1,0 +1,87 @@
+{
+  "assembly": "op-release-notes-1-19.adoc",
+  "variant": "self-managed",
+  "analysis_date": "2026-06-11",
+  "root_attributes": {
+    "id": "op-release-notes",
+    "title": "{pipelines-title} release notes",
+    "context": "op-release-notes",
+    "mod_docs_content_type": "ASSEMBLY"
+  },
+  "includes": [
+    {
+      "line": 3,
+      "path": "_attributes/common-attributes.adoc",
+      "type": "attributes",
+      "leveloffset": null,
+      "module_type": "attributes",
+      "description": "Common attribute definitions for OpenShift documentation"
+    },
+    {
+      "line": 29,
+      "path": "modules/op-tkn-pipelines-compatibility-support-matrix.adoc",
+      "type": "module",
+      "leveloffset": "+1",
+      "module_type": "REFERENCE",
+      "section_title": "Compatibility and support matrix",
+      "description": "Version compatibility table for OpenShift Pipelines components"
+    },
+    {
+      "line": 32,
+      "path": "modules/op-release-notes-1-19.adoc",
+      "type": "module",
+      "leveloffset": "+1",
+      "module_type": "REFERENCE",
+      "section_title": "Release notes for Red Hat OpenShift Pipelines 1.19",
+      "description": "Detailed release notes for version 1.19.0 including new features, breaking changes, known issues, and fixed issues"
+    },
+    {
+      "line": 35,
+      "path": "modules/op-release-notes-1-19-1.adoc",
+      "type": "module",
+      "leveloffset": "+1",
+      "module_type": "REFERENCE",
+      "section_title": "Release notes for Red Hat OpenShift Pipelines 1.19.1",
+      "description": "Release notes for patch version 1.19.1 with fixed issues"
+    },
+    {
+      "line": 38,
+      "path": "modules/op-release-notes-1-19-2.adoc",
+      "type": "module",
+      "leveloffset": "+1",
+      "module_type": "REFERENCE",
+      "section_title": "Release notes for Red Hat OpenShift Pipelines 1.19.2",
+      "description": "Release notes for patch version 1.19.2 with fixed issues"
+    },
+    {
+      "line": 41,
+      "path": "modules/op-release-notes-1-19-3.adoc",
+      "type": "module",
+      "leveloffset": "+1",
+      "module_type": "REFERENCE",
+      "section_title": "Release notes for Red Hat OpenShift Pipelines 1.19.3",
+      "description": "Release notes for patch version 1.19.3 with fixed issues"
+    }
+  ],
+  "module_statistics": {
+    "total_includes": 6,
+    "attributes": 1,
+    "modules": 5,
+    "module_types": {
+      "REFERENCE": 5,
+      "attributes": 1
+    }
+  },
+  "structure_analysis": {
+    "assembly_pattern": "Release notes assembly with versioned module includes",
+    "nesting_depth": 1,
+    "follows_modular_docs": true,
+    "observations": [
+      "Assembly follows standard release notes pattern with separate modules for each patch version",
+      "All release note modules are REFERENCE type containing feature lists, breaking changes, known issues, and fixes",
+      "Single compatibility matrix module provides cross-version reference",
+      "Leveloffset +1 consistently applied to all module includes",
+      "Structure supports incremental updates as new patch versions are released"
+    ]
+  }
+}

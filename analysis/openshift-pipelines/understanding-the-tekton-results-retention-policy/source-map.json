@@ -1,0 +1,29 @@
+{
+  "document": "understanding-the-tekton-results-retention-policy.adoc",
+  "type": "ASSEMBLY",
+  "path": "/Users/roparmar/git/openshift-docs/records/understanding-the-tekton-results-retention-policy.adoc",
+  "structure": {
+    "assembly": {
+      "id": "understanding-the-tekton-results-retention-policy",
+      "title": "Understanding the Tekton Results retention policy",
+      "type": "ASSEMBLY",
+      "lines": "1-84"
+    },
+    "includes": [
+      {
+        "directive": "include::modules/op-fine-grained-retention-policies.adoc[leveloffset=+1]",
+        "path": "modules/op-fine-grained-retention-policies.adoc",
+        "module_id": "op-fine-grained-retention-policies",
+        "title": "Fine-grained retention policies",
+        "type": "CONCEPT",
+        "line": 83,
+        "content_lines": "1-88"
+      }
+    ]
+  },
+  "include_graph": {
+    "understanding-the-tekton-results-retention-policy.adoc": [
+      "modules/op-fine-grained-retention-policies.adoc"
+    ]
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "assembly": "pac/using-pipelines-as-code-repos.adoc",
+  "includes": [
+    {"path": "modules/op-using-pipelines-as-code-with-a-github-app.adoc", "type": "CONCEPT", "leveloffset": "+1", "title": "Using Pipelines as Code with a GitHub App"},
+    {"path": "modules/op-pac-configuring-github-app-cli.adoc", "type": "PROCEDURE", "leveloffset": "+2", "title": "Configuring GitHub App using CLI"},
+    {"path": "modules/op-creating-a-github-application-in-administrator-perspective.adoc", "type": "PROCEDURE", "leveloffset": "+2", "title": "Creating a GitHub application in Administrator perspective"},
+    {"path": "modules/op-pac-configuring-github-app-manually.adoc", "type": "PROCEDURE", "leveloffset": "+2", "title": "Configuring GitHub App manually"},
+    {"path": "modules/op-scoping-github-token.adoc", "type": "PROCEDURE", "leveloffset": "+2", "title": "Scoping GitHub token"},
+    {"path": "modules/op-using-pipelines-as-code-with-github-webhook.adoc", "type": "PROCEDURE", "leveloffset": "+1", "title": "Using Pipelines as Code with GitHub Webhook"},
+    {"path": "modules/op-using-pipelines-as-code-with-gitlab.adoc", "type": "PROCEDURE", "leveloffset": "+1", "title": "Using Pipelines as Code with GitLab"},
+    {"path": "modules/op-using-pipelines-as-code-with-bitbucket-cloud.adoc", "type": "PROCEDURE", "leveloffset": "+1", "title": "Using Pipelines as Code with Bitbucket Cloud"},
+    {"path": "modules/op-using-pipelines-as-code-with-bitbucket-server.adoc", "type": "PROCEDURE", "leveloffset": "+1", "title": "Using Pipelines as Code with Bitbucket Data Center"},
+    {"path": "modules/op-interfacing-pipelines-as-code-with-custom-certificates.adoc", "type": "PROCEDURE", "leveloffset": "+1", "title": "Interfacing Pipelines as Code with custom certificates"},
+    {"path": "modules/op-using-private-repositories-with-pipelines-as-code.adoc", "type": "PROCEDURE", "leveloffset": "+1", "title": "Using private repositories with Pipelines as Code"}
+  ]
+}

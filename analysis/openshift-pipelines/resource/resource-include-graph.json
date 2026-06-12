@@ -1,0 +1,120 @@
+{
+  "book": "resource",
+  "assemblies": [
+    {
+      "assembly": "managing-pipelines-performance.adoc",
+      "topic": "Managing OpenShift Pipelines performance",
+      "modules": [
+        {
+          "path": "modules/op-improving-performance.adoc",
+          "type": "CONCEPT",
+          "leveloffset": "+1"
+        }
+      ]
+    },
+    {
+      "assembly": "reducing-pipelines-resource-consumption.adoc",
+      "topic": "Reducing resource consumption of OpenShift Pipelines",
+      "modules": [
+        {
+          "path": "modules/op-understanding-pipelines-resource-consumption.adoc",
+          "type": "CONCEPT",
+          "leveloffset": "+1"
+        },
+        {
+          "path": "modules/op-mitigating-extra-pipeline-resource-consumption.adoc",
+          "type": "CONCEPT",
+          "leveloffset": "+1"
+        },
+        {
+          "path": "modules/op-override-step-resources-pipelinerun.adoc",
+          "type": "CONCEPT",
+          "leveloffset": "+1"
+        },
+        {
+          "path": "modules/op-setting-compute-resources-for-a-task-step.adoc",
+          "type": "PROCEDURE",
+          "leveloffset": "+2"
+        }
+      ]
+    },
+    {
+      "assembly": "setting-compute-resource-quota-for-openshift-pipelines.adoc",
+      "topic": "Setting compute resource quota for OpenShift Pipelines",
+      "modules": [
+        {
+          "path": "modules/op-alternative-approaches-compute-resource-quota-pipelines.adoc",
+          "type": "CONCEPT",
+          "leveloffset": "+1"
+        },
+        {
+          "path": "modules/op-specifying-pipelines-resource-quota-using-priority-class.adoc",
+          "type": "PROCEDURE",
+          "leveloffset": "+1"
+        }
+      ]
+    },
+    {
+      "assembly": "protecting-tekton-workloads-from-eviction-during-node-drains.adoc",
+      "topic": "Protecting Tekton workload pods from eviction during node drains",
+      "modules": [
+        {
+          "path": "modules/op-eviction-protection-for-taskrun-pods.adoc",
+          "type": "CONCEPT",
+          "leveloffset": "+1"
+        },
+        {
+          "path": "modules/op-preventing-taskrun-pod-eviction-during-node-maintenance.adoc",
+          "type": "PROCEDURE",
+          "leveloffset": "+1"
+        }
+      ]
+    },
+    {
+      "assembly": "configuring-multicluster-support.adoc",
+      "topic": "Multicluster support for OpenShift Pipelines",
+      "modules": [
+        {
+          "path": "modules/op-about-multicluster-support.adoc",
+          "type": "CONCEPT",
+          "leveloffset": "+1"
+        },
+        {
+          "path": "modules/op-multicluster-architecture.adoc",
+          "type": "CONCEPT",
+          "leveloffset": "+1"
+        },
+        {
+          "path": "modules/op-configuring-hub-cluster-multicluster.adoc",
+          "type": "PROCEDURE",
+          "leveloffset": "+1"
+        },
+        {
+          "path": "modules/op-configuring-spoke-clusters-multicluster.adoc",
+          "type": "PROCEDURE",
+          "leveloffset": "+1"
+        },
+        {
+          "path": "modules/op-verifying-multicluster-setup.adoc",
+          "type": "PROCEDURE",
+          "leveloffset": "+1"
+        },
+        {
+          "path": "modules/op-creating-pipeline-runs-multicluster.adoc",
+          "type": "PROCEDURE",
+          "leveloffset": "+1"
+        },
+        {
+          "path": "modules/op-multicluster-limitations.adoc",
+          "type": "REFERENCE",
+          "leveloffset": "+1"
+        },
+        {
+          "path": "modules/op-multicluster-kueue-resources-reference.adoc",
+          "type": "REFERENCE",
+          "leveloffset": "+1"
+        }
+      ]
+    }
+  ]
+}

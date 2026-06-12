@@ -1,0 +1,25 @@
+{
+  "assembly": "records/using-tekton-results-for-openshift-pipelines-observability.adoc",
+  "includes": [
+    {"path": "modules/op-results-concepts.adoc", "type": "CONCEPT", "leveloffset": "+1"},
+    {"path": "modules/op-configuring-results.adoc", "type": "CONCEPT", "leveloffset": "+1"},
+    {"path": "modules/op-results-log-forward.adoc", "type": "PROCEDURE", "leveloffset": "+2"},
+    {"path": "modules/op-results-db.adoc", "type": "PROCEDURE", "leveloffset": "+2"},
+    {"path": "modules/op-configuring-retention-policy-results.adoc", "type": "PROCEDURE", "leveloffset": "+2"},
+    {"path": "modules/op-results-metrics.adoc", "type": "REFERENCE", "leveloffset": "+2"},
+    {"path": "modules/op-querying-results-records-about.adoc", "type": "CONCEPT", "leveloffset": "+1"},
+    {"path": "modules/op-prepare-opc-for-results.adoc", "type": "PROCEDURE", "leveloffset": "+2"},
+    {"path": "modules/op-query-results-name.adoc", "type": "PROCEDURE", "leveloffset": "+2"},
+    {"path": "modules/op-results-search-results.adoc", "type": "PROCEDURE", "leveloffset": "+2"},
+    {"path": "modules/op-results-search-records.adoc", "type": "PROCEDURE", "leveloffset": "+2"},
+    {"path": "modules/op-results-reference-results.adoc", "type": "REFERENCE", "leveloffset": "+2"},
+    {"path": "modules/op-results-reference-records.adoc", "type": "REFERENCE", "leveloffset": "+2"},
+    {"path": "modules/op-querying-pipelinerun-taskrun-about.adoc", "type": "CONCEPT", "leveloffset": "+1"},
+    {"path": "modules/op-results-opc-config.adoc", "type": "PROCEDURE", "leveloffset": "+2"},
+    {"path": "modules/op-results-opc-pipelinerunlist.adoc", "type": "PROCEDURE", "leveloffset": "+2"},
+    {"path": "modules/op-results-opc-taskrunlist.adoc", "type": "PROCEDURE", "leveloffset": "+2"},
+    {"path": "modules/op-results-opc-pipelinerunresults.adoc", "type": "PROCEDURE", "leveloffset": "+2"},
+    {"path": "modules/op-results-opc-taskrunresults.adoc", "type": "PROCEDURE", "leveloffset": "+2"},
+    {"path": "modules/op-results-opc-shortnames.adoc", "type": "REFERENCE", "leveloffset": "+2"}
+  ]
+}

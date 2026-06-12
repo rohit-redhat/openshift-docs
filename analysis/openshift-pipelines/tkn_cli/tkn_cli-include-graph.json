@@ -1,0 +1,85 @@
+[
+  {
+    "assembly": "installing-tkn.adoc",
+    "topic_name": "Installing tkn",
+    "includes": [
+      {
+        "module": "modules/op-installing-tkn-on-linux.adoc",
+        "type": "PROCEDURE",
+        "leveloffset": "+1"
+      },
+      {
+        "module": "modules/op-installing-tkn-on-linux-using-rpm.adoc",
+        "type": "PROCEDURE",
+        "leveloffset": "+1"
+      },
+      {
+        "module": "modules/op-installing-tkn-on-windows.adoc",
+        "type": "PROCEDURE",
+        "leveloffset": "+1"
+      },
+      {
+        "module": "modules/op-installing-tkn-on-macos.adoc",
+        "type": "PROCEDURE",
+        "leveloffset": "+1"
+      }
+    ]
+  },
+  {
+    "assembly": "op-configuring-tkn.adoc",
+    "topic_name": "Configuring tkn",
+    "includes": [
+      {
+        "module": "modules/op-tkn-enabling-tab-completion.adoc",
+        "type": "PROCEDURE",
+        "leveloffset": "+1"
+      }
+    ]
+  },
+  {
+    "assembly": "op-tkn-reference.adoc",
+    "topic_name": "Basic tkn commands",
+    "includes": [
+      {
+        "module": "modules/op-tkn-utility-commands.adoc",
+        "type": "REFERENCE",
+        "leveloffset": "+1"
+      },
+      {
+        "module": "modules/op-tkn-pipeline-management.adoc",
+        "type": "REFERENCE",
+        "leveloffset": "+1"
+      },
+      {
+        "module": "modules/op-tkn-pipeline-run.adoc",
+        "type": "REFERENCE",
+        "leveloffset": "+1"
+      },
+      {
+        "module": "modules/op-tkn-task-management.adoc",
+        "type": "REFERENCE",
+        "leveloffset": "+1"
+      },
+      {
+        "module": "modules/op-tkn-task-run.adoc",
+        "type": "REFERENCE",
+        "leveloffset": "+1"
+      },
+      {
+        "module": "modules/op-tkn-pipeline-resource-management.adoc",
+        "type": "REFERENCE",
+        "leveloffset": "+1"
+      },
+      {
+        "module": "modules/op-tkn-trigger-management.adoc",
+        "type": "REFERENCE",
+        "leveloffset": "+1"
+      },
+      {
+        "module": "modules/op-tkn-hub-interaction.adoc",
+        "type": "REFERENCE",
+        "leveloffset": "+1"
+      }
+    ]
+  }
+]

@@ -1,0 +1,153 @@
+{
+  "assembly": "records/using-tekton-results-for-openshift-pipelines-observability.adoc",
+  "variant": "self-managed",
+  "sections": [
+    {
+      "title": "Using Tekton Results for OpenShift Pipelines observability",
+      "level": 1,
+      "type": "ASSEMBLY",
+      "source_file": "records/using-tekton-results-for-openshift-pipelines-observability.adoc",
+      "line_range": [1, 11]
+    },
+    {
+      "title": "Tekton Results concepts",
+      "level": 2,
+      "type": "CONCEPT",
+      "source_file": "modules/op-results-concepts.adoc",
+      "line_range": [74, 245]
+    },
+    {
+      "title": "Configuring Tekton Results",
+      "level": 2,
+      "type": "CONCEPT",
+      "source_file": "modules/op-configuring-results.adoc",
+      "line_range": [256, 264]
+    },
+    {
+      "title": "Configuring LokiStack forwarding for logging information",
+      "level": 3,
+      "type": "PROCEDURE",
+      "source_file": "modules/op-results-log-forward.adoc",
+      "line_range": [275, 395]
+    },
+    {
+      "title": "Configuring an external database server",
+      "level": 3,
+      "type": "PROCEDURE",
+      "source_file": "modules/op-results-db.adoc",
+      "line_range": [406, 451]
+    },
+    {
+      "title": "Configuring the retention policy for Tekton Results",
+      "level": 3,
+      "type": "PROCEDURE",
+      "source_file": "modules/op-configuring-retention-policy-results.adoc",
+      "line_range": [462, 497]
+    },
+    {
+      "title": "Observability metrics for Tekton Results",
+      "level": 3,
+      "type": "REFERENCE",
+      "source_file": "modules/op-results-metrics.adoc",
+      "line_range": [508, 600]
+    },
+    {
+      "title": "Querying Tekton Results for results and records",
+      "level": 2,
+      "type": "CONCEPT",
+      "source_file": "modules/op-querying-results-records-about.adoc",
+      "line_range": [611, 619]
+    },
+    {
+      "title": "Preparing the opc utility environment for querying Tekton Results",
+      "level": 3,
+      "type": "PROCEDURE",
+      "source_file": "modules/op-prepare-opc-for-results.adoc",
+      "line_range": [630, 680]
+    },
+    {
+      "title": "Querying for results and records by name",
+      "level": 3,
+      "type": "PROCEDURE",
+      "source_file": "modules/op-query-results-name.adoc",
+      "line_range": [691, 783]
+    },
+    {
+      "title": "Searching for results",
+      "level": 3,
+      "type": "PROCEDURE",
+      "source_file": "modules/op-results-search-results.adoc",
+      "line_range": [794, 824]
+    },
+    {
+      "title": "Searching for records",
+      "level": 3,
+      "type": "PROCEDURE",
+      "source_file": "modules/op-results-search-records.adoc",
+      "line_range": [835, 901]
+    },
+    {
+      "title": "Reference information for searching results",
+      "level": 3,
+      "type": "REFERENCE",
+      "source_file": "modules/op-results-reference-results.adoc",
+      "line_range": [912, 953]
+    },
+    {
+      "title": "Reference information for searching records",
+      "level": 3,
+      "type": "REFERENCE",
+      "source_file": "modules/op-results-reference-records.adoc",
+      "line_range": [964, 989]
+    },
+    {
+      "title": "Querying results and logs by the names of pipeline runs and task runs",
+      "level": 2,
+      "type": "CONCEPT",
+      "source_file": "modules/op-querying-pipelinerun-taskrun-about.adoc",
+      "line_range": [1005, 1026]
+    },
+    {
+      "title": "Configuring the opc utility for querying results by pipeline run and task run names",
+      "level": 3,
+      "type": "PROCEDURE",
+      "source_file": "modules/op-results-opc-config.adoc",
+      "line_range": [1037, 1099]
+    },
+    {
+      "title": "Viewing a list of pipeline run names and identifiers",
+      "level": 3,
+      "type": "PROCEDURE",
+      "source_file": "modules/op-results-opc-pipelinerunlist.adoc",
+      "line_range": [1110, 1156]
+    },
+    {
+      "title": "Viewing a list of task run names and identifiers",
+      "level": 3,
+      "type": "PROCEDURE",
+      "source_file": "modules/op-results-opc-taskrunlist.adoc",
+      "line_range": [1167, 1220]
+    },
+    {
+      "title": "Viewing result information for a pipeline run",
+      "level": 3,
+      "type": "PROCEDURE",
+      "source_file": "modules/op-results-opc-pipelinerunresults.adoc",
+      "line_range": [1232, 1328]
+    },
+    {
+      "title": "Viewing result information for a task run",
+      "level": 3,
+      "type": "PROCEDURE",
+      "source_file": "modules/op-results-opc-taskrunresults.adoc",
+      "line_range": [1339, 1418]
+    },
+    {
+      "title": "Short names for command-line arguments",
+      "level": 3,
+      "type": "REFERENCE",
+      "source_file": "modules/op-results-opc-shortnames.adoc",
+      "line_range": [1429, 1445]
+    }
+  ]
+}

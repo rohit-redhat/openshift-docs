@@ -1,0 +1,328 @@
+{
+  "document": "op-release-notes-1-17",
+  "documentPath": "/Users/roparmar/git/openshift-docs/release_notes/op-release-notes-1-17.adoc",
+  "variant": "self-managed",
+  "totalRecords": 44,
+  "records": [
+    {
+      "id": 1,
+      "job": "Understand compatibility and support status",
+      "approach": "Compatibility and support matrix [reference]",
+      "evidence": "→ Lines 89-123: Compatibility and support matrix",
+      "sourceModule": "modules/op-tkn-pipelines-compatibility-support-matrix.adoc",
+      "moduleType": "REFERENCE"
+    },
+    {
+      "id": 2,
+      "job": "Learn about new features in OpenShift Pipelines 1.17",
+      "approach": "Release notes for Red Hat OpenShift Pipelines General Availability 1.17 [reference]",
+      "evidence": "→ Lines 134-393: Release notes for Red Hat OpenShift Pipelines General Availability 1.17",
+      "sourceModule": "modules/op-release-notes-1-17.adoc",
+      "moduleType": "REFERENCE"
+    },
+    {
+      "id": 3,
+      "job": "Configure multiple Git providers",
+      "approach": "Configure multiple Git providers using Git resolver [procedure]",
+      "evidence": "→ Lines 147-208: With this release, you can configure multiple Git providers by using the Git resolver",
+      "sourceModule": "modules/op-release-notes-1-17.adoc",
+      "moduleType": "REFERENCE"
+    },
+    {
+      "id": 4,
+      "job": "Monitor running PipelineRun resources at different levels",
+      "approach": "Configure monitoring level through TektonConfig CR [procedure]",
+      "evidence": "→ Lines 210-224: With this update, you can now monitor the running PipelineRun resources at the namespace, pipeline, and pipeline runlevel",
+      "sourceModule": "modules/op-release-notes-1-17.adoc",
+      "moduleType": "REFERENCE"
+    },
+    {
+      "id": 5,
+      "job": "Track who executed pipeline runs and task runs",
+      "approach": "User ID labels in YAML manifests [reference]",
+      "evidence": "→ Lines 226-227: after the execution of a pipeline run or task run, the YAML manifest contains a label showing the ID of the user who executed it",
+      "sourceModule": "modules/op-release-notes-1-17.adoc",
+      "moduleType": "REFERENCE"
+    },
+    {
+      "id": 6,
+      "job": "Apply performance tuning values to all controllers",
+      "approach": "Configure performance tuning in TektonConfig CR [procedure]",
+      "evidence": "→ Lines 228-229: when you use the spec.pipeline.performance spec in the TektonConfig CR to specify performance tuning values",
+      "sourceModule": "modules/op-release-notes-1-17.adoc",
+      "moduleType": "REFERENCE"
+    },
+    {
+      "id": 7,
+      "job": "Run skopeo-copy command with additional arguments",
+      "approach": "Pass arguments as space-separated string [procedure]",
+      "evidence": "→ Lines 233-239: you can run the skopeo-copy command with additional arguments",
+      "sourceModule": "modules/op-release-notes-1-17.adoc",
+      "moduleType": "REFERENCE"
+    },
+    {
+      "id": 8,
+      "job": "Apply security context constraints to pipelines and tasks",
+      "approach": "Ephemeral volume setting application [reference]",
+      "evidence": "→ Lines 241: OpenShift Pipelines applies the ephemeral volume setting of any security context constraint (SCC)",
+      "sourceModule": "modules/op-release-notes-1-17.adoc",
+      "moduleType": "REFERENCE"
+    },
+    {
+      "id": 9,
+      "job": "Monitor running PipelineRun resources in Pipelines as Code",
+      "approach": "Use pipelines_as_code_running_pipelineruns_count metric [reference]",
+      "evidence": "→ Lines 246-247: the pipelines_as_code_running_pipelineruns_count metric is added to show the number of running PipelineRun resources",
+      "sourceModule": "modules/op-release-notes-1-17.adoc",
+      "moduleType": "REFERENCE"
+    },
+    {
+      "id": 10,
+      "job": "Track total duration of PipelineRun resources",
+      "approach": "Use pipelines_as_code_pipelinerun_duration_seconds_sum metric [reference]",
+      "evidence": "→ Lines 248-249: the pipelines_as_code_pipelinerun_duration_seconds_sum metric is added to show the total duration in seconds",
+      "sourceModule": "modules/op-release-notes-1-17.adoc",
+      "moduleType": "REFERENCE"
+    },
+    {
+      "id": 11,
+      "job": "Include custom labels and annotations in Tekton Results",
+      "approach": "Configure summary fields in TektonResult CR [procedure]",
+      "evidence": "→ Lines 253-274: you can configure Tekton Results to include certain labels and annotations in the summary fields column",
+      "sourceModule": "modules/op-release-notes-1-17.adoc",
+      "moduleType": "REFERENCE"
+    },
+    {
+      "id": 12,
+      "job": "Generate ecdsa key pairs for artifact signing",
+      "approach": "Configure TektonConfig CR to generate x509 key pair [procedure]",
+      "evidence": "→ Lines 279-294: you can configure the TektonConfig CR to generate the x509 key pair of the ecdsa type",
+      "sourceModule": "modules/op-release-notes-1-17.adoc",
+      "moduleType": "REFERENCE"
+    },
+    {
+      "id": 13,
+      "job": "Use default Tekton Chains configuration",
+      "approach": "Default Chains configuration properties [reference]",
+      "evidence": "→ Lines 296-315: if you do not configure Tekton Chains in the TektonConfig CR, the Operator sets the configuration with default properties",
+      "sourceModule": "modules/op-release-notes-1-17.adoc",
+      "moduleType": "REFERENCE"
+    },
+    {
+      "id": 14,
+      "job": "Extract mongo-server-url from custom file paths",
+      "approach": "Use storage.docdb.mongo-server-url-path parameter [reference]",
+      "evidence": "→ Lines 317-318: Tekton Chains now supports extracting the mongo-server-url URL from a specified file",
+      "sourceModule": "modules/op-release-notes-1-17.adoc",
+      "moduleType": "REFERENCE"
+    },
+    {
+      "id": 15,
+      "job": "Migrate from ClusterTask resources",
+      "approach": "Use cluster resolver to access tasks in openshift-pipelines namespace [procedure]",
+      "evidence": "→ Lines 322-329: the deprecated ClusterTask resource is removed from the Operator",
+      "sourceModule": "modules/op-release-notes-1-17.adoc",
+      "moduleType": "REFERENCE"
+    },
+    {
+      "id": 16,
+      "job": "Replace removed community cluster tasks",
+      "approach": "Download from Tekton catalog [procedure]",
+      "evidence": "→ Lines 331-340: the community cluster tasks are removed from the Operator",
+      "sourceModule": "modules/op-release-notes-1-17.adoc",
+      "moduleType": "REFERENCE"
+    },
+    {
+      "id": 17,
+      "job": "Handle GitLab push events without commits",
+      "approach": "Error message display [reference]",
+      "evidence": "→ Lines 345: the Pipelines as Code controller correctly displays an error message warning the user that no commit is attached",
+      "sourceModule": "modules/op-release-notes-1-17.adoc",
+      "moduleType": "REFERENCE"
+    },
+    {
+      "id": 18,
+      "job": "Handle GitLab tag delete events",
+      "approach": "Error message for unsupported operation [reference]",
+      "evidence": "→ Lines 347: the controller correctly displays an error message warning the user that deleting the tag event is not supported",
+      "sourceModule": "modules/op-release-notes-1-17.adoc",
+      "moduleType": "REFERENCE"
+    },
+    {
+      "id": 19,
+      "job": "Resolve Bitbucket server variables and fields",
+      "approach": "Fixed variable resolution [reference]",
+      "evidence": "→ Lines 349: standard variables, header values, and body fields are now being resolved in PipelineRun resources for the Bitbucket server",
+      "sourceModule": "modules/op-release-notes-1-17.adoc",
+      "moduleType": "REFERENCE"
+    },
+    {
+      "id": 20,
+      "job": "Copy multiple images with skopeo-copy task",
+      "approach": "Use url.txt file when parameters are empty [procedure]",
+      "evidence": "→ Lines 351: the skopeo-copy task supports copying multiple images by using the url.txt file",
+      "sourceModule": "modules/op-release-notes-1-17.adoc",
+      "moduleType": "REFERENCE"
+    },
+    {
+      "id": 21,
+      "job": "Create repository with correct pipeline run naming",
+      "approach": "REPO_NAME.git as pipeline run name [reference]",
+      "evidence": "→ Lines 353: the issue is fixed, and the REPO_NAME.git is now used as the pipeline run name",
+      "sourceModule": "modules/op-release-notes-1-17.adoc",
+      "moduleType": "REFERENCE"
+    },
+    {
+      "id": 22,
+      "job": "Handle pipeline run validation failures",
+      "approach": "Accurate reporting in status.message field and finally task execution [reference]",
+      "evidence": "→ Lines 355: the pipeline run failure handling is fixed to accurately report validation failures",
+      "sourceModule": "modules/op-release-notes-1-17.adoc",
+      "moduleType": "REFERENCE"
+    },
+    {
+      "id": 23,
+      "job": "Handle out-of-memory pod failures",
+      "approach": "Immediate task run failure [reference]",
+      "evidence": "→ Lines 357: when a pod failed because of an out-of-memory error, the task run immediately fails",
+      "sourceModule": "modules/op-release-notes-1-17.adoc",
+      "moduleType": "REFERENCE"
+    },
+    {
+      "id": 24,
+      "job": "Process array results from CustomRun resources",
+      "approach": "Correct array result processing [reference]",
+      "evidence": "→ Lines 359: the array result is processed correctly",
+      "sourceModule": "modules/op-release-notes-1-17.adoc",
+      "moduleType": "REFERENCE"
+    },
+    {
+      "id": 25,
+      "job": "Record task run step statuses accurately",
+      "approach": "Correct status recording in TaskRun YAML manifest [reference]",
+      "evidence": "→ Lines 361: the statuses are correctly recorded",
+      "sourceModule": "modules/op-release-notes-1-17.adoc",
+      "moduleType": "REFERENCE"
+    },
+    {
+      "id": 26,
+      "job": "Mark subsequent steps as skipped after step failure",
+      "approach": "Correct skipped status marking [reference]",
+      "evidence": "→ Lines 363: the steps are marked as skipped",
+      "sourceModule": "modules/op-release-notes-1-17.adoc",
+      "moduleType": "REFERENCE"
+    },
+    {
+      "id": 27,
+      "job": "Execute finally tasks after validation failures",
+      "approach": "Finally task execution after failures [reference]",
+      "evidence": "→ Lines 365: the finally task runs",
+      "sourceModule": "modules/op-release-notes-1-17.adoc",
+      "moduleType": "REFERENCE"
+    },
+    {
+      "id": 28,
+      "job": "Start pipeline runs when .tekton directory has many files",
+      "approach": "Correct pipeline run startup [reference]",
+      "evidence": "→ Lines 367: the pipeline runs start correctly",
+      "sourceModule": "modules/op-release-notes-1-17.adoc",
+      "moduleType": "REFERENCE"
+    },
+    {
+      "id": 29,
+      "job": "Handle incorrect BitBucket event payloads",
+      "approach": "Payload validation before processing [reference]",
+      "evidence": "→ Lines 369: the controller validates payload before processing it",
+      "sourceModule": "modules/op-release-notes-1-17.adoc",
+      "moduleType": "REFERENCE"
+    },
+    {
+      "id": 30,
+      "job": "Clean up temporary Git authentication secrets",
+      "approach": "Proper secret deletion [reference]",
+      "evidence": "→ Lines 371: Pipelines as Code deletes temporary secrets properly",
+      "sourceModule": "modules/op-release-notes-1-17.adoc",
+      "moduleType": "REFERENCE"
+    },
+    {
+      "id": 31,
+      "job": "Match tag events in BitBucket",
+      "approach": "Correct tag event matching [reference]",
+      "evidence": "→ Lines 373: Pipelines as Code matches the tag events correctly",
+      "sourceModule": "modules/op-release-notes-1-17.adoc",
+      "moduleType": "REFERENCE"
+    },
+    {
+      "id": 32,
+      "job": "Record task specifications when task runs are canceled",
+      "approach": "Task specification recording [reference]",
+      "evidence": "→ Lines 375: Tekton Chains records the specification of the task",
+      "sourceModule": "modules/op-release-notes-1-17.adoc",
+      "moduleType": "REFERENCE"
+    },
+    {
+      "id": 33,
+      "job": "Record task steps accurately in Tekton Chains",
+      "approach": "Correct step recording [reference]",
+      "evidence": "→ Lines 377: the steps in the task specification and the steps executed in the task run are recorded correctly",
+      "sourceModule": "modules/op-release-notes-1-17.adoc",
+      "moduleType": "REFERENCE"
+    },
+    {
+      "id": 34,
+      "job": "Handle pipeline run timeouts correctly",
+      "approach": "Correct status reporting without invalid errors [reference]",
+      "evidence": "→ Lines 379: such messages do not appear in the log and the status is reported correctly",
+      "sourceModule": "modules/op-release-notes-1-17.adoc",
+      "moduleType": "REFERENCE"
+    },
+    {
+      "id": 35,
+      "job": "Mount workspaces only in specified steps",
+      "approach": "Workspace mounting in specified steps only [reference]",
+      "evidence": "→ Lines 381: the workspace is mounted only in the steps where it is specified",
+      "sourceModule": "modules/op-release-notes-1-17.adoc",
+      "moduleType": "REFERENCE"
+    },
+    {
+      "id": 36,
+      "job": "Manage concurrency queue in busy clusters",
+      "approach": "Proper concurrency queue management [reference]",
+      "evidence": "→ Lines 383: Pipelines as Code properly manages the concurrency queue and executes all pipeline runs",
+      "sourceModule": "modules/op-release-notes-1-17.adoc",
+      "moduleType": "REFERENCE"
+    },
+    {
+      "id": 37,
+      "job": "Apply LimitRange settings to pipelines and tasks",
+      "approach": "LimitRange overrides default requirements [reference]",
+      "evidence": "→ Lines 385: the LimitRange setting overrides the default container resource requirements",
+      "sourceModule": "modules/op-release-notes-1-17.adoc",
+      "moduleType": "REFERENCE"
+    },
+    {
+      "id": 38,
+      "job": "Identify validation failure status",
+      "approach": "Failed Validation status recording [reference]",
+      "evidence": "→ Lines 387: OpenShift Pipelines records a Failed Validation status",
+      "sourceModule": "modules/op-release-notes-1-17.adoc",
+      "moduleType": "REFERENCE"
+    },
+    {
+      "id": 39,
+      "job": "Read large Tekton bundles",
+      "approach": "Correct handling of large bundles [reference]",
+      "evidence": "→ Lines 389: the tkn command-line utilities correctly handles large Tekton bundles",
+      "sourceModule": "modules/op-release-notes-1-17.adoc",
+      "moduleType": "REFERENCE"
+    },
+    {
+      "id": 40,
+      "job": "View skipped tasks correctly",
+      "approach": "Correct display of skipped tasks [reference]",
+      "evidence": "→ Lines 391: they are no longer displayed as completed",
+      "sourceModule": "modules/op-release-notes-1-17.adoc",
+      "moduleType": "REFERENCE"
+    }
+  ]
+}

@@ -1,0 +1,1171 @@
+:_mod-docs-content-type: ASSEMBLY
+:_mod-docs-content-type: SNIPPET
+// The {product-title} attribute provides the context-sensitive name of the relevant OpenShift distribution, for example, "OpenShift Container Platform" or "OKD". The {product-version} attribute provides the product version relative to the distribution, for example "4.9".
+// {product-title} and {product-version} are parsed when AsciiBinder queries the _distro_map.yml file in relation to the base branch of a pull request.
+// See https://github.com/openshift/openshift-docs/blob/main/contributing_to_docs/doc_guidelines.adoc#product-name-and-version for more information on this topic.
+// Other common attributes are defined in the following lines:
+:data-uri:
+:icons:
+:experimental:
+:toc: macro
+:toc-title:
+:imagesdir: images
+:prewrap!:
+
+:pipelines-title: Red Hat OpenShift Pipelines
+:pipelines-shortname: OpenShift Pipelines
+:pipelines-ver: pipelines-1.22
+:pipelines-version-number: 1.22
+:osp-version-patch: 0
+:tekton-cache: Tekton Cache
+:tekton-chains: Tekton Chains
+:tekton-results: Tekton Results
+:tekton-triggers: Tekton Triggers
+:tekton-hub: Tekton Hub
+:artifact-hub: Artifact Hub
+:pac: Pipelines as Code
+:product-registry: OpenShift image registry
+// IBM Power
+:ibmpowerProductName: IBM Power
+// IBM zSystems
+:ibmzProductName: IBM zSystems
+:linuxoneProductName: IBM(R) LinuxONE
+:kebab: image:kebab.png[title="Options menu"]
+
+:op-system-base: RHEL
+:op-system-base-full: Red Hat Enterprise Linux (RHEL)
+
+:cluster-manager-first: Red Hat OpenShift Cluster Manager
+:cluster-manager: OpenShift Cluster Manager
+:cluster-manager-url: link:https://console.redhat.com/openshift[OpenShift Cluster Manager Hybrid Cloud Console]
+:cluster-manager-url-pull: link:https://console.redhat.com/openshift/install/pull-secret[pull secret from the Red Hat OpenShift Cluster Manager]
+
+:oc-first: pass:quotes[OpenShift CLI (`oc`)]
+
+// Attributes not present in the main branch
+:OCP: OpenShift Container Platform
+
+//We should use lowercase like regular OCP docs and deprecate the above.
+:ocp: OpenShift Container Platform
+
+
+:ols-official: Red{nbsp}Hat OpenShift Lightspeed
+:ols: OpenShift Lightspeed
+
+// Attributes not present in the main branch
+:rhosp: Red Hat OpenStack Platform
+[id="understanding-openshift-pipelines"]
+= Understanding {pipelines-shortname}
+:context: understanding-openshift-pipelines
+
+toc::[]
+
+:FeatureName: OpenShift Pipelines
+
+[role="_abstract"]
+{pipelines-title} is a cloud-native, continuous integration and continuous delivery (CI/CD) solution based on Kubernetes resources. It uses Tekton building blocks to automate deployments across many platforms by abstracting away the underlying implementation details. Tekton introduces several standard custom resource definitions (CRDs) for defining CI/CD pipelines that are portable across Kubernetes distributions.
+
+//Key features
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * about/understanding-openshift-pipelines.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id="op-key-features_{context}"]
+= Key features
+
+[role="_abstract"]
+{pipelines-title} provides a serverless, cloud-native CI/CD system that runs on {OCP}. It supports decentralized teams working on microservice-based architectures and integrates with existing {OCP} tools.
+
+* {pipelines-title} is a serverless CI/CD system that runs pipelines with all the required dependencies in isolated containers.
+* {pipelines-title} support decentralized teams that work on microservice-based architecture.
+* {pipelines-title} use standard CI/CD pipeline definitions that are easy to extend and integrate with the existing {OCP} tools, enabling you to scale on-demand.
+* You can use {pipelines-title} to build images with {OCP} tools such as Source-to-Image (S2I), Buildah, Buildpacks, and Kaniko that are portable across any {OCP} platform.
+* You can use the {OCP} Developer console to create Tekton resources, view logs of pipeline runs, and manage pipelines in your {OCP} namespaces.
+
+:leveloffset!:
+
+//{pipelines-shortname} concepts
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * about/understanding-openshift-pipelines.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id="op-pipelines-concepts_{context}"]
+= {pipelines-shortname} concepts
+
+[role="_abstract"]
+{pipelines-title} consists of several core concepts that work together to define and run CI/CD workflows. Tasks define individual steps of work, pipelines orchestrate multiple tasks in sequence or parallel, and task runs and pipeline runs represent the execution of those definitions. Additional concepts include workspaces for sharing data between tasks, step actions for reusable operations within tasks, and triggers for initiating pipeline runs automatically.
+
+:leveloffset!:
+
+//About tasks
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * about/understanding-openshift-pipelines.adoc
+:_mod-docs-content-type: CONCEPT
+
+[id="about-tasks_{context}"]
+= Tasks
+
+[role="_abstract"]
+You can use `Task` resources as the building blocks of a pipeline to define a set of sequentially executed steps. Each task functions as a reusable unit of work with specific inputs and outputs, capable of running individually or as part of a larger pipeline.
+
+`Task` resources are the building blocks of a pipeline and consist of sequentially executed steps. It is essentially a function of inputs and outputs. A task can run individually or as a part of the pipeline. You can reuse tasks in many pipelines.
+
+_Steps_ are a series of commands that are sequentially executed by the task and achieve a specific goal, such as building an image. Every task runs as a pod, and each step runs as a container within that pod. Because steps run within the same pod, they can access the same volumes for caching files, config maps, and secrets.
+
+The following example shows the `apply-manifests` task.
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: apply-manifests
+spec:
+  workspaces:
+  - name: source
+  params:
+    - name: manifest_dir
+      description: The directory in source that contains yaml manifests
+      type: string
+      default: "k8s"
+  steps:
+    - name: apply
+      image: image-registry.openshift-image-registry.svc:5000/openshift/cli:latest
+      workingDir: /workspace/source
+      command: ["/bin/bash", "-c"]
+      args:
+        - |-
+          echo Applying manifests in $(params.manifest_dir) directory
+          oc apply -f $(params.manifest_dir)
+          echo -----------------------------------
+----
+
+`apiVersion`:: The task API version, `v1`.
+
+`kind`:: The type of Kubernetes object, `Task`.
+
+`metadata.name`:: The unique name of this task.
+
+`spec`:: The list of parameters and steps in the task and the workspace used by the task.
+
+This task starts the pod and runs a container inside that pod by using the specified image to run the specified commands.
+
+[NOTE]
+====
+Starting with {pipelines-shortname} 1.6, the step YAML file no longer has the following defaults:
+
+* The `HOME` environment variable does not default to the `/tekton/home` directory
+* The `workingDir` field does not default to the `/workspace` directory
+
+Instead, the container for the step defines the `HOME` environment variable and the `workingDir` field. However, you can override the default values by specifying the custom values in the YAML file for the step.
+
+As a temporary measure, to keep backward compatibility with the older {pipelines-shortname} versions, you can set the following fields in the `TektonConfig` custom resource definition to `false`:
+
+```
+spec:
+  pipeline:
+    disable-working-directory-overwrite: false
+    disable-home-env-overwrite: false
+```
+====
+
+:leveloffset!:
+//About when expression
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * about/understanding-openshift-pipelines.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id="about-whenexpression_{context}"]
+= When expression
+
+[role="_abstract"]
+You can use 'when' expressions to guard task execution by defining specific criteria that tasks must meet before running. These expressions let you control the flow of your pipeline, including the execution of tasks in the `finally` section, based on static inputs, variables, or results from earlier tasks.
+
+When expressions guard task execution by setting criteria for running tasks within a pipeline. They contain a list of components that allow a task to run only when the task meets certain criteria. You can also include when expressions in the final set of tasks that you specify by using the `finally` field in the pipeline YAML file.
+
+The key components of a when expression are as follows:
+
+* `input`: Specifies static inputs or variables such as a parameter, task result, and execution status. You must enter a valid input. If you do not enter a valid input, its value defaults to an empty string.
+* `operator`: Specifies the relationship of an input to a set of `values`. Enter `in` or `notin` as your operator values.
+* `values`: Specifies an array of string values. Enter a non-empty array of static values or variables such as parameters, results, and a bound state of a workspace.
+
+The declared when expressions evaluate before the task runs. If the when expression evaluates to `True`, the task runs. If the when expression evaluates to `False`, the task skips.
+
+You can use the when expressions in various use cases. For example, whether:
+
+* The result of a preceding task is as expected.
+* A file in a Git repository has changed in the earlier commits.
+* An image exists in the registry.
+* An optional workspace is available.
+
+The following example shows the when expressions for a pipeline run. The pipeline run will run the `create-file` task only if the task meets the following criteria: the `path` parameter is `README.md`, and the `echo-file-exists` task runs only if the `exists` result from the `check-file` task is `yes`.
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: guarded-pr-
+spec:
+  taskRunTemplate:
+    serviceAccountName: pipeline
+  pipelineSpec:
+    params:
+      - name: path
+        type: string
+        description: The path of the file to be created
+    workspaces:
+      - name: source
+        description: |
+          This workspace is shared among all the pipeline tasks to read/write common resources
+    tasks:
+      - name: create-file
+        when:
+          - input: "$(params.path)"
+            operator: in
+            values: ["README.md"]
+        workspaces:
+          - name: source
+            workspace: source
+        taskSpec:
+          workspaces:
+            - name: source
+              description: The workspace to create the readme file in
+          steps:
+            - name: write-new-stuff
+              image: ubuntu
+              script: 'touch $(workspaces.source.path)/README.md'
+      - name: check-file
+        params:
+          - name: path
+            value: "$(params.path)"
+        workspaces:
+          - name: source
+            workspace: source
+        runAfter:
+          - create-file
+        taskSpec:
+          params:
+            - name: path
+          workspaces:
+            - name: source
+              description: The workspace to check for the file
+          results:
+            - name: exists
+              description: indicates whether the file exists or is missing
+          steps:
+            - name: check-file
+              image: alpine
+              script: |
+                if test -f $(workspaces.source.path)/$(params.path); then
+                  printf yes | tee /tekton/results/exists
+                else
+                  printf no | tee /tekton/results/exists
+                fi
+      - name: echo-file-exists
+        when:
+          - input: "$(tasks.check-file.results.exists)"
+            operator: in
+            values: ["yes"]
+        taskSpec:
+          steps:
+            - name: echo
+              image: ubuntu
+              script: 'echo file exists'
+...
+      - name: task-should-be-skipped-1
+        when:
+          - input: "$(params.path)"
+            operator: notin
+            values: ["README.md"]
+        taskSpec:
+          steps:
+            - name: echo
+              image: ubuntu
+              script: exit 1
+...
+    finally:
+      - name: finally-task-should-be-executed
+        when:
+          - input: "$(tasks.echo-file-exists.status)"
+            operator: in
+            values: ["Succeeded"]
+          - input: "$(tasks.status)"
+            operator: in
+            values: ["Succeeded"]
+          - input: "$(tasks.check-file.results.exists)"
+            operator: in
+            values: ["yes"]
+          - input: "$(params.path)"
+            operator: in
+            values: ["README.md"]
+        taskSpec:
+          steps:
+            - name: echo
+              image: ubuntu
+              script: 'echo finally done'
+  params:
+    - name: path
+      value: README.md
+  workspaces:
+    - name: source
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 16Mi
+----
+
+`kind`:: Specifies the type of Kubernetes object. In this example, `PipelineRun`.
+
+`tasks[0].name`:: Task `create-file` used in the pipeline.
+
+`tasks[2].name.when`:: The `when` expression that specifies to run the `echo-file-exists` task only if the `exists` result from the `check-file` task is `yes`.
+
+`tasks[3].name.when`:: The `when` expression that specifies to skip the `task-should-be-skipped-1` task only if the `path` parameter is `README.md`.
+
+`tasks[4].name.when`:: The `when` expression that specifies to run the `finally-task-should-be-executed` task only if the execution status of the `echo-file-exists` task and the task status is `Succeeded`, the `exists` result from the `check-file` task is `yes`, and the `path` parameter is `README.md`.
+
+The *Pipeline Run details* page of the {OCP} web console shows the status of the tasks and when expressions as follows:
+
+* The task meets all criteria: Tasks and the when expression symbol, which appears as a diamond shape, appear in a **success** state.
+
+* The task does not meet one of the criteria: The Task skips. Skipped tasks and the when expression symbol appear in a **skipped** state.
+
+* The task meets none of the criteria: The Task skips. Skipped tasks and the when expression symbol appear in a **skipped** state.
+
+* Task run fails: Failed tasks and the when expression symbol appear in a **failed** state.
+
+:leveloffset!:
+//About final tasks
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * about/understanding-openshift-pipelines.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id="about-finally_tasks_{context}"]
+= Finally tasks
+
+[role="_abstract"]
+You can use `finally` tasks to run a final set of tasks in your pipeline regardless of whether the earlier tasks succeed or fail. These tasks run in parallel after all other pipeline tasks finish, allowing you to perform cleanup or notification actions before the pipeline exits.
+
+The `finally` tasks are the final set of tasks specified using the `finally` field in the pipeline YAML file. A `finally` task always executes the tasks within the pipeline, irrespective of whether the pipeline runs succeed.
+
+You can configure a `finally` task to consume the results of any task within the same pipeline. This approach does not change the order in which this final task runs.
+
+The following example shows a code snippet of the `clone-cleanup-workspace` pipeline. This code clones the repository into a shared workspace and cleans up the workspace. After the pipeline tasks finish, the `cleanup` task specified in the `finally` section of the pipeline YAML file cleans up the workspace.
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: clone-cleanup-workspace
+spec:
+  workspaces:
+    - name: git-source
+  tasks:
+    - name: clone-app-repo
+      taskRef:
+        name: git-clone-from-catalog
+      params:
+        - name: url
+          value: https://github.com/tektoncd/community.git
+        - name: subdirectory
+          value: application
+      workspaces:
+        - name: output
+          workspace: git-source
+  finally:
+    - name: cleanup
+      taskRef:
+        name: cleanup-workspace
+      workspaces:
+        - name: source
+          workspace: git-source
+    - name: check-git-commit
+      params:
+        - name: commit
+          value: $(tasks.clone-app-repo.results.commit)
+      taskSpec:
+        params:
+          - name: commit
+        steps:
+          - name: check-commit-initialized
+            image: alpine
+            script: |
+              if [[ ! $(params.commit) ]]; then
+                exit 1
+              fi
+----
+
+`metadata.name`:: Unique name of the pipeline.
+
+`spec.workspaces[0].name`:: The shared workspace where the pipeline copies the git repository.
+
+`spec.tasks[0].name`:: The task to clone the application repository to the shared workspace.
+
+`spec.finally[0].name`:: The task to clean-up the shared workspace.
+
+`spec.finally.taskRef`:: A reference to the task that runs in the task run.
+
+`spec.finally[0].name.workspaces`:: A shared storage volume that a task in a pipeline needs at runtime to receive input or offer output.
+
+`spec.finally[1].name.params`:: A list of parameters required for a task. If a parameter does not have an implicit default value, you must explicitly set its value.
+
+`spec.finally[1].name.taskSpec`:: Embedded task definition.
+
+:leveloffset!:
+//About task run
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * about/understanding-openshift-pipelines.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id="about-taskrun_{context}"]
+= Task run
+
+[role="_abstract"]
+You can use a `TaskRun` resource to instantiate and run a task with specific inputs, outputs, and execution parameters on a cluster. You can start a task run independently or as part of a pipeline run to run the steps defined in a task.
+
+A `TaskRun` instantiates a task for execution with specific inputs, outputs, and execution parameters on a cluster. You can start it on its own or as part of a pipeline run for each task in a pipeline.
+
+A task consists of one or more steps that run container images, and each container image performs a specific piece of build work. A task run starts the steps in a task in the specified order, until all steps run successfully or a failure occurs. A `TaskRun` is automatically created by a `PipelineRun` for each task in a pipeline.
+
+The following example shows a task run that runs the `apply-manifests` task with the relevant input parameters:
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: TaskRun
+metadata:
+  name: apply-manifests-taskrun
+spec:
+  taskRunTemplate:
+    serviceAccountName: pipeline
+  taskRef:
+    kind: Task
+    name: apply-manifests
+  workspaces:
+  - name: source
+    persistentVolumeClaim:
+      claimName: source-pvc
+----
+
+`apiVersion`:: The task run API version `v1`.
+
+`kind`:: Specifies the type of Kubernetes object. In this example, `TaskRun`.
+
+`metadata.name`:: Unique name to identify this task run.
+
+`spec`:: Definition of the task run. For this task run, the task and the required workspace you define.
+
+`spec.taskRef`:: Name of the task reference used for this task run. This task run runs the `apply-manifests` task.
+
+`spec.workspaces`:: Workspace used by the task run.
+
+:leveloffset!:
+//About pipelines
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * about/understanding-openshift-pipelines.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id="about-pipelines_{context}"]
+= Pipelines
+
+[role="_abstract"]
+You can use a `Pipeline` resource to arrange a collection of tasks in a specific order of execution. By defining a pipeline, you construct complex workflows that automate the build, deployment, and delivery of your applications.
+
+A `Pipeline` is a collection of `Task` resources arranged in a specific order of execution. You run them to construct complex workflows that automate the build, deployment and delivery of applications by using one or more tasks to define a CI/CD workflow for your application.
+
+A `Pipeline` resource definition consists of several fields or attributes, which together enable the pipeline to run a specific goal. Each `Pipeline` resource definition must contain at least one `Task` resource, which obtains specific inputs and produces specific outputs. The pipeline definition can also optionally include several _Conditions_, _Workspaces_, _Parameters_, or _Resources_ depending on the application requirements.
+
+The following example shows the `build-and-deploy` pipeline, which builds an application image from a Git repository by using the `buildah` task provided in the `openshift-pipelines` namespace:
+
+[source,yaml,subs="attributes+"]
+----
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: build-and-deploy
+spec:
+  workspaces:
+  - name: shared-workspace
+  params:
+  - name: deployment-name
+    type: string
+    description: name of the deployment to be patched
+  - name: git-url
+    type: string
+    description: url of the git repo for the code of deployment
+  - name: git-revision
+    type: string
+    description: revision to use from repo of the code for deployment
+    default: "{pipelines-ver}"
+  - name: IMAGE
+    type: string
+    description: image to be built from the code
+  tasks:
+  - name: fetch-repository
+    taskRef:
+      resolver: cluster
+      params:
+      - name: kind
+        value: task
+      - name: name
+        value: git-clone
+      - name: namespace
+        value: openshift-pipelines
+    workspaces:
+    - name: output
+      workspace: shared-workspace
+    params:
+    - name: URL
+      value: $(params.git-url)
+    - name: SUBDIRECTORY
+      value: ""
+    - name: DELETE_EXISTING
+      value: "true"
+    - name: REVISION
+      value: $(params.git-revision)
+  - name: build-image
+    taskRef:
+      resolver: cluster
+      params:
+      - name: kind
+        value: task
+      - name: name
+        value: buildah
+      - name: namespace
+        value: openshift-pipelines
+    workspaces:
+    - name: source
+      workspace: shared-workspace
+    params:
+    - name: TLSVERIFY
+      value: "false"
+    - name: IMAGE
+      value: $(params.IMAGE)
+    runAfter:
+    - fetch-repository
+  - name: apply-manifests
+    taskRef:
+      name: apply-manifests
+    workspaces:
+    - name: source
+      workspace: shared-workspace
+    runAfter:
+    - build-image
+  - name: update-deployment
+    taskRef:
+      name: update-deployment
+    workspaces:
+    - name: source
+      workspace: shared-workspace
+    params:
+    - name: deployment
+      value: $(params.deployment-name)
+    - name: IMAGE
+      value: $(params.IMAGE)
+    runAfter:
+    - apply-manifests
+----
+
+`apiVersion`:: Pipeline API version `v1`.
+
+`kind`:: Specifies the type of Kubernetes object. In this example, `Pipeline`.
+
+`metadata.name`:: Unique name of this pipeline.
+
+`spec`:: Specifies the definition and structure of the pipeline.
+
+`spec.workspaces`:: Workspaces used across all the tasks in the pipeline.
+
+`spec.params`:: Parameters used across all the tasks in the pipeline.
+
+`tasks[0].name`:: Specifies the list of tasks used in the pipeline.
+
+`tasks[1].name`:: Task `build-image`, which uses the `buildah` task provided in the `openshift-pipelines` namespace to build application images from a given Git repository.
+
+`tasks[2].name`:: Task `apply-manifests`, which uses a user-defined task with the same name.
+
+`tasks[2].name.runAfter`:: Specifies the sequence in which tasks run in a pipeline. In this example, the `apply-manifests` task runs only after the `build-image` task finishes.
+
+[NOTE]
+====
+The {pipelines-title} Operator installs the Buildah task in the `openshift-pipelines` namespace and creates the `pipeline` service account with enough permissions to build and push an image. The Buildah task can fail when associated with a different service account with insufficient permissions.
+====
+
+:leveloffset!:
+//About pipeline run
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * about/understanding-openshift-pipelines.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id="about-pipelinerun_{context}"]
+= Pipeline run
+
+[role="_abstract"]
+You can use a `PipelineRun` resource to instantiate and run a pipeline with specific inputs, outputs, and credentials. This resource binds a pipeline to a workspace and parameter values, enabling you to run your CI/CD workflow for a specific scenario.
+
+A `PipelineRun` is a type of resource that binds a pipeline, workspaces, credentials, and a set of parameter values specific to a scenario to run the CI/CD workflow.
+
+A pipeline run is the running instance of a pipeline. It also creates a task run for each task in the pipeline run.
+
+The pipeline executes the tasks sequentially until they are complete or a task fails. The `status` field tracks and the progress of each task run and stores it for monitoring and auditing purposes.
+
+The following example runs the `build-and-deploy` pipeline with relevant resources and parameters:
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: build-deploy-api-pipelinerun
+spec:
+  pipelineRef:
+    name: build-and-deploy
+  params:
+  - name: deployment-name
+    value: vote-api
+  - name: git-url
+    value: https://github.com/openshift-pipelines/vote-api.git
+  - name: IMAGE
+    value: image-registry.openshift-image-registry.svc:5000/pipelines-tutorial/vote-api
+  workspaces:
+  - name: shared-workspace
+    volumeClaimTemplate:
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 500Mi
+----
+
+`apiVersion`:: Pipeline run API version `v1`.
+
+`kind`:: The type of Kubernetes object. In this example, `PipelineRun`.
+
+`metadata.name`:: Unique name to identify this pipeline run.
+
+`spec.pipelineRef.name`:: Name of the pipeline to run. In this example, `build-and-deploy`.
+
+`spec.params`:: The list of parameters required to run the pipeline.
+
+`spec.workspaces`:: Workspace used by the pipeline run.
+
+:leveloffset!:
+
+[role="_additional-resources"]
+.Additional resources
+
+* xref:../secure/authenticating-pipelines-repos-using-secrets.adoc#authenticating-pipelines-repos-using-secrets[Authenticating pipelines with repositories using secrets]
+
+//Pod templates
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * about/understanding-openshift-pipelines.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id="about-podtemplate_{context}"]
+= Pod templates
+
+[role="_abstract"]
+You can use a pod template in a `PipelineRun` or `TaskRun` custom resource (CR) to configure the pods that run your tasks. You can then set specific parameters, such as security contexts or user IDs, for every pod created during the pipeline or task run.
+
+Optionally, you can define a _pod template_ in a `PipelineRun` or `TaskRun` custom resource (CR). You can use any parameters available for a `Pod` CR in the pod template. When creating pods for running the pipeline or task, {pipelines-shortname} sets these parameters for every pod.
+
+For example, you can use a pod template to make the pod run as a user and not as root.
+
+For a pipeline run, you can define a pod template in the `pipelineRunTemplate.podTemplate` spec, as in the following example:
+
+.Example `PipelineRun` CR with a pod template
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: mypipelinerun
+spec:
+  pipelineRef:
+    name: mypipeline
+  taskRunTemplate:
+    podTemplate:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+----
+
+[NOTE]
+====
+In the earlier API version `v1beta1`, the pod template for a `PipelineRun` CR defined `podTemplate` directly in the `spec:` section. This format is not supported in the `v1` API.
+====
+
+For a task run, you can define a pod template in the `podTemplate` spec, as in the following example:
+
+.Example `TaskRun` CR with a pod template
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: TaskRun
+metadata:
+  name: mytaskrun
+  namespace: default
+spec:
+  taskRef:
+    name: mytask
+  podTemplate:
+    schedulerName: volcano
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1001
+----
+
+:leveloffset!:
+
+[role="_additional-resources"]
+.Additional resources
+* link:https://docs.openshift.com/container-platform/4.17/nodes/pods/nodes-pods-using.html[Using pods]
+
+//About workspace
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * about/understanding-openshift-pipelines.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id="about-workspaces_{context}"]
+= Workspaces
+
+[role="_abstract"]
+You can use workspaces to declare shared storage volumes that tasks in a pipeline need for input or output at runtime. By separating volume declaration from runtime storage, workspaces allow you to specify the filesystem location independently, making your tasks reusable and flexible across different environments.
+
+[NOTE]
+====
+We recommend that you use workspaces instead of the `PipelineResource` CRs in {pipelines-title}, as `PipelineResource` CRs are difficult to debug, limited in scope, and make tasks less reusable.
+====
+
+Instead of specifying the actual location of the volumes, workspaces allow you to declare the filesystem or parts of the filesystem that you need at runtime. A task or pipeline declares the workspace, and you must give the specific location details of the volume. It is then mounted into that workspace in a task run or a pipeline run. This separation of volume declaration from runtime storage volumes makes the tasks reusable, flexible, and independent of the user environment.
+
+With workspaces, you can:
+
+* Store task inputs and outputs
+* Share data among tasks
+* Use it as a mount point for credentials held in secrets
+* Use it as a mount point for configurations held in config maps
+* Use it as a mount point for common tools shared by an organization
+* Create a cache of build artifacts that accelerate jobs
+
+You can specify workspaces in the `TaskRun` or `PipelineRun` using:
+
+* A read-only config map or secret
+* An existing persistent volume claim shared with other tasks
+* A persistent volume claim from a volume claim template
+* An `emptyDir` that the system discards when the task run completes
+
+The following example shows a code snippet of the `build-and-deploy` pipeline, which declares a `shared-workspace` workspace for the `build-image` and `apply-manifests` tasks you define in the pipeline.
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: build-and-deploy
+spec:
+  workspaces:
+  - name: shared-workspace
+  params:
+...
+  tasks:
+  - name: build-image
+    taskRef:
+      resolver: cluster
+      params:
+      - name: kind
+        value: task
+      - name: name
+        value: buildah
+      - name: namespace
+        value: openshift-pipelines
+    workspaces:
+    - name: source
+      workspace: shared-workspace
+    params:
+    - name: TLSVERIFY
+      value: "false"
+    - name: IMAGE
+      value: $(params.IMAGE)
+    runAfter:
+    - fetch-repository
+  - name: apply-manifests
+    taskRef:
+      name: apply-manifests
+    workspaces:
+    - name: source
+      workspace: shared-workspace
+    runAfter:
+      - build-image
+...
+----
+
+`spec.workspaces`:: List of workspaces shared between the tasks defined in the pipeline. A pipeline can define as many workspaces as you need. In this example, the pipeline declares only one workspace named `shared-workspace`.
+
+`tasks`:: Definition of tasks used in the pipeline. This snippet defines two tasks, `build-image` and `apply-manifests`, which share a common workspace.
+
+`tasks.workspaces`:: List of workspaces used in the `build-image` task. A task definition can include as many workspaces as it requires. However, we recommend that a task uses at most one writable workspace.
+
+`tasks.workspaces[0].name`:: Name that uniquely identifies the workspace you use in the task. This task uses one workspace named `source`.
+
+`tasks.workspaces[0].name.workspace`:: Name of the pipeline workspace used by the task. Note that the workspace `source` in turn uses the pipeline workspace named `shared-workspace`.
+
+`tasks[1].name.workspaces`:: List of workspaces used in the `apply-manifests` task. Note that this task shares the `source` workspace with the `build-image` task.
+
+Workspaces help tasks share data, and let you specify one or more volumes that each task in the pipeline requires during execution. You can create a persistent volume claim or give a volume claim template that creates a persistent volume claim for you.
+
+The following code snippet of the `build-deploy-api-pipelinerun` pipeline run uses a volume claim template to create a persistent volume claim for defining the storage volume for the `shared-workspace` workspace used in the `build-and-deploy` pipeline.
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: build-deploy-api-pipelinerun
+spec:
+  pipelineRef:
+    name: build-and-deploy
+  params:
+...
+
+  workspaces:
+  - name: shared-workspace
+    volumeClaimTemplate:
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 500Mi
+----
+
+`workspaces`:: Specifies the list of pipeline workspaces for which volume binding you will offer in the pipeline run.
+
+`workspaces[0].name`:: The name of the pipeline workspace that receives the offered volume.
+
+`workspaces[0].name.volumeClaimTemplates`:: Specifies a volume claim template that creates a persistent volume claim to define the storage volume for the workspace.
+
+:leveloffset!:
+
+//About stepactions
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * about/understanding-openshift-pipelines.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id="about-stepactions_{context}"]
+= Step actions
+
+[role="_abstract"]
+You can use a `StepAction` custom resource (CR) to define a reusable action that a step performs. By referencing a `StepAction` object from a step, you can share and reuse action definitions across many tasks or reference actions from external sources.
+
+A step is a part of a task. If you define a step in a task, you cannot reference this step from another task.
+
+This CR contains the action that a step performs. You can reference a `StepAction` object from a step to create a step that performs the action. You can also use resolvers to reference a `StepAction` definition that is available from an external source.
+
+The following examples shows a `StepAction` CR named `apply-manifests-action`. This step action applies manifests from a source tree to your {OCP} environment:
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: StepAction
+metadata:
+  name: apply-manifests-action
+spec:
+  params:
+  - name: working_dir
+    description: The working directory where the source is located
+    type: string
+    default: "/workspace/source"
+  - name: manifest_dir
+    description: The directory in source that contains yaml manifests
+    default: "k8s"
+  results:
+  - name: output
+    description: The output of the oc apply command
+  image: image-registry.openshift-image-registry.svc:5000/openshift/cli:latest
+  env:
+  - name: MANIFEST_DIR
+    value: $(params.manifest_dir)
+  workingDir: $(params.working_dir)
+  script: |
+      #!/usr/bin/env bash
+      oc apply -f "$MANIFEST_DIR" | tee $(results.output)
+----
+
+`spec.params[n].name.type`:: The `type` specification for a parameter is optional.
+
+The `StepAction` CR does not include definitions of workspaces. Instead, the step action expects that the task that includes the action also provides the mounted source tree, typically using a workspace.
+
+A `StepAction` object can define parameters and results. When you reference this object, you must specify the values for the parameters of the `StepAction` object in the definition of the step. The results of the `StepAction` object automatically become the results of the step.
+
+[IMPORTANT]
+====
+To avoid malicious attacks that use the shell, the `StepAction` CR does not support using parameter values in a `script` value. Instead, you must use the `env:` section to define environment variables that contain the parameter values.
+====
+
+The following example task includes a step that references the `apply-manifests-action`  step action, provides the necessary parameters, and uses the result:
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: apply-manifests-with-action
+spec:
+  workspaces:
+  - name: source
+  params:
+  - name: manifest_dir
+    description: The directory in source that contains yaml manifests
+    type: string
+    default: "k8s"
+  steps:
+  - name: apply
+    ref:
+      name: apply-manifests-action
+    params:
+    - name: working_dir
+      value: "/workspace/source"
+    - name: manifest_dir
+      value: $(params.manifest_dir)
+  - name: display_result
+    script: 'echo $(step.apply.results.output)'
+----
+
+:leveloffset!:
+[role="_additional-resources"]
+.Additional resources
+
+* xref:../create/remote-pipelines-tasks-resolvers.adoc#remote-pipelines-tasks-resolvers[Specifying remote pipelines, tasks, and step actions using resolvers]
+
+//About triggers
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * about/understanding-openshift-pipelines.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id="about-triggers_{context}"]
+= Triggers
+
+[role="_abstract"]
+You can use Triggers in conjunction with pipelines to create a comprehensive CI/CD system driven by Kubernetes resources. Triggers capture external events, such as Git pull requests, and process them to extract information, enabling you to automatically instantiate pipelines and deploy resources based on event data.
+
+For example, you define a CI/CD workflow by using {pipelines-title} for your application. The pipeline must start for any new changes to take effect in the application repository. Triggers automate this process by capturing and processing any change event and by triggering a pipeline run that deploys the new image with the latest changes.
+
+Triggers consist of the following main resources that work together to form a reusable, decoupled, and self-sustaining CI/CD system:
+
+* The `TriggerBinding` resource extracts the fields from an event payload and stores them as parameters.
++
+The following example shows a code snippet of the `TriggerBinding` resource, from which you extract the Git repository information from the received event payload:
++
+[source,yaml]
+----
+apiVersion: triggers.tekton.dev/v1
+kind: TriggerBinding
+metadata:
+  name: vote-app
+spec:
+  params:
+  - name: git-repo-url
+    value: $(body.repository.url)
+  - name: git-repo-name
+    value: $(body.repository.name)
+  - name: git-revision
+    value: $(body.head_commit.id)
+----
+
+`apiVersion`:: The API version of the `TriggerBinding` resource. In this example, `v1`.
+
+`kind`:: Specifies the type of Kubernetes object. In this example, `TriggerBinding`.
+
+`metadata.name`:: A unique name to identify the `TriggerBinding` resource.
+
+`spec.params`:: The list of parameters extracted from the received event payload and passed to the `TriggerTemplate` resource. In this example, the `TriggerTemplate` extracts the Git repository URL, name, and revision from the body of the event payload.
+
+* The `TriggerTemplate` resource acts as a standard for creating resources. It specifies how the parameterized data from the `TriggerBinding` resource defines the new resources. A trigger template receives input from the trigger binding, then performs a series of actions that results in the creation of new pipeline resources and the initiation of a new pipeline run.
++
+The following example shows a code snippet of a `TriggerTemplate` resource, which creates a pipeline run by using the Git repository information received from the `TriggerBinding` resource you just created:
++
+[source,yaml,subs="attributes+"]
+----
+apiVersion: triggers.tekton.dev/v1
+kind: TriggerTemplate
+metadata:
+  name: vote-app
+spec:
+  params:
+  - name: git-repo-url
+    description: The git repository url
+  - name: git-revision
+    description: The git revision
+    default: {pipelines-ver}
+  - name: git-repo-name
+    description: The name of the deployment to be created / patched
+
+  resourcetemplates:
+  - apiVersion: tekton.dev/v1
+    kind: PipelineRun
+    metadata:
+      name: build-deploy-$(tt.params.git-repo-name)-$(uid)
+    spec:
+      taskRunTemplate:
+        serviceAccountName: pipeline
+      pipelineRef:
+        name: build-and-deploy
+      params:
+      - name: deployment-name
+        value: $(tt.params.git-repo-name)
+      - name: git-url
+        value: $(tt.params.git-repo-url)
+      - name: git-revision
+        value: $(tt.params.git-revision)
+      - name: IMAGE
+        value: image-registry.openshift-image-registry.svc:5000/pipelines-tutorial/$(tt.params.git-repo-name)
+      workspaces:
+      - name: shared-workspace
+        volumeClaimTemplate:
+         spec:
+          accessModes:
+           - ReadWriteOnce
+          resources:
+            requests:
+              storage: 500Mi
+----
+
+`apiVersion`:: The API version of the `TriggerTemplate` resource. In this example, `v1`.
+
+`kind`:: Specifies the type of Kubernetes object. In this example, `TriggerTemplate`.
+
+`metadata.name`:: Unique name to identify the `TriggerTemplate` resource.
+
+`spec.params`:: Parameters supplied by the `TriggerBinding` resource.
+
+`resourcetemplates`:: List of templates that specify how you create resources by using the parameters received through the `TriggerBinding` or `EventListener` resources.
+
+* The `Trigger` resource combines the `TriggerBinding` and `TriggerTemplate` resources, and optionally, the `interceptors` event processor.
++
+Interceptors process all the events for a specific platform that runs before the `TriggerBinding` resource. You can use interceptors to filter the payload, verify events, define and test trigger conditions, and implement other useful processing. Interceptors use secret for event verification. After the event data passes through an interceptor, it then goes to the trigger before you pass the payload data to the trigger binding. You can also use an interceptor to change the behavior of the associated trigger referenced in the `EventListener` specification.
+//image::op-triggers.png[alt="Diagram showing the flow of an event through the EventListener, Interceptors, Trigger, TriggerBinding, and finally creating a PipelineRun by using the TriggerTemplate.", width="100%"] //It seems like this was removed. It's not in the image directory.
++
+The following example shows a code snippet of a `Trigger` resource, named `vote-trigger` that connects the `TriggerBinding` and `TriggerTemplate` resources, and the `interceptors` event processor.
++
+[source,yaml]
+----
+apiVersion: triggers.tekton.dev/v1
+kind: Trigger
+metadata:
+  name: vote-trigger
+spec:
+  taskRunTemplate:
+    serviceAccountName: pipeline
+  interceptors:
+    - ref:
+        name: "github"
+      params:
+        - name: "secretRef"
+          value:
+            secretName: github-secret
+            secretKey: secretToken
+        - name: "eventTypes"
+          value: ["push"]
+  bindings:
+    - ref: vote-app
+  template:
+     ref: vote-app
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: github-secret
+type: Opaque
+stringData:
+  secretToken: "1234567"
+----
+
+`apiVersion`:: The API version of the `Trigger` resource. In this example, `v1`.
+
+`kind`:: Specifies the type of Kubernetes object. In this example, `Trigger`.
+
+`metadata.name`:: A unique name to identify the `Trigger` resource.
+
+`spec.taskRunTemplate.serviceAccountName`:: The service account name to use.
+
+`interceptors.ref.name`:: Interceptor name to reference. In this example, `github`.
+
+`interceptors.params`:: The required parameters to specify.
+
+`bindings.ref`:: The name of the `TriggerBinding` resource to connect to the `TriggerTemplate` resource.
+
+`template.ref`:: The name of the `TriggerTemplate` resource to connect to the `TriggerBinding` resource.
+
+`kind`:: The Secret to use to verify events.
+
+* The `EventListener` resource provides an endpoint, or an event sink, that listens for incoming HTTP-based events with a JSON payload. You extract event parameters from each `TriggerBinding` resource, and then process this data to create Kubernetes resources as specified by the corresponding `TriggerTemplate` resource. The `EventListener` resource also performs lightweight event processing or basic filtering on the payload by using event `interceptors`, which identify the type of payload and optionally change it. Currently, pipeline triggers support five types of interceptors:
+
+** Webhook Interceptors
+** GitHub Interceptors
+** GitLab Interceptors
+** Bitbucket Interceptors, and
+** Common Expression Language (CEL) Interceptors.
++
+The following example shows an `EventListener` resource, which references the `Trigger` resource named `vote-trigger`.
++
+[source,yaml]
+----
+apiVersion: triggers.tekton.dev/v1
+kind: EventListener
+metadata:
+  name: vote-app
+spec:
+  taskRunTemplate:
+    serviceAccountName: pipeline
+  triggers:
+    - triggerRef: vote-trigger
+----
+
+`apiVersion`:: The API version of the `EventListener` resource. In this example, `v1`.
+
+`kind`:: Specifies the type of Kubernetes object. In this example, `EventListener`.
+
+`metadata.name`:: A unique name to identify the `EventListener` resource.
+
+`spec.taskRunTemplate.serviceAccountName`:: The service account name to use.
+
+`spec.triggers.triggerRef`:: The name of the `Trigger` resource that the `EventListener` resource references.
+
+:leveloffset!:
+
+[role="_additional-resources"]
+== Additional resources
+
+* xref:../install_config/installing-pipelines.adoc#installing-pipelines[Installing {pipelines-shortname}]
+* xref:../create/creating-applications-with-cicd-pipelines.adoc#creating-applications-with-cicd-pipelines[Creating CI/CD solutions for applications using {pipelines-shortname}]
+* link:https://docs.openshift.com/container-platform/3.11/architecture/networking/routes.html#re-encryption-termination[Re-encryption Termination]
+* link:https://docs.openshift.com/container-platform/latest/networking/routes/secured-routes.html[Secured routes]

@@ -1,0 +1,12 @@
+{
+  "book_name": "Custom Tekton Hub instance",
+  "book_dir": "hub",
+  "distros": ["openshift-pipelines"],
+  "topics": [
+    {
+      "name": "Using Tekton Hub with OpenShift Pipelines",
+      "file": "using-tekton-hub-with-openshift-pipelines",
+      "type": "assembly"
+    }
+  ]
+}

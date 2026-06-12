@@ -1,0 +1,52 @@
+{
+  "document": "using-repository-crd.adoc",
+  "variant": "self-managed",
+  "includes": [
+    {
+      "line": 16,
+      "file": "modules/op-creating-repository-cr.adoc",
+      "leveloffset": "+1",
+      "type": "REFERENCE",
+      "title": "Creating the Repository custom resource",
+      "lines_in_reduced": "70-105"
+    },
+    {
+      "line": 18,
+      "file": "modules/op-creating-global-repository-cr.adoc",
+      "leveloffset": "+1",
+      "type": "PROCEDURE",
+      "title": "Creating the global Repository custom resource",
+      "lines_in_reduced": "107-165"
+    },
+    {
+      "line": 20,
+      "file": "modules/op-setting-concurrency-limits-in-repository-crd.adoc",
+      "leveloffset": "+1",
+      "type": "REFERENCE",
+      "title": "Setting concurrency limits",
+      "lines_in_reduced": "167-197"
+    },
+    {
+      "line": 22,
+      "file": "modules/op-changing-source-branch-in-repository-crd.adoc",
+      "leveloffset": "+1",
+      "type": "REFERENCE",
+      "title": "Changing the source branch for the pipeline definition",
+      "lines_in_reduced": "199-230"
+    },
+    {
+      "line": 24,
+      "file": "modules/op-custom-parameter-expansion.adoc",
+      "leveloffset": "+1",
+      "type": "CONCEPT",
+      "title": "Custom parameter expansion",
+      "lines_in_reduced": "232-307"
+    }
+  ],
+  "summary": {
+    "total_includes": 5,
+    "concept_modules": 1,
+    "procedure_modules": 1,
+    "reference_modules": 3
+  }
+}

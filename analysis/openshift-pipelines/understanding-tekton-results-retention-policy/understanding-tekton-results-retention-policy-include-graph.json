@@ -1,0 +1,63 @@
+{
+  "document": "understanding-tekton-results-retention-policy-self-managed-reduced.adoc",
+  "metadata": {
+    "doc_type": "ASSEMBLY",
+    "total_lines": 227,
+    "analysis_date": "2026-06-11"
+  },
+  "structure": [
+    {
+      "line_start": 1,
+      "line_end": 56,
+      "type": "attributes",
+      "description": "AsciiDoc attributes and product definitions"
+    },
+    {
+      "line_start": 57,
+      "line_end": 67,
+      "type": "assembly_header",
+      "heading": "Understanding the Tekton Results retention policy",
+      "level": "assembly",
+      "abstract": "The Tekton Results Retention Policy Agent manages how long the database retains Tekton Results and Records before pruning them."
+    },
+    {
+      "line_start": 68,
+      "line_end": 136,
+      "type": "example",
+      "heading": "Sample YAML configuration",
+      "level": "content",
+      "description": "TektonConfig YAML showing retention policy configuration with defaultRetention, policies, and runAt fields"
+    },
+    {
+      "line_start": 137,
+      "line_end": 177,
+      "type": "module",
+      "module_type": "CONCEPT",
+      "heading": "Fine-grained retention policies",
+      "level": "module",
+      "id": "op-fine-grained-retention-policies",
+      "abstract": "You can use the policies field to define rules that apply to specific Results.",
+      "includes_table": true,
+      "table_description": "Policy field definitions (name, selector, matchNamespaces, matchLabels, matchAnnotations, matchStatuses, retention)"
+    },
+    {
+      "line_start": 178,
+      "line_end": 226,
+      "type": "example",
+      "heading": "Example config map with multiple policies",
+      "level": "content",
+      "description": "ConfigMap YAML with 4 policies showing different retention strategies and examples of how Tekton Results applies them"
+    }
+  ],
+  "modules": [
+    {
+      "id": "op-fine-grained-retention-policies",
+      "type": "CONCEPT",
+      "file": "embedded",
+      "lines": "143-177",
+      "heading": "Fine-grained retention policies"
+    }
+  ],
+  "dependencies": [],
+  "notes": "This is a small, focused assembly with one embedded concept module. No external includes detected."
+}

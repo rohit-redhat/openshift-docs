@@ -1,0 +1,17 @@
+{
+  "assembly": "release_notes/op-release-notes-1-17.adoc",
+  "includes": [
+    {
+      "line": 29,
+      "path": "modules/op-tkn-pipelines-compatibility-support-matrix.adoc",
+      "type": "REFERENCE",
+      "heading": "Compatibility and support matrix"
+    },
+    {
+      "line": 33,
+      "path": "modules/op-release-notes-1-17.adoc",
+      "type": "REFERENCE",
+      "heading": "Release notes for Red Hat OpenShift Pipelines General Availability 1.17"
+    }
+  ]
+}

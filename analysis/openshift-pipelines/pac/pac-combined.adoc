@@ -1,0 +1,4091 @@
+= About Pipelines as Code
+
+:_mod-docs-content-type: ASSEMBLY
+:_mod-docs-content-type: SNIPPET
+// The {product-title} attribute provides the context-sensitive name of the relevant OpenShift distribution, for example, "OpenShift Container Platform" or "OKD". The {product-version} attribute provides the product version relative to the distribution, for example "4.9".
+// {product-title} and {product-version} are parsed when AsciiBinder queries the _distro_map.yml file in relation to the base branch of a pull request.
+// See https://github.com/openshift/openshift-docs/blob/main/contributing_to_docs/doc_guidelines.adoc#product-name-and-version for more information on this topic.
+// Other common attributes are defined in the following lines:
+:data-uri:
+:icons:
+:experimental:
+:toc: macro
+:toc-title:
+:imagesdir: images
+:prewrap!:
+
+:pipelines-title: Red Hat OpenShift Pipelines
+:pipelines-shortname: OpenShift Pipelines
+:pipelines-ver: pipelines-1.22
+:pipelines-version-number: 1.22
+:osp-version-patch: 0
+:tekton-cache: Tekton Cache
+:tekton-chains: Tekton Chains
+:tekton-results: Tekton Results
+:tekton-triggers: Tekton Triggers
+:tekton-hub: Tekton Hub
+:artifact-hub: Artifact Hub
+:pac: Pipelines as Code
+:product-registry: OpenShift image registry
+// IBM Power
+:ibmpowerProductName: IBM Power
+// IBM zSystems
+:ibmzProductName: IBM zSystems
+:linuxoneProductName: IBM(R) LinuxONE
+:kebab: image:kebab.png[title="Options menu"]
+
+:op-system-base: RHEL
+:op-system-base-full: Red Hat Enterprise Linux (RHEL)
+
+:cluster-manager-first: Red Hat OpenShift Cluster Manager
+:cluster-manager: OpenShift Cluster Manager
+:cluster-manager-url: link:https://console.redhat.com/openshift[OpenShift Cluster Manager Hybrid Cloud Console]
+:cluster-manager-url-pull: link:https://console.redhat.com/openshift/install/pull-secret[pull secret from the Red Hat OpenShift Cluster Manager]
+
+:oc-first: pass:quotes[OpenShift CLI (`oc`)]
+
+// Attributes not present in the main branch
+:OCP: OpenShift Container Platform
+
+//We should use lowercase like regular OCP docs and deprecate the above.
+:ocp: OpenShift Container Platform
+
+
+:ols-official: Red{nbsp}Hat OpenShift Lightspeed
+:ols: OpenShift Lightspeed
+
+// Attributes not present in the main branch
+:rhosp: Red Hat OpenStack Platform
+[id="about-pipelines-as-code"]
+= About {pac}
+:context: about-pipelines-as-code
+
+toc::[]
+
+
+// :FeatureName: Pipelines as Code
+[role="_abstract"]
+With {pac}, cluster administrators and users with the required privileges can define pipeline templates as part of source code Git repositories. When triggered by a source code push or a pull request for the configured Git repository, {pac} runs the pipeline and reports the status.
+
+[id="pac-key-features"]
+== Key features
+{pac} supports the following features:
+
+* Pull request status and control on the platform hosting the Git repository.
+* GitHub Checks API to set the status of a pipeline run, including rechecks.
+* GitHub pull request and commit events.
+* Pull request actions in comments, such as `/retest`.
+* Git events filtering and a separate pipeline for each event.
+* Automatic task resolution in {pipelines-shortname}, including local tasks, {tekton-hub}, and remote URLs.
+* Retrieval of configurations using GitHub blobs and objects API.
+* Access Control List (ACL) over a GitHub organization or using a Prow style `OWNERS` file.
+* The `tkn pac` CLI plugin for managing bootstrapping and {pac} repositories.
+* Support for GitHub App, GitHub Webhook, Bitbucket Data Center, and Bitbucket Cloud.
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/using-pipelines-as-code-repos.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id="pac-concepts_{context}"]
+= {pac} concepts
+
+{pac} interacts with your Git repository provider. To use {pac}, you must first configure this integration.
+[role="_abstract"]
+{pac} interacts with your Git repository provider. To use {pac}, you must first configure this integration.
+
+You can use {pac} with any number of repositories within your Git repository provider. For each repository, you must create a `Repository` custom resource (CR) within an {OCP} namespace that you control. This CR has information that {pac} can use to access this repository.
+
+{pac} starts the pipeline runs for a repository within the namespace containing the `Repository` CR for this repository.
+
+Inside your Git repository, you must create a `.tekton` directory and store pipeline run definitions as YAML files in this directory. Each pipeline run that you define must include annotations that find the events that must trigger this pipeline run.
+
+The definition can reference other YAML files in the same directory. For example, you can define a pipeline in a separate YAML file and see this pipeline in the pipeline run file. You can also use annotations in the pipeline run definition to reference task and pipeline resources from {tekton-hub}, from HTTP locations, and from other paths in your directory. You can use special variables in the definition to reference execution context, such as the name of the branch.
+
+When a matching event happens, {pac} creates a `PipelineRun` CR based on the definition that you provided in the repository. Creating a `PipelineRun` CR triggers execution of the pipeline defined in the pipeline run.
+
+{pac} uses the _{pac} resolver_ to create the `PipelineRun` CR based on your definition. The {pac} resolver retrieves all of the resources that you referenced by using annotations and adds them to the `PipelineRun` CR. If the {pac} resolver fails to retrieve any referenced resource, {pac} logs an error and does not create a pipeline run.
+
+{pac} also replaces dynamic variables in your pipeline run definition with their values.
+
+[IMPORTANT]
+====
+By default, when creating a `PipelineRun` CR for a pull request or push event, {pac} uses the definitions from the `.tekton` directory of the source branch of the pull request or push event. If the pull request or push event modifies the `.tekton` directory, {pac} uses the modified version.
+
+You can define the `pipelinerun_provenance: "default_branch"` setting in the `Repository` CR to change this behaviour. If you specify this setting, {pac} always uses definitions from the `.tekton` directory of the default branch configured on the Git repository provider, such as `main`, `master`, or `trunk`.
+====
+
+:leveloffset!:
+
+= Installing and configuring Pipelines as Code
+
+:_mod-docs-content-type: ASSEMBLY
+:_mod-docs-content-type: SNIPPET
+// The {product-title} attribute provides the context-sensitive name of the relevant OpenShift distribution, for example, "OpenShift Container Platform" or "OKD". The {product-version} attribute provides the product version relative to the distribution, for example "4.9".
+// {product-title} and {product-version} are parsed when AsciiBinder queries the _distro_map.yml file in relation to the base branch of a pull request.
+// See https://github.com/openshift/openshift-docs/blob/main/contributing_to_docs/doc_guidelines.adoc#product-name-and-version for more information on this topic.
+// Other common attributes are defined in the following lines:
+:data-uri:
+:icons:
+:experimental:
+:toc: macro
+:toc-title:
+:imagesdir: images
+:prewrap!:
+
+:pipelines-title: Red Hat OpenShift Pipelines
+:pipelines-shortname: OpenShift Pipelines
+:pipelines-ver: pipelines-1.22
+:pipelines-version-number: 1.22
+:osp-version-patch: 0
+:tekton-cache: Tekton Cache
+:tekton-chains: Tekton Chains
+:tekton-results: Tekton Results
+:tekton-triggers: Tekton Triggers
+:tekton-hub: Tekton Hub
+:artifact-hub: Artifact Hub
+:pac: Pipelines as Code
+:product-registry: OpenShift image registry
+// IBM Power
+:ibmpowerProductName: IBM Power
+// IBM zSystems
+:ibmzProductName: IBM zSystems
+:linuxoneProductName: IBM(R) LinuxONE
+:kebab: image:kebab.png[title="Options menu"]
+
+:op-system-base: RHEL
+:op-system-base-full: Red Hat Enterprise Linux (RHEL)
+
+:cluster-manager-first: Red Hat OpenShift Cluster Manager
+:cluster-manager: OpenShift Cluster Manager
+:cluster-manager-url: link:https://console.redhat.com/openshift[OpenShift Cluster Manager Hybrid Cloud Console]
+:cluster-manager-url-pull: link:https://console.redhat.com/openshift/install/pull-secret[pull secret from the Red Hat OpenShift Cluster Manager]
+
+:oc-first: pass:quotes[OpenShift CLI (`oc`)]
+
+// Attributes not present in the main branch
+:OCP: OpenShift Container Platform
+
+//We should use lowercase like regular OCP docs and deprecate the above.
+:ocp: OpenShift Container Platform
+
+
+:ols-official: Red{nbsp}Hat OpenShift Lightspeed
+:ols: OpenShift Lightspeed
+
+// Attributes not present in the main branch
+:rhosp: Red Hat OpenStack Platform
+[id="install-config-pipelines-as-code"]
+= Installing and configuring {pac}
+:context: install-config-pipelines-as-code
+
+toc::[]
+
+
+// :FeatureName: Pipelines as Code
+[role="_abstract"]
+You can install {pac} as a part of {pipelines-title} installation.
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/install-config-pipelines-as-code.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="installing-pipelines-as-code-on-an-openshift-cluster_{context}"]
+= Installing {pac} on an {OCP}
+
+[role="_abstract"]
+When you install the {pipelines-title} Operator, the system installs {pac} in the `openshift-pipelines` namespace. For more details, see _Installing {pipelines-shortname}_ in the _Additional resources_ section.
+
+.Procedure
+
+. To disable the default installation of {pac} with the Operator, set the value of the `enable` parameter to `false` in the `TektonConfig` custom resource:
++
+[source,yaml]
+----
+apiVersion: operator.tekton.dev/v1alpha1
+kind: TektonConfig
+metadata:
+  name: config
+spec:
+  platforms:
+    openshift:
+      pipelinesAsCode:
+        enable: false
+        settings:
+          application-name: {pac} CI
+          auto-configure-new-github-repo: "false"
+          bitbucket-cloud-check-source-ip: "true"
+          hub-catalog-name: tekton
+          hub-url: https://api.hub.tekton.dev/v1
+          remote-tasks: "true"
+          secret-auto-create: "true"
+# ...
+----
+
+. Optionally, you can run the following command:
++
+[source,terminal]
+----
+$ oc patch tektonconfig config --type="merge" \
+     -p '{"spec": {"platforms": {"openshift":{"pipelinesAsCode": {"enable": false}}}}}'
+----
+
+. To enable the default installation of {pac} with the {pipelines-title} Operator, set the value of the `enable` parameter to `true` in the `TektonConfig` custom resource:
++
+[source,yaml]
+----
+apiVersion: operator.tekton.dev/v1alpha1
+kind: TektonConfig
+metadata:
+  name: config
+spec:
+  platforms:
+    openshift:
+      pipelinesAsCode:
+        enable: true
+        settings:
+          application-name: {pac} CI
+          auto-configure-new-github-repo: "false"
+          bitbucket-cloud-check-source-ip: "true"
+          hub-catalog-name: tekton
+          hub-url: https://api.hub.tekton.dev/v1
+          remote-tasks: "true"
+          secret-auto-create: "true"
+# ...
+----
+
+. Optionally, you can run the following command:
++
+[source,terminal]
+----
+$ oc patch tektonconfig config --type="merge" \
+     -p '{"spec": {"platforms": {"openshift":{"pipelinesAsCode": {"enable": true}}}}}'
+----
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/install-config-pipelines-as-code.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id="installing-pipelines-as-code-cli_{context}"]
+= Installing {pac} CLI
+
+[role="_abstract"]
+Cluster administrators can use the `tkn pac` and `opc` CLI tools on local machines or as containers for testing. Installing the `tkn` CLI for {pipelines-title} automatically installs the `tkn pac` and `opc` CLI tools.
+
+You can install the `tkn pac` and `opc` version `{pipelines-version-number}.{osp-version-patch}` binaries for the supported platforms:
+
+* link:https://mirror.openshift.com/pub/cgw/pipelines/{pipelines-version-number}.{osp-version-patch}/tkn-linux-amd64.tar.gz[Linux (x86_64, amd64)]
+* link:https://mirror.openshift.com/pub/cgw/pipelines/{pipelines-version-number}.{osp-version-patch}/tkn-linux-s390x.tar.gz[Linux on {ibmzProductName} and {linuxoneProductName} (s390x)]
+* link:https://mirror.openshift.com/pub/cgw/pipelines/{pipelines-version-number}.{osp-version-patch}/tkn-linux-ppc64le.tar.gz[Linux on {ibmpowerProductName} (ppc64le)]
+* link:https://mirror.openshift.com/pub/cgw/pipelines/{pipelines-version-number}.{osp-version-patch}/tkn-linux-arm64.tar.gz[Linux on ARM (aarch64, arm64)]
+* link:https://mirror.openshift.com/pub/cgw/pipelines/{pipelines-version-number}.{osp-version-patch}/tkn-macos-amd64.tar.gz[macOS]
+* link:https://mirror.openshift.com/pub/cgw/pipelines/{pipelines-version-number}.{osp-version-patch}/tkn-windows-amd64.zip[Windows]
+
+// Binaries also need to be updated in the following modules:
+// op-installing-tkn-on-linux.adoc
+// op-installing-tkn-on-windows.adoc
+// op-installing-tkn-on-macos.adoc
+
+// In addition, you can install `tkn pac` using the following methods:
+
+// [CAUTION]
+// ====
+// The `tkn pac` CLI tool available using these methods is _not updated regularly_.
+// ====
+
+// * Install on Linux or Mac OS using the `brew` package manager:
+// +
+// [source,terminal]
+// ----
+// $ brew install openshift-pipelines/pipelines-as-code/tektoncd-pac
+// ----
+// +
+// You can upgrade the package by running the following command:
+// +
+// [source,terminal]
+// ----
+// $ brew upgrade openshift-pipelines/pipelines-as-code/tektoncd-pac
+// ----
+
+// * Install as a container using `podman`:
+// +
+// [source,terminal]
+// ----
+// $ podman run -e KUBECONFIG=/tmp/kube/config -v ${HOME}/.kube:/tmp/kube \
+//      -it quay.io/openshift-pipeline/pipelines-as-code tkn pac help
+// ----
+// +
+// You can also use `docker` as a substitute for `podman`.
+
+// * Install from the GitHub repository using `go`:
+// +
+// [source,terminal]
+// ----
+// $ go install github.com/openshift-pipelines/pipelines-as-code/cmd/tkn-pac
+// ----
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/install-config-pipelines-as-code.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="customizing-pipelines-as-code-configuration_{context}"]
+= Customizing {pac} configuration
+
+[role="_abstract"]
+To customize {pac}, cluster administrators can configure the following parameters in the `TektonConfig` custom resource, in the `platforms.openshift.pipelinesAsCode.settings` spec:
+
+.Customizing {pac} configuration
+[options="header"]
+|===
+
+| Parameter | Description | Default
+
+| `application-name` | The name of the application. For example, the name displayed in the GitHub Checks labels. | `"Pipelines as Code CI"`
+
+| `secret-auto-create` | When enabled, {pac} automatically creates a secret by using the token from the GitHub application. You can use this secret with private repositories. | `enabled`
+
+| `remote-tasks` | When enabled, allows remote tasks from pipeline run annotations. | `enabled`
+
+| `hub-url` | The base URL for the link:https://artifacthub.io[{artifact-hub}]. | `https://artifacthub.io`
+
+| `hub-catalog-name` | The {tekton-hub} catalog name. | `tekton`
+
+| `tekton-dashboard-url` | The URL of the {tekton-hub} dashboard. {pac} uses this URL to generate a `PipelineRun` URL on the {tekton-hub} dashboard.  | NA
+
+| `bitbucket-cloud-check-source-ip` | When enabled, secures the service requests by querying IP ranges for a public Bitbucket. Changing this value might create a security risk. | `enabled`
+
+| `bitbucket-cloud-additional-source-ip` | Additional IP ranges or networks, separated by commas. | NA
+
+| `max-keep-run-upper-limit` | A maximum limit for the `max-keep-run` value for a pipeline run. | NA
+
+| `default-max-keep-runs` | A default limit for the `max-keep-run` value for a pipeline run. If defined, {pac} applies the value to all pipeline runs that do not have a `max-keep-run` annotation. | NA
+
+| `auto-configure-new-github-repo` | Configures new GitHub repositories automatically. {pac} sets up a namespace and creates a custom resource for your repository. This parameter is only supported with GitHub applications. | `disabled`
+
+| `auto-configure-repo-namespace-template` | Configures a template to automatically generate the namespace for your new repository, if you enable `auto-configure-new-github-repo`. | `{repo_name}-pipelines`
+
+| `auto-configure-repo-repository-template` | Configures a template to automatically generate the name for your new `Repository` custom resource (CR), if you enable `auto-configure-new-github-repo`. | `{{repo_name}}-repo-cr`
+
+| `error-log-snippet` | Enables or disables log snippets for failed tasks in a pipeline. Disable this parameter to prevent data leakage. {pipelines-shortname} truncates snippets to 65,000 characters. | `true`
+
+| `error-log-snippet-number-of-lines` | Configures the number of lines displayed in error log snippets. | `3`
+
+| `error-detection-from-container-logs` | Enables or disables inspecting container logs for error messages and exposing them as pull request annotations. Applies only with the GitHub app. | `true`
+
+| `error-detection-max-number-of-lines` | The maximum number of lines inspected in the container logs to search for error messages. Set to `-1` to inspect an unlimited number of lines. | 50
+
+| `secret-github-app-token-scoped` | When `true`, {pac} scopes the GitHub access token to only the repository with the pipeline definition. When `false`, you can use the `TektonConfig` CR and the `Repository` CR to scope the token to additional repositories. | `true`
+
+| `secret-github-app-scope-extra-repos` | Additional repositories for scoping the generated GitHub access token. |
+
+| `enable-cancel-in-progress-on-pull-requests` | Cancels in-progress pipeline runs when a user pushes a new commit to a pull request. {pac} cancels the old run only after the new one starts. The `cancel-in-progress` annotation on individual runs overrides this setting. | `false`
+
+| `enable-cancel-in-progress-on-push` | Cancels in-progress pipeline runs when a user pushes a new commit. {pac} cancels the old run only after the new one starts. The `cancel-in-progress` annotation on individual runs overrides this setting. | `false`
+
+|===
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/install-config-pipelines-as-code.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="pac-additional-controller_{context}"]
+= Configuring additional {pac} controllers to support additional GitHub apps
+
+[role="_abstract"]
+By default, you can configure {pac} to interact with one GitHub app. In some cases you might need to use more than one GitHub app. For example, you might use different GitHub accounts or different GitHub instances such as GitHub Enterprise or GitHub SaaS. To use more than one GitHub app, you must configure an additional {pac} controller for every additional GitHub app.
+
+.Procedure
+
+. In the `TektonConfig` custom resource, add the `additionalPACControllers` section to the `platforms.openshift.pipelinesAsCode` spec, as in the following example:
++
+.Example `additionalPACControllers` section
+[source,yaml]
+----
+apiVersion: operator.tekton.dev/v1
+kind: TektonConfig
+metadata:
+  name: config
+spec:
+  platforms:
+    openshift:
+      pipelinesAsCode:
+        additionalPACControllers:
+          pac_controller_2:
+            enable: true
+            secretName: pac_secret_2
+            settings:
+# ...
+----
+`pac_controller_2`:: The name of the controller. This name must be unique and not exceed 25 characters in length.
+`enable`:: This parameter is optional. Set this parameter to `true` to enable the additional controller or to `false` to disable the additional controller. The default value is `true`.
+`secretName`:: Set this parameter to the name of a secret that you must create for the GitHub app.
+`settings`:: Optional. Use the `settings` block to configure any {pac} settings for the additional controller when the settings must be different from the main {pac} controller.
+
+. Optional: If you want to use more than two GitHub apps, create additional sections under the `pipelinesAsCode.additionalPACControllers` spec to configure a {pac} controller for every GitHub instance. Use a unique name for every controller.
+
+:leveloffset!:
+
+[role="_additional-resources"]
+.Additional resources
+
+* xref:../pac/install-config-pipelines-as-code.adoc#customizing-pipelines-as-code-configuration_install-config-pipelines-as-code[Customizing {pac} configuration]
+
+* xref:../pac/using-pipelines-as-code-repos.adoc#pac-configuring-github-app-manually_using-pipelines-as-code-repos[Configuring a GitHub App manually and creating a secret for {pac}]
+
+[role="_additional-resources"]
+== Additional resources
+
+* xref:../install_config/installing-pipelines.adoc#installing-pipelines[Installing {pipelines-shortname}]
+* xref:../tkn_cli/installing-tkn.adoc#installing-tkn[Installing tkn]
+* xref:../release_notes/op-release-notes-1-22.adoc#op-release-notes-1-22[{pipelines-title} release notes]
+
+= Using Pipelines as Code with a Git repository hosting service provider
+
+:_mod-docs-content-type: ASSEMBLY
+:_mod-docs-content-type: SNIPPET
+// The {product-title} attribute provides the context-sensitive name of the relevant OpenShift distribution, for example, "OpenShift Container Platform" or "OKD". The {product-version} attribute provides the product version relative to the distribution, for example "4.9".
+// {product-title} and {product-version} are parsed when AsciiBinder queries the _distro_map.yml file in relation to the base branch of a pull request.
+// See https://github.com/openshift/openshift-docs/blob/main/contributing_to_docs/doc_guidelines.adoc#product-name-and-version for more information on this topic.
+// Other common attributes are defined in the following lines:
+:data-uri:
+:icons:
+:experimental:
+:toc: macro
+:toc-title:
+:imagesdir: images
+:prewrap!:
+
+:pipelines-title: Red Hat OpenShift Pipelines
+:pipelines-shortname: OpenShift Pipelines
+:pipelines-ver: pipelines-1.22
+:pipelines-version-number: 1.22
+:osp-version-patch: 0
+:tekton-cache: Tekton Cache
+:tekton-chains: Tekton Chains
+:tekton-results: Tekton Results
+:tekton-triggers: Tekton Triggers
+:tekton-hub: Tekton Hub
+:artifact-hub: Artifact Hub
+:pac: Pipelines as Code
+:product-registry: OpenShift image registry
+// IBM Power
+:ibmpowerProductName: IBM Power
+// IBM zSystems
+:ibmzProductName: IBM zSystems
+:linuxoneProductName: IBM(R) LinuxONE
+:kebab: image:kebab.png[title="Options menu"]
+
+:op-system-base: RHEL
+:op-system-base-full: Red Hat Enterprise Linux (RHEL)
+
+:cluster-manager-first: Red Hat OpenShift Cluster Manager
+:cluster-manager: OpenShift Cluster Manager
+:cluster-manager-url: link:https://console.redhat.com/openshift[OpenShift Cluster Manager Hybrid Cloud Console]
+:cluster-manager-url-pull: link:https://console.redhat.com/openshift/install/pull-secret[pull secret from the Red Hat OpenShift Cluster Manager]
+
+:oc-first: pass:quotes[OpenShift CLI (`oc`)]
+
+// Attributes not present in the main branch
+:OCP: OpenShift Container Platform
+
+//We should use lowercase like regular OCP docs and deprecate the above.
+:ocp: OpenShift Container Platform
+
+
+:ols-official: Red{nbsp}Hat OpenShift Lightspeed
+:ols: OpenShift Lightspeed
+
+// Attributes not present in the main branch
+:rhosp: Red Hat OpenStack Platform
+[id="using-pipelines-as-code-repos"]
+= Using {pac} with a Git repository hosting service provider
+:context: using-pipelines-as-code-repos
+
+toc::[]
+[role="_abstract"]
+After installing {pac}, cluster administrators can configure a Git repository hosting service provider.
+
+The following services are supported:
+
+* GitHub App
+* GitHub Webhook
+* GitLab
+* Bitbucket Data Center
+* Bitbucket Cloud
+
+[NOTE]
+====
+GitHub App is the recommended service for using with {pac}.
+====
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/using-pipelines-as-code-repos.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id="using-pipelines-as-code-with-a-github-app_{context}"]
+= GitHub App integration with {pac}
+
+[role="_abstract"]
+GitHub Apps integrate {pipelines-title} with Git-based workflows. Cluster administrators configure a single GitHub App for all users, with webhooks pointing to the {pac} controller endpoint to trigger pipeline runs.
+
+
+There are three ways to set up a GitHub app for {pac}:
+
+* Use the `tkn` command line utility.
+* Use the Administrator perspective of the web console.
+* Set up the app manually in GitHub and then create a secret for {pac}.
+
+By default, {pac} can communicate with one GitHub app. If you configured additional {pac} controllers to communicate with additional GitHub apps, configure each of the GitHub apps separately. You must set up GitHub apps for any additional controllers manually.
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://docs.github.com/en/developers/apps/getting-started-with-apps/about-apps[About GitHub Apps on GitHub] (GitHub)
+
+:leveloffset!:
+
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * pac/using-pipelines-as-code-repos.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="pac-configuring-github-app-cli_{context}"]
+= Configure a GitHub App using the command line interface
+
+[role="_abstract"]
+You can use the `tkn` command line utility to create a GitHub app and configure the {pac} controller for the GitHub app.
+
+[IMPORTANT]
+====
+If you created additional {pac} controllers to support additional GitHub apps, you can use this procedure only for the main controller. To create a GitHub app for an additional controller, use the manual procedure.
+====
+
+.Prerequisites
+
+* You logged on to the {OCP} cluster as a cluster administrator.
+* You installed the `tkn` command line utility with the `tkn pac` plugin.
+
+.Procedure
+
+* Enter the following command:
++
+[source,terminal]
+----
+$ tkn pac bootstrap github-app
+----
++
+This command assumes that your account uses a standard github.com API endpoint. If you use a different GitHub API endpoint, for example, if you use GitHub Enterprise, use the `--github-api-url` option to specify the endpoint, as in the following example:
++
+.Example command
+[source,terminal]
+----
+$ tkn pac bootstrap github-app --github-api-url https://github.com/enterprises/example-enterprise
+----
+
+.Verification
+
+* Navigate to your GitHub account or organization settings to verify that the new GitHub App is displayed in the *GitHub Apps* section.
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://docs.github.com/en/developers/apps/getting-started-with-apps/about-apps[About GitHub Apps on GitHub] (GitHub)
+
+
+:leveloffset!:
+
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * pac/using-pipelines-as-code-repos.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="creating-a-github-application-in-administrator-perspective_{context}"]
+= Create a GitHub App in administrator perspective
+
+[role="_abstract"]
+As a cluster administrator, you can configure your GitHub App with the {ocp} cluster to use {pac}. You can then run a set of tasks required for build deployment.
+
+[IMPORTANT]
+====
+If you created additional {pac} controllers to support additional GitHub apps, you can use this procedure only for the main controller. To create a GitHub app for an additional controller, use the manual procedure.
+====
+
+.Prerequisites
+You have installed the {pipelines-title} `{pipelines-ver}` operator from the Operator Hub.
+
+.Procedure
+. In the administrator perspective, navigate to *Pipelines* using the navigation pane.
+. Click *Setup GitHub App* on the *Pipelines* page.
+. Enter your GitHub App name. For example, `pipelines-ci-clustername-testui`.
+. Click *Setup*.
+. Enter your Git password when prompted in the browser.
+. Click *Create GitHub App for <username>*, where `<username>` is your GitHub user name.
+
+.Verification
+After successful creation of the GitHub App, the {OCP} web console opens and displays the details about the application.
+
+image::Github-app-details.png[GitHub app details]
+
+{pac} saves the details of the GitHub App as a secret in the `openShift-pipelines` namespace.
+
+To view details such as name, link, and secret associated with the GitHub applications, go to *Pipelines* and click *View GitHub App*.
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://docs.github.com/en/apps/creating-github-apps/about-creating-github-apps/about-creating-github-apps[About creating GitHub Apps on GitHub] (GitHub)
+
+
+:leveloffset!:
+
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * pac/using-pipelines-as-code-repos.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="pac-configuring-github-app-manually_{context}"]
+= Configure a GitHub App manually and create a secret for {pac}
+
+[role="_abstract"]
+You can use the GitHub user interface to create a GitHub app. Then you must create a secret that configures {pac} to connect to GitHub app.
+
+If you created additional {pac} controllers to support additional GitHub apps, you must use this procedure for the additional controllers.
+
+.Prerequisites
+
+* You have installed the {pipelines-title} {pipelines-ver} Operator from the OperatorHub.
+* You have a GitHub account with permissions to create GitHub Apps for your personal account or organization.
+* You are logged on to the {OCP} cluster as a cluster administrator.
+
+.Procedure
+. Sign in to your GitHub account.
+
+. In the GitHub menu, select **Settings** -> **Developer settings** -> **GitHub Apps**, then click **New GitHub App**.
+
+. Give the following information in the GitHub App form:
+
+* **GitHub Application Name**: `{pipelines-shortname}`
+* **Homepage URL**: OpenShift Console URL
+* **Webhook URL**: The {pac} route or ingress URL. You can find it by running the following command:
++
+[source,terminal]
+----
+$ echo https://$(oc get route -n openshift-pipelines pipelines-as-code-controller -o jsonpath='{.spec.host}')
+----
++
+Alternatively, to configure the GitHub app for an additional {pac} controller, replace `pipelines-as-code-controller` with the name of the controller that you configured, as in the following example:
++
+.Example command
+[source,terminal]
+----
+$ echo https://$(oc get route -n openshift-pipelines pac_controller_2 -o jsonpath='{.spec.host}')
+----
+
+* **Webhook secret**: An arbitrary secret. You can generate a secret by running the following command:
++
+[source,terminal]
+----
+$ openssl rand -hex 20
+----
+
+. Select the following items in the **Repository permissions** section:
+
+* **Checks**: `Read & Write`
+* **Contents**: `Read & Write`
+* **Issues**: `Read & Write`
+* **Metadata**: `Read-only`
+* **Pull request**: `Read & Write`
+
+. Select the following item in the **Organization permissions** section:
+
+* **Members**: `Read-only`
+
+. Subscribe to the following events:
+
+* **Check run**
+* **Check suite**
+* **Commit comment**
+* **Issue comment**
+* **Pull request**
+* **Push**
+
+. Click **Create GitHub App**.
+
+. On the **Details** page of the newly created GitHub App, note the **App ID** displayed at the top.
+
+. In the **Private keys** section, click **Generate Private key** to automatically generate and download a private key for the GitHub app. Securely store the private key for future reference and usage.
+
+. Install the created App on a repository that you want to use with {pac}.
+
+. Configure {pac} to access the newly created GitHub App by entering the following command:
++
+[source,terminal]
+----
+$ oc -n openshift-pipelines create secret generic pipelines-as-code-secret \
+        --from-literal github-private-key="$(cat <PATH_PRIVATE_KEY>)" \
+        --from-literal github-application-id="<APP_ID>" \
+        --from-literal webhook.secret="<WEBHOOK_SECRET>"
+----
+`-n`:: If you created additional {pac} controllers and you are configuring the app for an additional controller, replace `pipelines-as-code-secret` with the name from the `secretName` parameter for that controller.
+`<PATH_PRIVATE_KEY>`:: The path to the private key you downloaded while configuring the GitHub App.
+`<APP_ID>`:: The **App ID** of the GitHub App.
+`<WEBHOOK_SECRET>`:: The webhook secret provided when you created the GitHub App.
++
+[NOTE]
+====
+{pac} works automatically with GitHub Enterprise by detecting the header set from GitHub Enterprise and using it for the GitHub Enterprise API authorization URL.
+====
+
+.Verification
+
+. Navigate to your GitHub account or organization settings to verify that the GitHub App is installed and displayed in the *Installed GitHub Apps* section.
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://docs.github.com/en/developers/apps/getting-started-with-apps/about-apps[About GitHub Apps on GitHub] (GitHub)
+
+:leveloffset!:
+
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * pac/using-pipelines-as-code-repos.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="scoping-github-token_{context}"]
+= Scope the GitHub token to additional repositories
+
+[role="_abstract"]
+{pac} uses the GitHub App to generate an access token. {pac} uses this token to retrieve the pipeline payload and to interact with GitHub repositories.
+
+By default, {pac} scopes the access token to the repository with the pipeline definition. You might need the token to access additional repositories. For example, the `.tekton/pr.yaml` file might reside in a CI repository, but the build process in `pr.yaml` fetches tasks from a separate private CD repository.
+
+You can extend the scope of the GitHub token in two ways:
+
+* _Global configuration_: You can extend the GitHub token to a list of repositories in different namespaces. You must have administrative permissions to set this configuration.
+* _Repository level configuration_: You can extend the GitHub token to a list of repositories that exist in the same namespace as the original repository. You do not need administrative permissions to set this configuration.
+
+.Prerequisites
+
+* You have administrator access to the {OCP} cluster, or you have repository administrator access for repository-level configuration.
+* You have a {pac} GitHub App configured for your {OCP} cluster.
+* You know the names of the additional repositories that you want to scope the token to.
+* The additional repositories must already exist in your GitHub organization or account.
+
+.Procedure
+
+. In the `TektonConfig` custom resource (CR), in the `pipelinesAsCode.settings` spec, set `secret-github-app-token-scoped` to `false`. This enables the GitHub token to access repositories in both the global and repository-level configuration.
+
+. To set global configuration, specify the additional repositories in the `secret-github-app-scope-extra-repos` parameter of the `TektonConfig` CR:
++
+[source,yaml]
+----
+apiVersion: operator.tekton.dev/v1alpha1
+kind: TektonConfig
+metadata:
+  name: config
+spec:
+  platforms:
+    openshift:
+      pipelinesAsCode:
+        enable: true
+        settings:
+          secret-github-app-token-scoped: false
+          secret-github-app-scope-extra-repos: "owner2/project2, owner3/project3"
+----
++
+. To set repository-level configuration, specify the additional repositories in the `github_app_token_scope_repos` parameter of the `Repository` CR:
++
+[source,yaml]
+----
+apiVersion: "pipelinesascode.tekton.dev/v1alpha1"
+kind: Repository
+metadata:
+  name: test
+  namespace: test-repo
+spec:
+  url: "https://github.com/linda/project"
+  settings:
+    github_app_token_scope_repos:
+    - "owner/project"
+    - "owner1/project1"
+----
++
+In this example, the `Repository` CR applies to `linda/project` in the `test-repo` namespace. {pac} extends the token scope to `owner/project`, `owner1/project1`, and `linda/project`. All repositories must exist in the `test-repo` namespace.
++
+[NOTE]
+====
+The additional repositories can be public or private, but must reside in the same namespace as the repository that you associate with the `Repository` resource.
+
+If any of the repositories do not exist in the namespace, the scoping of the GitHub token fails with an error message:
+
+.Example output
+[source,terminal]
+----
+failed to scope GitHub token as repo owner1/project1 does not exist in namespace test-repo
+----
+====
+
+.Verification
+
+The generated GitHub token enables access to the additional repositories that you configured in the global and repository level configuration, and the original repository where the {pac} payload files reside.
+
+If you give both global configuration and repository level configuration, {pac} scopes the token to all the repositories from both configurations, as in the following example.
+
+*`TektonConfig` custom resource*
+[source,yaml]
+----
+apiVersion: operator.tekton.dev/v1alpha1
+kind: TektonConfig
+metadata:
+  name: config
+spec:
+  platforms:
+    openshift:
+      pipelinesAsCode:
+        enable: true
+        settings:
+          secret-github-app-token-scoped: false
+          secret-github-app-scope-extra-repos: "owner2/project2, owner3/project3"
+----
+
+*`Repository` custom resource*
+[source,yaml]
+----
+apiVersion: "pipelinesascode.tekton.dev/v1alpha1"
+kind: Repository
+metadata:
+ name: test
+ namespace: test-repo
+spec:
+ url: "https://github.com/linda/project"
+ settings:
+   github_app_token_scope_repos:
+   - "owner/project"
+   - "owner1/project1"
+----
+
+{pac} scopes the GitHub token to the `owner/project`, `owner1/project1`, `owner2/project2`, `owner3/project3`, and `linda/project` repositories.
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://docs.openshift.com/container-platform/latest/architecture/control-plane.html[Understanding the control plane]
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/using-pipelines-as-code-repos.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="using-pipelines-as-code-with-github-webhook_{context}"]
+= Use {pac} with GitHub Webhook
+
+[role="_abstract"]
+Use {pac} with GitHub Webhook if you cannot create a GitHub App. However, GitHub Webhook does not give access to the GitHub Check Runs API. {pac} reports task status as pull request comments instead of the *Checks* tab.
+
+[NOTE]
+====
+{pac} with GitHub Webhook does not support GitOps comments such as `/retest` and `/ok-to-test`. To restart the continuous integration (CI), create a new commit to the repository. For example, to create a new commit without any changes, you can use the following command:
+
+[source,terminal]
+----
+$ git --amend -a --no-edit && git push --force-with-lease <origin> <branchname>
+----
+====
+
+.Prerequisites
+
+* You installed {pac} on the cluster.
+
+* For authorization, you created a personal access token on GitHub.
+
+** To generate a secure and fine-grained token, restrict its scope to a specific repository and grant the following permissions:
++
+.Permissions for fine-grained tokens
+[options="header"]
+|===
+
+| Name | Access
+
+| Administration | Read-only
+
+| Metadata | Read-only
+
+| Content | Read-only
+
+| Commit statuses | Read and Write
+
+| Pull request | Read and Write
+
+| Webhooks | Read and Write
+
+|===
+
+** To use classic tokens, set the scope as `public_repo` for public repositories and `repo` for private repositories. In addition, give a short token expiration period and note the token in an alternate location.
++
+[NOTE]
+====
+If you want to configure the webhook using the `tkn pac` CLI, add the `admin:repo_hook` scope.
+====
+
+.Procedure
+
+. Configure the webhook and create a `Repository` custom resource (CR).
+
+** To configure a webhook and create a `Repository` CR _automatically_ using the `tkn pac` CLI tool, use the following command:
++
+[source,terminal]
+----
+$ tkn pac create repo
+----
++
+.Sample interactive output
+[source,terminal]
+----
+? Enter the Git repository url (default: https://github.com/owner/repo):
+? Please enter the namespace where the pipeline should run (default: repo-pipelines):
+! Namespace repo-pipelines is not found
+? Would you like me to create the namespace repo-pipelines? Yes
+✓ Repository owner-repo has been created in repo-pipelines namespace
+✓ Setting up GitHub Webhook for Repository https://github.com/owner/repo
+👀 I have detected a controller url: https://pipelines-as-code-controller-openshift-pipelines.apps.example.com
+? Do you want me to use it? Yes
+? Please enter the secret to configure the webhook for payload validation (default: sJNwdmTifHTs):  sJNwdmTifHTs
+ℹ ️You now need to create a GitHub personal access token, please checkout the docs at https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token for the required scopes
+? Please enter the GitHub access token:  ****************************************
+✓ Webhook has been created on repository owner/repo
+🔑 Webhook Secret owner-repo has been created in the repo-pipelines namespace.
+🔑 Repository CR owner-repo has been updated with webhook secret in the repo-pipelines namespace
+ℹ Directory .tekton has been created.
+✓ We have detected your repository using the programming language Go.
+✓ A basic template has been created in /home/Go/src/github.com/owner/repo/.tekton/pipelinerun.yaml, feel free to customize it.
+----
+
+** To configure a webhook and create a `Repository` CR _manually_, perform the following steps:
+
+... On your {ocp} cluster, extract the public URL of the {pac} controller.
++
+[source,terminal]
+----
+$ echo https://$(oc get route -n openshift-pipelines pipelines-as-code-controller -o jsonpath='{.spec.host}')
+----
+
+... On your GitHub repository or organization, perform the following steps:
+
+.... Go to *Settings* –> *Webhooks* and click *Add webhook*.
+
+.... Set the *Payload URL* to the {pac} controller public URL.
+
+.... Select the content type as *application/json*.
+
+.... Add a webhook secret and note it in an alternate location. With `openssl` installed on your local machine, generate a random secret.
++
+[source,terminal]
+----
+$ openssl rand -hex 20
+----
+
+.... Click *Let me select individual events* and select these events: *Commit comments*, *Issue comments*, *Pull request*, and *Pushes*.
+
+.... Click *Add webhook*.
+
+... On your {ocp} cluster, create a `Secret` object with the personal access token and webhook secret.
++
+[source,terminal]
+----
+$ oc -n target-namespace create secret generic github-webhook-config \
+  --from-literal provider.token="<GITHUB_PERSONAL_ACCESS_TOKEN>" \
+  --from-literal webhook.secret="<WEBHOOK_SECRET>"
+----
+
+... Create a `Repository` CR.
++
+.Example: `Repository` CR
+[source,yaml]
+----
+apiVersion: "pipelinesascode.tekton.dev/v1alpha1"
+kind: Repository
+metadata:
+  name: my-repo
+  namespace: target-namespace
+spec:
+  url: "https://github.com/owner/repo"
+  git_provider:
+    secret:
+      name: "github-webhook-config"
+      key: "provider.token" # Set this if you have a different key in your secret
+    webhook_secret:
+      name: "github-webhook-config"
+      key: "webhook.secret" # Set this if you have a different key for your secret
+----
++
+[NOTE]
+====
+{pac} assumes that the OpenShift Secret object and the Repository CR are in the same namespace.
+====
+
+. Optional: For an existing Repository CR, add many GitHub Webhook secrets or give a substitute for a deleted secret.
+
+.. Add a webhook by using the `tkn pac` CLI tool.
++
+.Example: Additional webhook by using the `tkn pac` CLI
+[source,terminal]
+----
+$ tkn pac webhook add -n repo-pipelines
+----
++
+.Sample interactive output
+[source,terminal]
+----
+✓ Setting up GitHub Webhook for Repository https://github.com/owner/repo
+👀 I have detected a controller url: https://pipelines-as-code-controller-openshift-pipelines.apps.example.com
+? Do you want me to use it? Yes
+? Please enter the secret to configure the webhook for payload validation (default: AeHdHTJVfAeH):  AeHdHTJVfAeH
+✓ Webhook has been created on repository owner/repo
+🔑 Secret owner-repo has been updated with webhook secret in the repo-pipelines namespace.
+----
+
+.. Update the `webhook.secret` key in the existing OpenShift Secret object.
+
+. Optional: For an existing `Repository` CR, update the personal access token.
+
+** Update the personal access token by using the `tkn pac` CLI tool.
++
+.Example: Updating personal access token by using the `tkn pac` CLI
+[source,terminal]
+----
+$ tkn pac webhook update-token -n repo-pipelines
+----
++
+.Sample interactive output
+[source,terminal]
+----
+? Please enter your personal access token:  ****************************************
+🔑 Secret owner-repo has been updated with new personal access token in the repo-pipelines namespace.
+----
+
+** Or, update the personal access token by modifying the `Repository` CR.
+
+... Find the name of the secret in the `Repository` CR.
++
+[source,yaml]
+----
+apiVersion: "pipelinesascode.tekton.dev/v1alpha1"
+kind: Repository
+metadata:
+  name: my-repo
+  namespace: target-namespace
+spec:
+# ...
+  git_provider:
+    secret:
+      name: "github-webhook-config"
+# ...
+----
+
+... Use the `oc patch` command to update the values of the `$NEW_TOKEN` in the `$target_namespace` namespace.
++
+[source,terminal]
+----
+$ oc -n $target_namespace patch secret github-webhook-config -p "{\"data\": {\"provider.token\": \"$(echo -n $NEW_TOKEN|base64 -w0)\"}}"
+----
+
+.Verification
+
+Verify the webhook configuration in your GitHub repository.
+
+. Go to your GitHub repository *Settings* -> *Webhooks*.
+
+. Verify that the webhook is displayed in the list with the {pac} controller URL.
+
+.. Check that the recent deliveries show successful responses with a checkmark.
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token[Creating a personal access token] (GitHub)
+* link:https://docs.github.com/en/developers/webhooks-and-events/webhooks/about-webhooks[About webhooks] (GitHub)
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/using-pipelines-as-code-repos.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="using-pipelines-as-code-with-gitlab_{context}"]
+= Use {pac} with GitLab
+
+[role="_abstract"]
+If your organization or project uses GitLab as the preferred platform, you can use {pac} for your repository with a webhook on GitLab.
+
+.Prerequisites
+
+* You installed {pac} on the cluster.
+
+* For authorization, you generated a personal access token as the manager of the project or organization on GitLab.
++
+[NOTE]
+====
+* If you want to configure the webhook using the `tkn pac` CLI, add the `admin:repo_hook` scope to the token.
+
+* Using a token scoped for a specific project cannot give API access to a merge request (MR) sent from a forked repository. In such cases, {pac} displays the result of a pipeline as a comment on the MR.
+====
+
+.Procedure
+
+. Configure the webhook and create a `Repository` custom resource (CR).
+
+** To configure a webhook and create a `Repository` CR _automatically_ using the `tkn pac` CLI tool, use the following command:
++
+[source,terminal]
+----
+$ tkn pac create repo
+----
++
+.Sample interactive output
+[source,terminal]
+----
+? Enter the Git repository url (default: https://gitlab.com/owner/repo):
+? Please enter the namespace where the pipeline should run (default: repo-pipelines):
+! Namespace repo-pipelines is not found
+? Would you like me to create the namespace repo-pipelines? Yes
+✓ Repository repositories-project has been created in repo-pipelines namespace
+✓ Setting up GitLab Webhook for Repository https://gitlab.com/owner/repo
+? Please enter the project ID for the repository you want to be configured,
+  project ID refers to an unique ID (e.g. 34405323) shown at the top of your GitLab project : 17103
+👀 I have detected a controller url: https://pipelines-as-code-controller-openshift-pipelines.apps.example.com
+? Do you want me to use it? Yes
+? Please enter the secret to configure the webhook for payload validation (default: lFjHIEcaGFlF):  lFjHIEcaGFlF
+ℹ ️You now need to create a GitLab personal access token with `api` scope
+ℹ ️Go to this URL to generate one https://gitlab.com/-/profile/personal_access_tokens, see https://is.gd/rOEo9B for documentation
+? Please enter the GitLab access token:  **************************
+? Please enter your GitLab API URL::  https://gitlab.com
+✓ Webhook has been created on your repository
+🔑 Webhook Secret repositories-project has been created in the repo-pipelines namespace.
+🔑 Repository CR repositories-project has been updated with webhook secret in the repo-pipelines namespace
+ℹ Directory .tekton has been created.
+✓ A basic template has been created in /home/Go/src/gitlab.com/repositories/project/.tekton/pipelinerun.yaml, feel free to customize it.
+----
+
+** To configure a webhook and create a `Repository` CR _manually_, perform the following steps:
+
+... On your {ocp} cluster, extract the public URL of the {pac} controller.
++
+[source,terminal]
+----
+$ echo https://$(oc get route -n openshift-pipelines pipelines-as-code-controller -o jsonpath='{.spec.host}')
+----
+
+... On your GitLab project, perform the following steps:
+
+.... Use the left sidebar to go to *Settings* –> *Webhooks*.
+
+.... Set the *URL* to the {pac} controller public URL.
+
+.... Add a webhook secret and note it in an alternate location. With `openssl` installed on your local machine, generate a random secret.
++
+[source,terminal]
+----
+$ openssl rand -hex 20
+----
+
+.... Click *Let me select individual events* and select these events: *Commit comments*, *Issue comments*, *Pull request*, and *Pushes*.
+
+.... Click *Save changes*.
+
+... On your {ocp} cluster, create a `Secret` object with the personal access token and webhook secret.
++
+[source,terminal]
+----
+$ oc -n target-namespace create secret generic gitlab-webhook-config \
+  --from-literal provider.token="<GITLAB_PERSONAL_ACCESS_TOKEN>" \
+  --from-literal webhook.secret="<WEBHOOK_SECRET>"
+----
+
+... Create a `Repository` CR.
++
+.Example: `Repository` CR
+[source,yaml]
+----
+apiVersion: "pipelinesascode.tekton.dev/v1alpha1"
+kind: Repository
+metadata:
+  name: my-repo
+  namespace: target-namespace
+spec:
+  url: "https://gitlab.com/owner/repo" # The repository URL
+  git_provider:
+    #url: "https://gitlab.example.com/"
+    secret:
+      name: "gitlab-webhook-config"
+      key: "provider.token" # Set this if you have a different key in your secret
+    webhook_secret:
+      name: "gitlab-webhook-config"
+      key: "webhook.secret" # Set this if you have a different key for your secret
+----
+`git_provider.url`:: If you are using a private instance of GitLab and not GitLab.com, uncomment this field and set it to the URL of your GitLab API. The GitLab API is the same host as the repository. For example, if the repository is `\https://gitlab.example.com/owner/repo`, the API URL is `\https://gitlab.example.com/`.
+
++
+[NOTE]
+====
+* {pac} assumes that the OpenShift Secret object and the Repository CR are in the same namespace.
+====
+
+. Optional: For an existing Repository CR, add many GitLab Webhook secrets or give a substitute for a deleted secret.
+
+.. Add a webhook by using the `tkn pac` CLI tool.
++
+.Example: Adding additional webhook by using the `tkn pac` CLI
+[source,terminal]
+----
+$ tkn pac webhook add -n repo-pipelines
+----
++
+.Sample interactive output
+[source,terminal]
+----
+✓ Setting up GitLab Webhook for Repository https://gitlab.com/owner/repo
+👀 I have detected a controller url: https://pipelines-as-code-controller-openshift-pipelines.apps.example.com
+? Do you want me to use it? Yes
+? Please enter the secret to configure the webhook for payload validation (default: AeHdHTJVfAeH):  AeHdHTJVfAeH
+✓ Webhook has been created on repository owner/repo
+🔑 Secret owner-repo has been updated with webhook secret in the repo-pipelines namespace.
+----
+
+.. Update the `webhook.secret` key in the existing OpenShift Secret object.
+
+. Optional: For an existing `Repository` CR, update the personal access token.
+
+** Update the personal access token by using the `tkn pac` CLI tool.
++
+.Example: Updating personal access token by using the `tkn pac` CLI
+[source,terminal]
+----
+$ tkn pac webhook update-token -n repo-pipelines
+----
++
+.Sample interactive output
+[source,terminal]
+----
+? Please enter your personal access token:  ****************************************
+🔑 Secret owner-repo has been updated with new personal access token in the repo-pipelines namespace.
+----
+
+** Or, update the personal access token by modifying the `Repository` CR.
+
+... Find the name of the secret in the `Repository` CR.
++
+[source,yaml]
+----
+...
+spec:
+  git_provider:
+    secret:
+      name: "gitlab-webhook-config"
+...
+----
+
+... Use the `oc patch` command to update the values of the `$NEW_TOKEN` in the `$target_namespace` namespace.
++
+[source,terminal]
+----
+$ oc -n $target_namespace patch secret gitlab-webhook-config -p "{\"data\": {\"provider.token\": \"$(echo -n $NEW_TOKEN|base64 -w0)\"}}"
+----
+
+.Verification
+
+* Check the webhook configuration in your GitLab project:
+.. Navigate to *Settings* -> *Webhooks*.
+.. Verify that the webhook URL points to {pac} controller.
+.. Click *Test* and select *Push events* to verify connectivity.
+
+* Trigger a pipeline run by pushing a commit to your repository or creating a merge request.
+
+* Check that the pipeline status is reported back to GitLab in the merge request or commit status.
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html[Personal access tokens] (GitLab)
+* link:https://docs.gitlab.com/ee/user/project/integrations/webhooks.html[Webhooks] (GitLab)
+
+
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/using-pipelines-as-code-repos.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="using-pipelines-as-code-with-bitbucket-cloud_{context}"]
+= Use {pac} with Bitbucket Cloud
+
+[role="_abstract"]
+If your organization or project uses Bitbucket Cloud as the preferred platform, you can use {pac} for your repository with a webhook on Bitbucket Cloud.
+
+.Prerequisites
+
+* You installed {pac} on the cluster.
+
+* You created an app password on Bitbucket Cloud.
+
+** Check the following boxes to add appropriate permissions to the token:
+*** Account: `Email`, `Read`
+*** Workspace membership: `Read`, `Write`
+*** Projects: `Read`, `Write`
+*** Issues: `Read`, `Write`
+*** Pull requests: `Read`, `Write`
++
+[NOTE]
+====
+* If you want to configure the webhook using the `tkn pac` CLI, add the `Webhooks`: `Read` and `Write` permission to the token.
+
+* Once generated, save a copy of the password or token in an alternate location.
+====
+
+.Procedure
+
+. Configure the webhook and create a `Repository` CR.
+
+** To configure a webhook and create a `Repository` CR _automatically_ using the `tkn pac` CLI tool, use the following command:
++
+[source,terminal]
+----
+$ tkn pac create repo
+----
++
+.Sample interactive output
+[source,terminal]
+----
+? Enter the Git repository url (default: https://bitbucket.org/workspace/repo):
+? Please enter the namespace where the pipeline should run (default: repo-pipelines):
+! Namespace repo-pipelines is not found
+? Would you like me to create the namespace repo-pipelines? Yes
+✓ Repository workspace-repo has been created in repo-pipelines namespace
+✓ Setting up Bitbucket Webhook for Repository https://bitbucket.org/workspace/repo
+? Please enter your bitbucket cloud username:  <username>
+ℹ ️You now need to create a Bitbucket Cloud app password, please checkout the docs at https://is.gd/fqMHiJ for the required permissions
+? Please enter the Bitbucket Cloud app password:  ************************************
+👀 I have detected a controller url: https://pipelines-as-code-controller-openshift-pipelines.apps.example.com
+? Do you want me to use it? Yes
+✓ Webhook has been created on repository workspace/repo
+🔑 Webhook Secret workspace-repo has been created in the repo-pipelines namespace.
+🔑 Repository CR workspace-repo has been updated with webhook secret in the repo-pipelines namespace
+ℹ Directory .tekton has been created.
+✓ A basic template has been created in /home/Go/src/bitbucket/repo/.tekton/pipelinerun.yaml, feel free to customize it.
+----
+
+** To configure a webhook and create a `Repository` CR _manually_, perform the following steps:
+
+... On your {ocp} cluster, extract the public URL of the {pac} controller.
++
+[source,terminal]
+----
+$ echo https://$(oc get route -n openshift-pipelines pipelines-as-code-controller -o jsonpath='{.spec.host}')
+----
+
+... On Bitbucket Cloud, perform the following steps:
+
+.... Use the left navigation pane of your Bitbucket Cloud repository to go to *Repository settings* –> *Webhooks* and click *Add webhook*.
+
+.... Set a *Title*. For example, "{pac}".
+
+.... Set the *URL* to the {pac} controller public URL.
+
+.... Select these events: *Repository: Push*, *Pull Request: Created*, *Pull Request: Updated*, and *Pull Request: Comment created*.
+
+.... Click *Save*.
+
+... On your {ocp} cluster, create a `Secret` object with the app password in the target namespace.
++
+[source,terminal]
+----
+$ oc -n target-namespace create secret generic bitbucket-cloud-token \
+  --from-literal provider.token="<BITBUCKET_APP_PASSWORD>"
+----
+
+... Create a `Repository` CR.
++
+.Example: `Repository` CR
+[source,yaml]
+----
+apiVersion: "pipelinesascode.tekton.dev/v1alpha1"
+kind: Repository
+metadata:
+  name: my-repo
+  namespace: target-namespace
+spec:
+  url: "https://bitbucket.com/workspace/repo"
+  branch: "main"
+  git_provider:
+    user: "<BITBUCKET_USERNAME>"
+    secret:
+      name: "bitbucket-cloud-token"
+      key: "provider.token" # Set this if you have a different key in your secret
+----
+`git_provider.user`:: You can only reference a user by the `ACCOUNT_ID` in an owner file.
+`git_provider.secret.name`:: {pac} assumes that the secret referred in the `git_provider.secret` spec and the `Repository` CR is in the same namespace.
+
++
+[NOTE]
+====
+* The `tkn pac create` and `tkn pac bootstrap` commands are not supported on Bitbucket Cloud.
+
+* Bitbucket Cloud does not support webhook secrets. To secure the payload and prevent hijacking of the CI, {pac} fetches the list of Bitbucket Cloud IP addresses and ensures that the webhook receptions come only from those IP addresses.
+** To disable the default behavior, set the `bitbucket-cloud-check-source-ip` parameter to `false` in the `TektonConfig` custom resource, in the `pipelinesAsCode.settings` spec.
+** To allow additional safe IP addresses or networks, add them as comma-separated values to the `bitbucket-cloud-additional-source-ip` parameter in the `TektonConfig` custom resource, in the `pipelinesAsCode.settings` spec.
+====
+
+. Optional: For an existing `Repository` CR, add many Bitbucket Cloud Webhook secrets or give a substitute for a deleted secret.
+
+.. Add a webhook by using the `tkn pac` CLI tool.
++
+.Example: Adding additional webhook by using the `tkn pac` CLI
+[source,terminal]
+----
+$ tkn pac webhook add -n repo-pipelines
+----
++
+.Sample interactive output
+[source,terminal]
+----
+✓ Setting up Bitbucket Webhook for Repository https://bitbucket.org/workspace/repo
+? Please enter your bitbucket cloud username:  <username>
+👀 I have detected a controller url: https://pipelines-as-code-controller-openshift-pipelines.apps.example.com
+? Do you want me to use it? Yes
+✓ Webhook has been created on repository workspace/repo
+🔑 Secret workspace-repo has been updated with webhook secret in the repo-pipelines namespace.
+----
++
+[NOTE]
+====
+Use the `[-n <namespace>]` option with the `tkn pac webhook add` command only when the `Repository` CR exists in a namespace other than the default namespace.
+====
+
+.. Update the `webhook.secret` key in the existing OpenShift Secret object.
+
+. Optional: For an existing `Repository` CR, update the personal access token.
+
+** Update the personal access token by using the `tkn pac` CLI tool.
++
+.Example: Updating personal access token by using the `tkn pac` CLI
+[source,terminal]
+----
+$ tkn pac webhook update-token -n repo-pipelines
+----
++
+.Sample interactive output
+[source,terminal]
+----
+? Please enter your personal access token:  ****************************************
+🔑 Secret owner-repo has been updated with new personal access token in the repo-pipelines namespace.
+----
++
+[NOTE]
+====
+Use the `[-n <namespace>]` option with the `tkn pac webhook update-token` command only when the `Repository` CR exists in a namespace other than the default namespace.
+====
+
+** Or, update the personal access token by modifying the `Repository` CR.
+
+... Find the name of the secret in the `Repository` CR.
++
+[source,yaml]
+----
+...
+spec:
+  git_provider:
+    user: "<BITBUCKET_USERNAME>"
+    secret:
+      name: "bitbucket-cloud-token"
+      key: "provider.token"
+...
+----
+
+... Use the `oc patch` command to update the values of the `$password` in the `$target_namespace` namespace.
++
+[source,terminal]
+----
+$ oc -n $target_namespace patch secret bitbucket-cloud-token -p "{\"data\": {\"provider.token\": \"$(echo -n $NEW_TOKEN|base64 -w0)\"}}"
+----
+
+.Verification
+
+. Verify that the Repository custom resource is created:
++
+[source,terminal]
+----
+$ oc get repository -n <namespace>
+----
++
+.Example output
+[source,terminal]
+----
+NAME              URL                                      NAMESPACE           SUCCEEDED   REASON
+workspace-repo    https://bitbucket.org/workspace/repo     repo-pipelines      True        Succeeded
+----
+
+. Verify the webhook configuration in your Bitbucket Cloud repository:
+.. Navigate to your Bitbucket Cloud repository in a web browser.
+.. Go to *Repository settings* → *Webhooks*.
+.. Verify that the webhook is displayed with the {pac} controller URL.
+.. Check the webhook history for successful deliveries after you trigger an event.
+
+. Trigger a test event by pushing a commit to your repository or creating a pull request.
+
+. Verify that the pipeline run is created in response to the event:
++
+[source,terminal]
+----
+$ oc get pipelinerun -n <namespace>
+----
++
+.Example output
+[source,terminal]
+----
+NAME                          SUCCEEDED   REASON      STARTTIME   COMPLETIONTIME
+workspace-repo-run-abc123     True        Succeeded   5m          2m
+----
+
+. Verify that the pipeline status is reported back to Bitbucket Cloud:
+.. Navigate to your pull request or commit in Bitbucket Cloud.
+.. Verify that the pipeline status displays as a build status indicator.
+.. Verify that the status shows the correct state (running, succeeded, or failed).
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://support.atlassian.com/bitbucket-cloud/docs/app-passwords/[Creating app password on Bitbucket Cloud] (Bitbucket Cloud)
+* link:https://developer.atlassian.com/cloud/bitbucket/bitbucket-api-changes-gdpr/#introducing-atlassian-account-id-and-nicknames[Introducing Atlassian Account ID and Nicknames] (Atlassian Developer)
+
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/using-pipelines-as-code-repos.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="using-pipelines-as-code-with-bitbucket-server_{context}"]
+= Use {pac} with Bitbucket Data Center
+
+[role="_abstract"]
+If your organization or project uses Bitbucket Data Center as the preferred platform, you can use {pac} for your repository with a webhook on Bitbucket Data Center.
+
+.Prerequisites
+
+* You installed {pac} on the cluster.
+
+* You generated a personal access token as the manager of the project on Bitbucket Data Center, and saved a copy of it in an alternate location.
++
+[NOTE]
+====
+* The token must have the `PROJECT_ADMIN` and `REPOSITORY_ADMIN` permissions.
+* The token must have access to forked repositories in pull requests.
+====
+
+.Procedure
+
+. On your {ocp} cluster, extract the public URL of the {pac} controller.
++
+[source,terminal]
+----
+$ echo https://$(oc get route -n openshift-pipelines pipelines-as-code-controller -o jsonpath='{.spec.host}')
+----
+
+. On Bitbucket Data Center, perform the following steps:
+
+.. Use the left navigation pane of your Bitbucket Data Center repository to go to *Repository settings* –> *Webhooks* and click *Add webhook*.
+
+.. Set a *Title*. For example, "{pac}".
+
+.. Set the *URL* to the {pac} controller public URL.
+
+.. Add a webhook secret and save a copy of it in an alternate location. If you have `openssl` installed on your local machine, generate a random secret using the following command:
++
+[source,terminal]
+----
+$ openssl rand -hex 20
+----
+
+.. Select the following events:
+*** *Repository: Push*
+*** *Repository: Modified*
+*** *Pull Request: Opened*
+*** *Pull Request: Source branch updated*
+*** *Pull Request: Comment added*
+
+.. Click *Save*.
+
+. On your {ocp} cluster, create a `Secret` object with the app password in the target namespace.
++
+[source,terminal]
+----
+$ oc -n target-namespace create secret generic bitbucket-datacenter-webhook-config \
+  --from-literal provider.token="<PERSONAL_TOKEN>" \
+  --from-literal webhook.secret="<WEBHOOK_SECRET>"
+----
+
+. Create a `Repository` CR.
++
+.Example: `Repository` CR
+[source,yaml]
+----
+apiVersion: "pipelinesascode.tekton.dev/v1alpha1"
+kind: Repository
+metadata:
+  name: my-repo
+  namespace: target-namespace
+spec:
+  url: "https://bitbucket.com/workspace/repo"
+  git_provider:
+    url: "https://bitbucket.datacenter.api.url/rest"
+    user: "<BITBUCKET_USERNAME>"
+    secret:
+      name: "bitbucket-datacenter-webhook-config"
+      key: "provider.token" # Set this if you have a different key in your secret
+    webhook_secret:
+      name: "bitbucket-datacenter-webhook-config"
+      key: "webhook.secret" # Set this if you have a different key for your secret
+----
+`git_provider.url`:: Ensure that you have the right Bitbucket Data Center API URL without the `/api/v1.0` suffix. Usually, the default install has a `/rest` suffix.
+`git_provider.user`:: You can only reference a user by the `ACCOUNT_ID` in an owner file.
+`git_provider.secret`:: {pac} assumes that the secret referred in the `git_provider.secret` spec and the `Repository` CR is in the same namespace.
++
+[NOTE]
+====
+The `tkn pac create` and `tkn pac bootstrap` commands are not supported on Bitbucket Data Center.
+====
+
+.Verification
+
+. Verify that the Repository custom resource is created:
++
+[source,terminal]
+----
+$ oc get repository -n <namespace>
+----
++
+.Example output
+[source,terminal]
+----
+NAME      URL                                       NAMESPACE           SUCCEEDED   REASON
+my-repo   https://bitbucket.com/workspace/repo      target-namespace    True        Succeeded
+----
+
+. Verify the webhook configuration in your Bitbucket Data Center repository:
+.. Navigate to your Bitbucket Data Center repository in a web browser.
+.. Go to *Repository settings* → *Webhooks*.
+.. Verify that the webhook is displayed with the {pac} controller URL.
+.. Check the webhook history for successful deliveries after you trigger an event.
+
+. Trigger a test event by pushing a commit to your repository or creating a pull request.
+
+. Verify that the pipeline run is created in response to the event:
++
+[source,terminal]
+----
+$ oc get pipelinerun -n <namespace>
+----
++
+.Example output
+[source,terminal]
+----
+NAME                   SUCCEEDED   REASON      STARTTIME   COMPLETIONTIME
+my-repo-run-xyz456     True        Succeeded   4m          1m
+----
+
+. Verify that the pipeline status is reported back to Bitbucket Data Center:
+.. Navigate to your pull request or commit in Bitbucket Data Center.
+.. Verify that the pipeline status displays as a build status indicator.
+.. Verify that the status shows the correct state (running, succeeded, or failed).
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://pipelinesascode.com/docs/guides/repository-crd/[Using the Repository custom resource]
+* link:https://confluence.atlassian.com/bitbucketserver/personal-access-tokens-939515499.html[Creating personal tokens on Bitbucket Data Center] (Bitbucket Data Center)
+* link:https://confluence.atlassian.com/bitbucketserver/manage-webhooks-938025878.html[Managing webhooks on Bitbucket Data Center] (Bitbucket Data Center)
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/using-pipelines-as-code-repos.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="interfacing-pipelines-as-code-with-custom-certificates_{context}"]
+= Configure custom certificates for {pac}
+
+[role="_abstract"]
+To configure {pac} with a Git repository that uses a privately signed or custom certificate, expose the certificate to {pac}.
+
+.Procedure
+
+* If you have installed {pac} using the {pipelines-title} Operator, you can add your custom certificate to the cluster using the `Proxy` object. The Operator exposes the certificate in all {pipelines-title} components and workloads, including {pac}.
+
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/using-pipelines-as-code-repos.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="using-private-repositories-with-pipelines-as-code_{context}"]
+= Private repository support in {pac}
+
+[role="_abstract"]
+{pac} supports private repositories by creating or updating a secret in the target namespace with the user token. The `git-clone` task from {tekton-hub} uses the user token to clone private repositories.
+
+Whenever {pac} creates a new pipeline run in the target namespace, it creates or updates a secret with the  `pac-gitauth-<REPOSITORY_OWNER>-<REPOSITORY_NAME>-<RANDOM_STRING>` format.
+
+You must reference the secret with the `basic-auth` workspace in your pipeline run and pipeline definitions, which is then passed on to the `git-clone` task.
+
+[source,yaml]
+----
+...
+  workspace:
+  - name: basic-auth
+    secret:
+      secretName: "{{ git_auth_secret }}"
+...
+----
+
+In the pipeline, you can reference the `basic-auth` workspace for the `git-clone` task to reuse:
+
+[source,yaml]
+----
+...
+workspaces:
+  - name basic-auth
+params:
+    - name: repo_url
+    - name: revision
+...
+tasks:
+  workspaces:
+    - name: basic-auth
+      workspace: basic-auth
+  ...
+  tasks:
+  - name: git-clone-from-catalog
+      taskRef:
+        name: git-clone
+      params:
+        - name: url
+          value: $(params.repo_url)
+        - name: revision
+          value: $(params.revision)
+...
+----
+`name`:: The `git-clone` task picks up the `basic-auth` workspace and uses it to clone the private repository.
+
+You can change this configuration by setting the `secret-auto-create` parameter to either a `false` or `true` value, as required, in the `TektonConfig` custom resource, in the `pipelinesAsCode.settings` spec.
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://hub.tekton.dev/tekton/task/git-clone[git-clone task on {tekton-hub}]
+
+:leveloffset!:
+
+[role="_additional-resources"]
+.Additional resources
+* link:https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html[GitLab Webhook documentation on GitLab]
+* link:https://support.atlassian.com/bitbucket-cloud/docs/app-passwords/[Creating app password on Bitbucket Cloud]
+* link:https://developer.atlassian.com/cloud/bitbucket/bitbucket-api-changes-gdpr/#introducing-atlassian-account-id-and-nicknames[Introducing Atlassian Account ID and Nicknames]
+* link:https://confluence.atlassian.com/bitbucketserver/personal-access-tokens-939515499.html[Creating personal tokens on Bitbucket Data Center]
+* link:https://confluence.atlassian.com/bitbucketserver/manage-webhooks-938025878.html[Managing webhooks on Bitbucket Data Center]
+* xref:../pac/install-config-pipelines-as-code.adoc#pac-additional-controller_install-config-pipelines-as-code[Configuring additional {pac} controllers to support additional GitHub apps]
+* link:https://docs.openshift.com/container-platform/latest/networking/enable-cluster-wide-proxy.html[Enabling the cluster-wide proxy]
+
+= Using the Repository custom resource
+
+:_mod-docs-content-type: ASSEMBLY
+:_mod-docs-content-type: SNIPPET
+// The {product-title} attribute provides the context-sensitive name of the relevant OpenShift distribution, for example, "OpenShift Container Platform" or "OKD". The {product-version} attribute provides the product version relative to the distribution, for example "4.9".
+// {product-title} and {product-version} are parsed when AsciiBinder queries the _distro_map.yml file in relation to the base branch of a pull request.
+// See https://github.com/openshift/openshift-docs/blob/main/contributing_to_docs/doc_guidelines.adoc#product-name-and-version for more information on this topic.
+// Other common attributes are defined in the following lines:
+:data-uri:
+:icons:
+:experimental:
+:toc: macro
+:toc-title:
+:imagesdir: images
+:prewrap!:
+
+:pipelines-title: Red Hat OpenShift Pipelines
+:pipelines-shortname: OpenShift Pipelines
+:pipelines-ver: pipelines-1.22
+:pipelines-version-number: 1.22
+:osp-version-patch: 0
+:tekton-cache: Tekton Cache
+:tekton-chains: Tekton Chains
+:tekton-results: Tekton Results
+:tekton-triggers: Tekton Triggers
+:tekton-hub: Tekton Hub
+:artifact-hub: Artifact Hub
+:pac: Pipelines as Code
+:product-registry: OpenShift image registry
+// IBM Power
+:ibmpowerProductName: IBM Power
+// IBM zSystems
+:ibmzProductName: IBM zSystems
+:linuxoneProductName: IBM(R) LinuxONE
+:kebab: image:kebab.png[title="Options menu"]
+
+:op-system-base: RHEL
+:op-system-base-full: Red Hat Enterprise Linux (RHEL)
+
+:cluster-manager-first: Red Hat OpenShift Cluster Manager
+:cluster-manager: OpenShift Cluster Manager
+:cluster-manager-url: link:https://console.redhat.com/openshift[OpenShift Cluster Manager Hybrid Cloud Console]
+:cluster-manager-url-pull: link:https://console.redhat.com/openshift/install/pull-secret[pull secret from the Red Hat OpenShift Cluster Manager]
+
+:oc-first: pass:quotes[OpenShift CLI (`oc`)]
+
+// Attributes not present in the main branch
+:OCP: OpenShift Container Platform
+
+//We should use lowercase like regular OCP docs and deprecate the above.
+:ocp: OpenShift Container Platform
+
+
+:ols-official: Red{nbsp}Hat OpenShift Lightspeed
+:ols: OpenShift Lightspeed
+
+// Attributes not present in the main branch
+:rhosp: Red Hat OpenStack Platform
+[id="using-repository-crd"]
+= Using the Repository custom resource
+:context: using-repository-crd
+
+toc::[]
+[role="_abstract"]
+The `Repository` custom resource (CR) has the following primary functions:
+
+* Inform {pac} about processing an event from a URL.
+* Inform {pac} about the namespace for the pipeline runs.
+* Reference an API secret, username, or an API URL necessary for Git provider platforms when using webhook methods.
+* Show the last pipeline run status for a repository.
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/using-repository-crd.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="creating-repository-cr_{context}"]
+= Creating the Repository custom resource
+
+[role="_abstract"]
+You can use the `tkn pac` CLI or other alternative methods to create a `Repository` custom resource (CR) inside the target namespace. For example:
+
+[source,terminal]
+----
+$ cat <<EOF|kubectl create -n my-pipeline-ci -f-
+
+apiVersion: "pipelinesascode.tekton.dev/v1alpha1"
+kind: Repository
+metadata:
+  name: project-repository
+spec:
+  url: "https://github.com/<repository>/<project>"
+EOF
+----
+`-n`:: `my-pipeline-ci` is the target namespace.
+
+Whenever an event comes from a URL such as `\https://github.com/<repository>/<project>`, {pac} matches it and checks out the repository content. It then matches the pipeline run against the content in the `.tekton/` directory.
+
+[NOTE]
+====
+* You must create the `Repository` CR in the same namespace where pipelines associated with the source code repository run; it cannot target a different namespace.
+
+* If many `Repository` CRs match the same event, {pac} processes only the oldest one. If you need to match a specific namespace, add the `pipelinesascode.tekton.dev/target-namespace: "<mynamespace>"` annotation. Such explicit targeting prevents a malicious actor from executing a pipeline run in a namespace to which they do not have access.
+====
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/using-repository-crd.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="creating-global-repository-cr_{context}"]
+= Creating the global Repository custom resource
+
+[role="_abstract"]
+Optionally, you can create a global `Repository` custom resource (CR) in the namespace where you installed {pipelines-shortname}, normally `openshift-pipelines`. If you create this CR, the settings that you specify in it apply by default to all `Repository` CRs that you create.
+
+:FeatureName: The global `Repository` CR
+:_mod-docs-content-type: SNIPPET
+// When including this file, ensure that {FeatureName} is set immediately before
+// the include. Otherwise it will result in an incorrect replacement.
+
+[IMPORTANT]
+====
+[subs="attributes+"]
+{FeatureName} is a Technology Preview feature only. Technology Preview features are not supported with Red Hat production service level agreements (SLAs) and might not be functionally complete. Red Hat does not recommend using them in production. These features provide early access to upcoming product features, enabling customers to test functionality and provide feedback during the development process.
+
+For more information about the support scope of Red Hat Technology Preview features, see link:https://access.redhat.com/support/offerings/techpreview/[Technology Preview Features Support Scope].
+====
+// Undefine {FeatureName} attribute, so that any mistakes are easily spotted
+:!FeatureName:
+
+.Prerequisites
+
+* You have administrator access to the `openshift-pipelines` namespace.
+* You logged on to the OpenShift cluster using the `oc` command line utility.
+
+.Procedure
+
+* Create a `Repository` CR named `pipeline-as-code` in the `openshift-pipelines` namespace. Specify all the required default settings in this CR.
++
+.Example command to create the CR
+[source,terminal]
+----
+$ cat <<EOF|oc create -n openshift-pipelines -f -
+
+apiVersion: "pipelinesascode.tekton.dev/v1alpha1"
+kind: Repository
+metadata:
+  name: pipelines-as-code
+spec:
+  git_provider:
+    secret:
+      name: "gitlab-webhook-config"
+      key: "provider.token"
+    webhook_secret:
+      name: "gitlab-webhook-config"
+      key: "webhook.secret"
+EOF
+----
++
+In this example, all `Repository` CRs that you create include the common secrets for accessing your GitLab repositories. You can set different repository URLs and other settings in the CRs.
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/using-repository-crd.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="setting-concurrency-limits-in-repository-crd_{context}"]
+= Setting concurrency limits
+
+[role="_abstract"]
+You can use the `concurrency_limit` spec in the `Repository` custom resource definition (CRD) to define the maximum number of pipeline runs running simultaneously for a repository.
+
+[source,yaml]
+----
+apiVersion: "pipelinesascode.tekton.dev/v1alpha1"
+kind: Repository
+metadata:
+  name: my-repo
+  namespace: target-namespace
+spec:
+# ...
+  concurrency_limit: <number>
+# ...
+
+----
+
+If there are many pipeline runs matching an event, the pipeline runs that match the event start in an alphabetical order.
+
+For example, if you have three pipeline runs in the `.tekton` directory and you create a pull request with a `concurrency_limit` of `1`, then {pac} executes all the pipeline runs in alphabetical order. At any given time, only one pipeline run is in the running state. The system queues the rest.
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/using-repository-crd.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="changing-source-branch-in-repository-crd_{context}"]
+= Changing the source branch for the pipeline definition
+
+[role="_abstract"]
+By default, {pac} fetches the pipeline definition from the branch that triggered the event. To fetch the definition from the default branch instead (such as `main`, `master`, or `trunk`), set `pipelinerun_provenance` in the `Repository` custom resource definition (CRD).
+
+[source,yaml]
+----
+apiVersion: "pipelinesascode.tekton.dev/v1alpha1"
+kind: Repository
+metadata:
+  name: my-repo
+  namespace: target-namespace
+spec:
+# ...
+  settings:
+    pipelinerun_provenance: "default_branch"
+# ...
+----
+
+[NOTE]
+====
+Use this setting as a security precaution. By default, {pac} uses the pipeline definition in the submitted pull request. With the `default-branch` setting, you must merge the pipeline definition into the default branch before {pac} runs it. This ensures that merge reviews verify all changes.
+====
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/using-repository-crd.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id="op-custom-parameter-expansion_{context}"]
+= Custom parameter expansion
+
+[role="_abstract"]
+You can use {pac} to expand a custom parameter within your `PipelineRun` resource by using the `params` field. You can specify a value for the custom parameter inside the template of the `Repository` custom resource (CR). The specified value replaces the custom parameter in your pipeline run.
+
+You can use custom parameters in the following scenarios:
+
+* To define a URL parameter, such as a registry URL that varies based on a push or a pull request.
+* To define a parameter, such as an account UUID that an administrator can manage without necessitating changes to the `PipelineRun` execution in the Git repository.
+
+[NOTE]
+====
+Use the custom parameter expansion feature only when you cannot use the Tekton `PipelineRun` parameters because you define Tekton parameters in a `Pipeline` resource and customize them alongside it inside a Git repository. However, you define and customize custom parameters in the location of the `Repository` CR. Therefore, you cannot manage your CI/CD pipeline from a single point.
+====
+
+The following example shows a custom parameter named `company` in the `Repository` CR:
+
+[source,yaml]
+----
+...
+spec:
+  params:
+    - name: company
+      value: "ABC Company"
+...
+----
+
+The value `ABC Company` replaces the parameter name `company` in your pipeline run and in the remotely fetched tasks.
+
+You can also retrieve the value for a custom parameter from a Kubernetes secret, as shown in the following example:
+
+[source,yaml]
+----
+...
+spec:
+  params:
+    - name: company
+      secret_ref:
+        name: my-secret
+        key: companyname
+...
+----
+
+{pac} parses and uses custom parameters in the following manner:
+
+* If you have a `value` and a `secret_ref` defined, {pac} uses the `value`.
+* If you do not have a `name` in the `params` section, {pac} does not parse the parameter.
+* If you have many `params` with the same `name`, {pac} uses the last parameter.
+
+You can also define a custom parameter and use its expansion only when specified conditions match a Common Expression Language (CEL) filter. The following example shows a CEL filter applicable on a custom parameter named `company` when a pull request event triggers:
+
+[source,yaml]
+----
+...
+spec:
+  params:
+    - name: company
+      value: "ABC Company"
+      filter: pac.event_type == "pull_request"
+...
+----
+
+[NOTE]
+====
+When you have many parameters with the same name and different filters, {pac} uses the first parameter that matches the filter. You can then expand parameters according to different event types. For example, you can combine a push and a pull request event.
+====
+
+:leveloffset!:
+
+= Creating pipeline runs in Pipelines as Code
+
+:_mod-docs-content-type: ASSEMBLY
+:_mod-docs-content-type: SNIPPET
+// The {product-title} attribute provides the context-sensitive name of the relevant OpenShift distribution, for example, "OpenShift Container Platform" or "OKD". The {product-version} attribute provides the product version relative to the distribution, for example "4.9".
+// {product-title} and {product-version} are parsed when AsciiBinder queries the _distro_map.yml file in relation to the base branch of a pull request.
+// See https://github.com/openshift/openshift-docs/blob/main/contributing_to_docs/doc_guidelines.adoc#product-name-and-version for more information on this topic.
+// Other common attributes are defined in the following lines:
+:data-uri:
+:icons:
+:experimental:
+:toc: macro
+:toc-title:
+:imagesdir: images
+:prewrap!:
+
+:pipelines-title: Red Hat OpenShift Pipelines
+:pipelines-shortname: OpenShift Pipelines
+:pipelines-ver: pipelines-1.22
+:pipelines-version-number: 1.22
+:osp-version-patch: 0
+:tekton-cache: Tekton Cache
+:tekton-chains: Tekton Chains
+:tekton-results: Tekton Results
+:tekton-triggers: Tekton Triggers
+:tekton-hub: Tekton Hub
+:artifact-hub: Artifact Hub
+:pac: Pipelines as Code
+:product-registry: OpenShift image registry
+// IBM Power
+:ibmpowerProductName: IBM Power
+// IBM zSystems
+:ibmzProductName: IBM zSystems
+:linuxoneProductName: IBM(R) LinuxONE
+:kebab: image:kebab.png[title="Options menu"]
+
+:op-system-base: RHEL
+:op-system-base-full: Red Hat Enterprise Linux (RHEL)
+
+:cluster-manager-first: Red Hat OpenShift Cluster Manager
+:cluster-manager: OpenShift Cluster Manager
+:cluster-manager-url: link:https://console.redhat.com/openshift[OpenShift Cluster Manager Hybrid Cloud Console]
+:cluster-manager-url-pull: link:https://console.redhat.com/openshift/install/pull-secret[pull secret from the Red Hat OpenShift Cluster Manager]
+
+:oc-first: pass:quotes[OpenShift CLI (`oc`)]
+
+// Attributes not present in the main branch
+:OCP: OpenShift Container Platform
+
+//We should use lowercase like regular OCP docs and deprecate the above.
+:ocp: OpenShift Container Platform
+
+
+:ols-official: Red{nbsp}Hat OpenShift Lightspeed
+:ols: OpenShift Lightspeed
+
+// Attributes not present in the main branch
+:rhosp: Red Hat OpenStack Platform
+[id="creating-pipeline-runs-pac"]
+= Creating pipeline runs in {pac}
+:context: creating-pipeline-runs-pac
+
+toc::[]
+
+[role="_abstract"]
+Automate pipeline execution triggered by Git events. Integrate {pac} with your repository provider and define your repository using the `Repository` custom resource (CR).
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/creating-pipeline-runs-pac.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="creating-pipeline-run-pac_{context}"]
+= Creating a pipeline run in {pac}
+
+[role="_abstract"]
+You can create a pipeline run definition for {pac} in your repository and match it to an event, such as a pull request. When the event happens, {pac} creates a `PipelineRun` custom resource (CR) from this definition, and then {pipelines-shortname} executes the pipeline run.
+
+.Prerequisites
+
+* You configured {pac} to integrate with your Git repository hosting service provider.
+
+* You created a `Repository` CR to define the connection to your repository in {pac}.
+
+* You have a `.tekton` directory in the root of your repository.
+
+.Procedure
+
+. Create a file with a `.yaml` or `.yml` extension in the `.tekton` directory.
+
+. In the file that you created, create a YAML specification for a `PipelineRun` CR. This specification can use all features of {pipelines-shortname}.
+
+. Optional: Complete any of the following configuration steps based on your pipeline run requirements:
+
+** Create other files with a `.yaml` or `.yml` extension in the `.tekton` directory. In these files, give definitions of resources that your pipeline run definition references, such as `Pipeline`, `Task`, or `StepAction` CRs. The {pac} resolver automatically resolves these resources and includes them in the  `PipelineRun` CR that uses your definition.
+
+** Use _dynamic variables_ in your pipeline run specification. {pac} replaces these variables with values that represent the current context. For example, `{{ repo_url }}` is the current URL for the repository and `{{ revision }}` is the commit SHA that started the pipeline run.
++
+For more information about dynamic variables, see the "Dynamic variables in a pipeline run specification" section.
+
+** Add one or more {pac} resolver annotations to your pipeline run definition. A {pac} resolver annotation references a pipeline or task in {tekton-hub}, an HTTP location, or a location in your repository outside the `.tekton` directory. If you create a {pac} resolver annotation to reference a resource, you can use this resource by name in your pipeline run definition. The {pac} resolver automatically resolves these resources and includes them in the  `PipelineRun` CR that uses your definition.
++
+For more information about these annotations, see the "{pac} resolver annotations" section.
+
+. Match the pipeline run to events by adding any of the following annotations to the pipeline run definition. When the defined event happens, {pac} starts the pipeline run. For more information about matching the pipeline run to events, see the "Annotations for matching events to a pipeline run" section.
+
+** A combination of the `pipelinesascode.tekton.dev/on-event` annotation, which defines a `pull request` or `push` event, and a `pipelinesascode.tekton.dev/on-target-branch` annotation, which defines the branch that the pull request or push event must target. If you match your pipeline run to a pull request or push event, the pipeline run starts when a user creates the event. For pull requests, it starts again each time the user updates the source branch event.
++
+[NOTE]
+====
+If your Git repository provider uses merge requests and not pull requests, a `pull_request` event definition matches a merge request.
+====
+
+** A `pipelinesascode.tekton.dev/on-comment` annotation, which matches the pipeline run to a comment on a pull request by regular expression. If you match your pipeline run to a comment, it starts when someone adds the comment to a pull request. To start the pipeline run again, add the comment again.
+
+** A `pipelinesascode.tekton.dev/on-cel-expression` annotation, which matches the pipeline run if the specified Common Expression Language (CEL) expression evaluates to `true` on a pull request or push event.
+
+. Optional: Add one or more annotations that filter the matching events. With these annotations, when the defined matching event (such as a pull request, a push event, or a comment) happens, {pac} checks if these annotations are also matched. The pipeline run starts only if all the annotations that you added to it match the event. For more information about filtering matching events, see the "Annotations for filtering events" section.
+
+** The event matches a `pipelinesascode.tekton.dev/on-path-changed` annotation if the pull request or push event affect files in the specified paths.
+
+** A `pipelinesascode.tekton.dev/on-path-changed-ignore` annotation excludes matching the event if the event changes _only_ files in the specified paths and does not change any other files in the repository.
+
+** The event matches a `pipelinesascode.tekton.dev/on-label` annotation if the pull request or push event has one of the specified labels.
+
+. Optional: Add the `pipelinesascode.tekton.dev/cancel-in-progress: "true"` annotation to enable automatic cancellation of the pipeline run in certain cases. For example, if a pull request triggers a pipeline run and then the user pushes new commits into the pull request source branch, each push triggers a new copy of the pipeline run. If you enable automatic cancellation-in-progress, {pac} cancels the older run after a new copy starts. This prevents many copies of the pipeline run from consuming cluster resources simultaneously. For more information about this annotation, see the "Annotations for specifying automatic cancellation-in-progress for a pipeline run" section.
++
+.Example {pac} pipeline run definition
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: maven-build
+annotations:
+  pipelinesascode.tekton.dev/task: "[git-clone]"
+  pipelinesascode.tekton.dev/on-event: "[pull_request]"
+  pipelinesascode.tekton.dev/on-target-branch: "[main, release]"
+  pipelinesascode.tekton.dev/on-path-changed: "[src/**]"
+  pipelinesascode.tekton.dev/cancel-in-progress: "true"
+spec:
+  pipelineSpec:
+    workspaces:
+    - name: shared-workspace
+    tasks:
+      - name: fetch-repo
+        taskRef:
+          - name: git-clone
+        params:
+        - name: url
+          value: {{ repo_url }}
+        - name: revision
+          value: {{ revision }}
+        workspaces:
+        - name: output
+          workspace: shared-workspace
+      - name: build-from-source
+        taskRef:
+          resolver: cluster
+          params:
+          - name: kind
+            value: task
+          - name: name
+            value: maven
+          - name: namespace
+            value: openshift-pipelines
+        workspaces:
+        - name: source
+          workspace: shared-workspace
+----
+`pipelinesascode.tekton.dev/task`:: References the `git-clone` task from {tekton-hub}.
+`pipelinesascode.tekton.dev/on-event`:: Matches the pipeline run to a pull request or merge request event.
+`pipelinesascode.tekton.dev/on-target-branch`:: Specifies that a pull request into either the `main` branch or `release` branch triggers this pipeline run.
+`pipelinesascode.tekton.dev/on-path-changed`:: Specifies that the pipeline run triggers only if the pull request has changes to files under the `src` directory.
+`pipelinesascode.tekton.dev/cancel-in-progress`:: Specifies that, if {pac} starts the pipeline run again for the same pull request, {pac} cancels the earlier run.
+`tasks.name`:: The pipeline run specification references the `git-clone` task by name. Because of the `pipelinesascode.tekton.dev/task` annotation, the {pac} resolver resolves this reference to the `git-clone` task from {tekton-hub}.
+`params.repo_url`:: {pac} replaces the `{{ repo_url }}` dynamic variable with the URL for the Git repository.
+`params.revision`:: {pac} replaces the `{{ revision }}` dynamic variable with the revision of the branch for which {pac} started the pipeline run.
+
+.Verification
+
+. Verify that your pipeline run definition files exist in the `.tekton` directory:
++
+[source,terminal]
+----
+$ ls .tekton/
+----
++
+The output shows your `.yaml` or `.yml` files and any subdirectories containing additional pipeline resources.
++
+.Example output
+[source,terminal]
+----
+maven-build.yaml  pull-request.yml  shared-tasks/
+----
+
+. After committing and pushing the pipeline run definition to your repository, trigger a matching event such as opening a pull request or pushing to a branch that matches your annotations.
+
+. Verify that {pac} created a `PipelineRun` resource:
++
+[source,terminal]
+----
+$ oc get pipelinerun -n <namespace>
+----
++
+Replace `<namespace>` with the namespace where your `Repository` CR is configured.
++
+The output shows the `PipelineRun` resources that {pac} created from your definition.
+
+.Troubleshooting
+
+* If {pac} does not trigger the pipeline run, verify the following:
+** The webhook is correctly configured for the Git repository.
+** The secret is correctly created in your cluster.
+** The `Repository` CR exists and is correctly configured.
+** The pipeline run definition file is in the `.tekton` directory.
+** The file has a `.yaml` or `.yml` extension.
+** The event annotations match the Git event type (pull_request, push, or comment).
+** The target branch annotation matches the actual branch.
+
+* If the pipeline run fails to start, check the {pac} controller logs by using the following command with the appropriate pod name:
++
+[source,terminal]
+----
+$ oc logs pipelines-as-code-controller-<pod_id> -n openshift-pipelines
+----
++
+Replace `<pod_id>` with the unique identifier of the {pac} controller pod. To find the pod name, use `oc get pods -n openshift-pipelines`.
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://tekton.dev/docs/pipelines/pipelineruns/[Tekton PipelineRun documentation]
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/creating-pipeline-runs-pac.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="parameters-pipeline-run-using-pipelines-as-code_{context}"]
+= Dynamic variables in a pipeline run specification
+
+[role="_abstract"]
+You can use dynamic variables in a pipeline run specification to give information about the triggering commit. You can also use these variables with the temporary GitHub App token for GitHub API operations.
+
+[IMPORTANT]
+====
+Using {pac} dynamic variables in default values for pipeline or task parameters is currently not supported. You can use a dynamic variable in a `value:` field, but not in a `default:` field.
+====
+
+[id="commits-parameters-pipeline-run-using-pipelines-as-code_{context}"]
+== Commit and URL information
+
+You can specify the parameters of your commit and URL by using dynamic, expandable variables with the `{{<var>}}` format. Currently, you can use the following variables:
+
+* `{{repo_owner}}`: The repository owner.
+* `{{repo_name}}`: The repository name.
+* `{{repo_url}}`: The repository full URL.
+* `{{revision}}`: Full SHA revision of a commit.
+* `{{sender}}`: The username or account ID of the sender of the commit.
+* `{{source_branch}}`: The branch name where the event originated.
+* `{{target_branch}}`: The branch name that the event targets. For push events, it is the same as the `source_branch`.
+* `{{pull_request_number}}`: The pull or merge request number, defined only for a `pull_request` event type.
+* `{{git_auth_secret}}`: The secret name that {pac} generates automatically with the Git provider token for checking out private repositories.
+
+[id="token-parameters-pipeline-run-using-pipelines-as-code_{context}"]
+== Temporary GitHub App token for GitHub API operations
+
+You can use the temporary installation token generated by {pac} from the GitHub App to access the GitHub API. The GitHub App generates a key for private repositories in the `git-provider-token` key. You can use the `{{git_auth_secret}}` dynamic variable in pipeline runs to access this key.
+
+For example, if your pipeline run must add a comment to a pull request, you can use a {pac} annotation to fetch the `github-add-comment` task definition from {tekton-hub}. You can then define the task that adds the comment, as shown in the following example:
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: pipeline-with-comment
+annotations:
+  pipelinesascode.tekton.dev/task: "github-add-comment"
+spec:
+  pipelineSpec:
+    tasks:
+      - name: add-sample-comment
+        taskRef:
+          name: github-add-comment
+        params:
+          - name: REQUEST_URL
+            value: "{{ repo_url }}/pull/{{ pull_request_number }}"
+          - name: COMMENT_OR_FILE
+            value: "Pipelines as Code IS GREAT!"
+          - name: GITHUB_TOKEN_SECRET_NAME
+            value: "{{ git_auth_secret }}"
+          - name: GITHUB_TOKEN_SECRET_KEY
+            value: "git-provider-token"
+----
+`REQUEST_URL`:: By using the dynamic variables, you can reuse this snippet template for any pull request from any repository that you use with {pac}.
+
+[NOTE]
+====
+On GitHub Apps, the generated installation token is available for 8 hours and scoped to the repository from where the events originate. You can configure the scope differently, but GitHub determines the expiration time.
+====
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/about-authentication-with-a-github-app[GitHub App authentication]
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/creating-pipeline-runs-pac.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="pipelines-as-code-resolver-annotations_{context}"]
+= {pac} resolver annotations
+
+[role="_abstract"]
+You can use {pac} resolver annotations to reference `Task` and `Pipeline` custom resource (CR) definitions. The {pac} resolver fetches the definitions from the locations that you specify in the annotations.
+
+If you reference a remote task in a pipeline run, or a pipeline in a `PipelineRun` or a `PipelineSpec` object, the {pac} resolver automatically resolves the referenced resource and includes it in the resulting `PipelineRun` CR.
+
+[NOTE]
+====
+Red Hat deprecated the public instance of {tekton-hub} (`hub.tekton.dev`) and will remove it in a future release. Use link:https://artifacthub.io[{artifact-hub}] as an alternative for Tekton `Pipeline` and `Task` resources:
+
+* link:https://artifacthub.io/packages/search?repo=tekton-catalog-tasks[Tekton Catalog Tasks]
+* link:https://artifacthub.io/packages/search?repo=tekton-catalog-pipelines[Tekton Catalog Pipelines]
+
+{artifact-hub} is open source and supports self-hosting, providing greater flexibility for managing your Tekton `Pipeline` and `Task` resources.
+====
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://artifacthub.io/packages/search?repo=tekton-catalog-tasks[Tekton Catalog Tasks on Artifact Hub]
+
+
+:leveloffset!:
+
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * pac/creating-pipeline-runs-pac.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="using-remote-task-annotations-with-pipelines-as-code_{context}"]
+= Remote task annotations
+
+[role="_abstract"]
+Include remote tasks in your pipeline runs by using {pac} resolver annotations to reference tasks from {tekton-hub}, Artifact Hub, HTTP URLs, or local repository files. This enables task reuse across repositories without duplicating task definitions.
+
+*Reference remote tasks in {tekton-hub}*
+
+* Reference a single remote task in {tekton-hub}.
+
++
+[source,yaml]
+----
+...
+  pipelinesascode.tekton.dev/task: "git-clone"
+...
+----
+`pipelinesascode.tekton.dev/task`:: {pac} includes the latest version of the task from the {tekton-hub}.
+
+
+* Reference many remote tasks from {tekton-hub}
+
++
+[source,yaml]
+----
+...
+  pipelinesascode.tekton.dev/task: "[git-clone, golang-test, tkn]"
+...
+----
+
+* Reference many remote tasks from {tekton-hub} using the `-<NUMBER>` suffix.
+
++
+[source,yaml]
+----
+...
+  pipelinesascode.tekton.dev/task: "git-clone"
+  pipelinesascode.tekton.dev/task-1: "golang-test"
+  pipelinesascode.tekton.dev/task-2: "tkn"
+...
+----
+`pipelinesascode.tekton.dev/task-2`:: By default, {pac} interprets the string as the latest task to fetch from {tekton-hub}.
+
+
+* Reference a specific version of a remote task from {tekton-hub}.
+
++
+[source,yaml]
+----
+...
+  pipelinesascode.tekton.dev/task: "[git-clone:0.1]"
+...
+----
+`pipelinesascode.tekton.dev/task`:: Refers to the `0.1` version of the `git-clone` remote task from {tekton-hub}.
+
+
+.Remote tasks by using URLs
+
+[source,yaml]
+----
+...
+  pipelinesascode.tekton.dev/task: "<https://remote.url/task.yaml>"
+...
+----
+`pipelinesascode.tekton.dev/task`:: The public URL to the remote task.
++
+[NOTE]
+====
+* If you use GitHub and the remote task URL uses the same host as the `Repository` custom resource definition (CRD), {pac} uses the GitHub token and fetches the URL using the GitHub API.
++
+For example, if your repository URL is similar to `\https://github.com/<organization>/<repository>` and the remote HTTP URL references a GitHub blob, {pac} fetches the task definition files from that private repository by using the GitHub App token.
++
+When you work on a public GitHub repository, {pac} acts similarly for a GitHub raw URL such as `\https://raw.githubusercontent.com/<organization>/<repository>/<mainbranch>/<path>/<file>`.
+
+
+* {pac} scopes GitHub App tokens to the owner or organization that contains the repository. When you use the GitHub webhook method, you can fetch any private or public repository on any organization that allows the personal token.
+====
+
+.Reference a task from a YAML file inside your repository
+
+[source,yaml]
+----
+...
+pipelinesascode.tekton.dev/task: "<share/tasks/git-clone.yaml>"
+...
+----
+`pipelinesascode.tekton.dev/task`:: Relative path to the local file containing the task definition.
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://artifacthub.io/packages/search?repo=tekton-catalog-tasks[Tekton Catalog Tasks on Artifact Hub]
+
+:leveloffset!:
+
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * pac/creating-pipeline-runs-pac.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="using-remote-pipeline-annotations-with-pipelines-as-code_{context}"]
+= Remote pipeline annotations
+
+[role="_abstract"]
+You can share a pipeline definition across many repositories by using the remote pipeline annotation.
+
+[source,yaml]
+----
+...
+    pipelinesascode.tekton.dev/pipeline: "<https://git.provider/raw/pipeline.yaml>"
+...
+----
+`pipelinesascode.tekton.dev/pipeline`:: URL to the remote pipeline definition. You can also give locations for files inside the same repository.
+
+[NOTE]
+====
+You can reference only one pipeline definition using the annotation.
+====
+
+[id="overriding-tasks-in-remote-pipeline_{context}"]
+== Overriding a task in a remote pipeline
+
+By default, if you use a remote pipeline annotation in a pipeline run, {pac} uses all the tasks that are a part of the remote pipeline.
+
+You can override a task in a remote pipeline by adding a task annotation to the pipeline run. The added task must have the same name as a task in the remote pipeline.
+
+For example, you might use the following pipeline run definition:
+
+.Example pipeline run definition referencing a remote pipeline and overriding a task
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  annotations:
+    pipelinesascode.tekton.dev/pipeline: "https://git.provider/raw/pipeline.yaml"
+    pipelinesascode.tekton.dev/task: "./my-git-clone-task.yaml"
+----
+
+For this example, assume the remote task found at `\https://git.provider/raw/pipeline.yaml` includes a task named `git-clone` and the task that the `my-git-clone-task.yaml` file defines is also named `git-clone`.
+
+In this case, the pipeline run executes the remote pipeline, but replaces the task named `git-clone` in the pipeline with the task you defined.
+
+[role="_additional-resources"]
+.Additional resources
+
+* xref:../pac/creating-pipeline-runs-pac.adoc#pipelines-as-code-resolver-annotations_creating-pipeline-runs-pac[{pac} resolver annotations]
+* xref:../pac/creating-pipeline-runs-pac.adoc#using-remote-task-annotations-with-pipelines-as-code_creating-pipeline-runs-pac[Remote task annotations]
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/creating-pipeline-runs-pac.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="matching-pipeline-run-using-pipelines-as-code_{context}"]
+= Annotations for matching events to a pipeline run
+
+[role="_abstract"]
+You can match different Git provider events with each pipeline run by using annotations on the pipeline run. If there are many pipeline runs matching an event, {pac} runs them in parallel and posts the results to the Git provider as soon as a pipeline run finishes.
+
+[id="pull-matching-pipeline-run-using-pipelines-as-code_{context}"]
+== Matching a pull request event to a pipeline run
+
+You can use the following example to match the `pipeline-pr-main` pipeline run with a `pull_request` event that targets the `main` branch:
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: pipeline-pr-main
+annotations:
+  pipelinesascode.tekton.dev/on-target-branch: "[main]"
+  pipelinesascode.tekton.dev/on-event: "[pull_request]"
+# ...
+----
+`pipelinesascode.tekton.dev/on-target-branch`:: You can specify many branches by adding comma-separated entries. For example, `"[main, release-nightly]"`. In addition, you can specify the following items:
+* Full references to branches such as `"refs/heads/main"`
+* Globs with pattern matching such as `"refs/heads/\*"`
+* Tags such as `"refs/tags/1.\*"`
+
+[id="push-matching-pipeline-run-using-pipelines-as-code_{context}"]
+== Matching a push event to a pipeline run
+
+You can use the following example to match the `pipeline-push-on-main` pipeline run with a `push` event targeting the `refs/heads/main` branch:
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: pipeline-push-on-main
+annotations:
+  pipelinesascode.tekton.dev/on-target-branch: "[refs/heads/main]"
+  pipelinesascode.tekton.dev/on-event: "[push]"
+# ...
+----
+`pipelinesascode.tekton.dev/on-target-branch`:: You can specify many branches by adding comma-separated entries. For example, `"[main, release-nightly]"`. In addition, you can specify the following items:
+* Full references to branches such as `"refs/heads/main"`
+* Globs with pattern matching such as `"refs/heads/\*"`
+* Tags such as `"refs/tags/1.\*"`
+
+
+[id="comment-matching-pipeline-run-using-pipelines-as-code_{context}"]
+== Matching a comment event to a pipeline run
+
+:FeatureName: Matching a comment event to a pipeline run
+:_mod-docs-content-type: SNIPPET
+// When including this file, ensure that {FeatureName} is set immediately before
+// the include. Otherwise it will result in an incorrect replacement.
+
+[IMPORTANT]
+====
+[subs="attributes+"]
+{FeatureName} is a Technology Preview feature only. Technology Preview features are not supported with Red Hat production service level agreements (SLAs) and might not be functionally complete. Red Hat does not recommend using them in production. These features provide early access to upcoming product features, enabling customers to test functionality and provide feedback during the development process.
+
+For more information about the support scope of Red Hat Technology Preview features, see link:https://access.redhat.com/support/offerings/techpreview/[Technology Preview Features Support Scope].
+====
+// Undefine {FeatureName} attribute, so that any mistakes are easily spotted
+:!FeatureName:
+
+You can use the following example to match the `pipeline-comment` pipeline run with a comment on a pull request, when the text of the comment matches the `^/merge-pr` regular expression:
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: pipeline-comment
+annotations:
+  pipelinesascode.tekton.dev/on-comment: "^/merge-pr"
+# ...
+----
+
+The pipeline run starts only if the comment author meets one of the following requirements:
+
+* The author is the owner of the repository.
+* The author is a collaborator on the repository.
+* The author is a public member on the organization of the repository.
+* The `OWNERS` file lists the comment author in the `approvers` or `reviewers` section in the root of the repository, as defined in the https://www.kubernetes.dev/docs/guide/owners/[Kubernetes documentation]. {pac} supports the specification for the `OWNERS` and `OWNERS_ALIASES` files. If the `OWNERS` file includes a https://github.com/kubernetes/community/blob/master/contributors/guide/owners.md#filters[filters] section, {pac} matches approvers and reviewers only against the `.*` filter.
+
+[id="advanced-matching-pipeline-run-using-pipelines-as-code_{context}"]
+== Advanced event matching
+
+{pac} supports by using Common Expression Language (CEL) based filtering for advanced event matching. If you have the `pipelinesascode.tekton.dev/on-cel-expression` annotation in your pipeline run, {pac} uses the CEL expression and skips the `on-target-branch` annotation. Compared to the simple `on-target-branch` annotation matching, the CEL expressions allow complex filtering and negation.
+
+[IMPORTANT]
+====
+If you use the `on-cel-expression` annotation in the same pipeline run as an `on-event`, `on-target-branch`, `on-label`, `on-path-change`, or `on-path-change-ignore` annotation, the `on-cel-expression` annotation takes priority and {pac} ignores the other annotations.
+====
+
+To use CEL-based filtering with {pac}, consider the following examples of annotations:
+
+* To match a `pull_request` event targeting the `main` branch and coming from the `wip` branch:
++
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: pipeline-advanced-pr
+annotations:
+  pipelinesascode.tekton.dev/on-cel-expression: |
+    event == "pull_request" && target_branch == "main" && source_branch == "wip"
+...
+----
+
+* To run a pipeline only if a path has changed, you can use the `.pathChanged` suffix function with a glob pattern:
++
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: pipeline-advanced-pr-pathchanged
+annotations:
+  pipelinesascode.tekton.dev/on-cel-expression: |
+    event == "pull_request" && "docs/\*.md".pathChanged()
+# ...
+----
+`.pathChanged()`:: Matches all markdown files in the `docs` directory.
+
+* To match all pull requests starting with the title `[DOWNSTREAM]`:
++
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: pipeline-advanced-pr-downstream
+annotations:
+  pipelinesascode.tekton.dev/on-cel-expression: |
+    event == "pull_request && event_title.startsWith("[DOWNSTREAM]")
+# ...
+----
+
+* To run a pipeline on a `pull_request` event, but skip the `experimental` branch:
++
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: pipeline-advanced-pr-not-experimental
+annotations:
+  pipelinesascode.tekton.dev/on-cel-expression: |
+    event == "pull_request" && target_branch != experimental"
+# ...
+----
+
+For advanced CEL-based filtering while using {pac}, you can use the following fields and suffix functions:
+
+* `event`: A `push` or `pull_request` event.
+* `target_branch`: The target branch.
+* `source_branch`: The branch of origin of a `pull_request` event. For `push` events, it is same as the `target_branch`.
+* `event_title`: Matches the title of the event, such as the commit title for a `push` event, and the title of a pull or merge request for a `pull_request` event. Currently, only GitHub, GitLab, and Bitbucket Cloud are the supported providers.
+* `.pathChanged`: A suffix function to a string. The string can be a glob of a path to check if the path has changed. Currently, {pac} supports only GitHub and GitLab as providers.
+
+In addition, you can access the full payload as passed by the Git repository provider. Use the `headers` field to access the headers of the payload, for example, `headers['x-github-event']`. Use the `body` field to access the body of the payload, for example, `body.pull_request.state`.
+
+:FeatureName: Using the header and body of the payload for CEL-based filtering with {pac}
+:_mod-docs-content-type: SNIPPET
+// When including this file, ensure that {FeatureName} is set immediately before
+// the include. Otherwise it will result in an incorrect replacement.
+
+[IMPORTANT]
+====
+[subs="attributes+"]
+{FeatureName} is a Technology Preview feature only. Technology Preview features are not supported with Red Hat production service level agreements (SLAs) and might not be functionally complete. Red Hat does not recommend using them in production. These features provide early access to upcoming product features, enabling customers to test functionality and provide feedback during the development process.
+
+For more information about the support scope of Red Hat Technology Preview features, see link:https://access.redhat.com/support/offerings/techpreview/[Technology Preview Features Support Scope].
+====
+// Undefine {FeatureName} attribute, so that any mistakes are easily spotted
+:!FeatureName:
+
+In the following example, the pipeline run starts only if all of the following conditions are true:
+
+* The pull request is targeting the `main` branch.
+* The author of the pull request is `superuser`.
+* The action is `synchronize`; this action triggers when an update occurs on a pull request.
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  annotations:
+    pipelinesascode.tekton.dev/on-cel-expression: |
+      body.pull_request.base.ref == "main" &&
+        body.pull_request.user.login == "superuser" &&
+        body.action == "synchronize"
+# ...
+----
+
+[NOTE]
+====
+If you use the `header` or `body` field for event matching, you might be unable to trigger the pipeline run using Git commands such as `retest`. If you use a Git command, the payload body is the comment that has this command, and not the original payload.
+
+If you want to trigger the pipeline run again when using the `body` field for event matching, you can close and reopen the pull request or merge request, or add a new SHA commit. To add a new SHA commit, use the following command:
+
+[source,terminal]
+----
+$ git commit --amend --no-edit && git push --force-with-lease
+----
+====
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://cel.dev/[Common Expression Language (CEL)]
+* link:https://www.kubernetes.dev/docs/guide/owners/[Kubernetes OWNERS file specification]
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/creating-pipeline-runs-pac.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="filtering-pipeline-run-using-pipelines-as-code_{context}"]
+= Annotations for filtering events matched to a pipeline run
+
+[role="_abstract"]
+Add annotations to a pipeline run to filter events that {pac} matches, ensuring the pipeline run starts only when all annotations match the event.
+
+You can add one or more annotations to a pipeline run to filter the events that {pac} matches to this pipeline run. In this case, when the defined matching event (such as a pull request, a push event, or a comment) happens, {pac} checks if these annotations also match. The pipeline run starts only if all the annotations that you added match the event.
+
+[id="path-matching-pipeline-run-using-pipelines-as-code_{context}"]
+== Matching changes in paths to a pipeline run
+
+You can match a pipeline run to changes in a set of paths. {pac} starts the pipeline run only if the pull request or push event includes changes in any of the paths that you list.
+
+The `pass:[*]` wildcard denotes any file in the directory. The `pass:[**]` wildcard denotes any file in the directory or any subdirectories on any level under the directory.
+
+You can use the following example to match the `pipeline-pkg-or-cli` pipeline run when a pull request changes any files in the `pkg` directory, the `cli` directory, or any subdirectories under the `cli` directory.
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: pipeline-pkg-or-cli
+annotations:
+  pipelinesascode.tekton.dev/on-path-changed: "[pkg/*, cli/**]"
+# ...
+----
+
+[id="exclude-path-matching-pipeline-run-using-pipelines-as-code_{context}"]
+== Excluding changes in paths from matching a pipeline run
+
+You can configure a pipeline run to exclude matching if a pull request makes changes only to files in a specified set of paths. If the pipeline run matches an event but the pull request includes changes only to files in the paths that you list, {pac} does not start the pipeline run.
+
+The following example matches the `pipeline-docs-not-generated` pipeline run when a pull request changes any files under the `docs` directory or its subdirectories. The match excludes changes that apply only to the `docs/generated` directory or its subdirectories.
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: pipeline-docs-not-generated
+annotations:
+  pipelinesascode.tekton.dev/on-path-changed: "[docs/**]"
+  pipelinesascode.tekton.dev/on-path-changed-ignore: "[docs/generated/**]"
+# ...
+----
+
+You can use the following example to match the `pipeline-main-not-docs` pipeline run when a pull request targets the `main` branch, except when the changes apply only to the `docs` directory or its subdirectories.
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: pipeline-main-not-docs
+annotations:
+  pipelinesascode.tekton.dev/on-target-branch: "[main]"
+  pipelinesascode.tekton.dev/on-event: "[pull_request]"
+  pipelinesascode.tekton.dev/on-path-changed-ignore: "[docs/**]"
+# ...
+----
+
+[id="label-matching-pipeline-run-using-pipelines-as-code_{context}"]
+== Matching a pull request label to a pipeline run
+
+:FeatureName: Matching pull request labels to a pipeline run
+:_mod-docs-content-type: SNIPPET
+// When including this file, ensure that {FeatureName} is set immediately before
+// the include. Otherwise it will result in an incorrect replacement.
+
+[IMPORTANT]
+====
+[subs="attributes+"]
+{FeatureName} is a Technology Preview feature only. Technology Preview features are not supported with Red Hat production service level agreements (SLAs) and might not be functionally complete. Red Hat does not recommend using them in production. These features provide early access to upcoming product features, enabling customers to test functionality and provide feedback during the development process.
+
+For more information about the support scope of Red Hat Technology Preview features, see link:https://access.redhat.com/support/offerings/techpreview/[Technology Preview Features Support Scope].
+====
+// Undefine {FeatureName} attribute, so that any mistakes are easily spotted
+:!FeatureName:
+
+You can match a pipeline run to one or several pull request labels. {pac} starts the pipeline run only when the pull request has any of these labels. When you update the pull request with a new commit, if the label is still present, {pac} starts the pipeline run again.
+
+The following example matches the `pipeline-bug-or-defect` pipeline run when you add the `bug` or `defect` label to a pull request. It also matches when you update a labeled pull request with a new commit:
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: pipeline-bug-or-defect
+annotations:
+  pipelinesascode.tekton.dev/on-label: "[bug, defect]"
+# ...
+----
+
+[NOTE]
+====
+The current version of {pac} supports matching events to pull request labels only for the GitHub, Gitea, and GitLab repository hosting service providers.
+====
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://cel.dev/[Common Expression Language (CEL)]
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/managing-pipeline-runs-pac.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="speccancel-pipeline-run-using-pipelines-as-code_{context}"]
+= Annotations for specifying automatic cancellation-in-progress for a pipeline run
+
+[role="_abstract"]
+Configure automatic cancellation-in-progress for pipeline runs to prevent many copies from consuming excessive cluster resources when rapid Git events occur. Use the `cancel-in-progress` annotation to automatically cancel older pipeline runs when a new copy starts for the same pull request or branch.
+
+For example, if a pull request triggers a pipeline run and then the user pushes new commits into the pull request source branch, each push triggers a new copy of the pipeline run. If several pushes happen, several copies can run, which can consume excessive cluster resources.
+
+You can configure a pipeline run to enable automatic cancellation-in-progress. If you enable automatic cancellation for a pipeline run, {pac} cancels the pipeline run in the following situations:
+
+* {pac} has successfully started a copy of the same pipeline run for the same pull request or the same source branch.
+
+* A user merges or closes the pull request that triggered the pipeline run.
+
+You can use the following example to enable automatic cancellation when you create the `sample-pipeline` pipeline run:
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: sample-pipeline
+annotations:
+  pipelinesascode.tekton.dev/cancel-in-progress: "true"
+# ...
+----
+
+:FeatureName: Automatic cancellation-in-progress of pipeline runs
+:_mod-docs-content-type: SNIPPET
+// When including this file, ensure that {FeatureName} is set immediately before
+// the include. Otherwise it will result in an incorrect replacement.
+
+[IMPORTANT]
+====
+[subs="attributes+"]
+{FeatureName} is a Technology Preview feature only. Technology Preview features are not supported with Red Hat production service level agreements (SLAs) and might not be functionally complete. Red Hat does not recommend using them in production. These features provide early access to upcoming product features, enabling customers to test functionality and provide feedback during the development process.
+
+For more information about the support scope of Red Hat Technology Preview features, see link:https://access.redhat.com/support/offerings/techpreview/[Technology Preview Features Support Scope].
+====
+// Undefine {FeatureName} attribute, so that any mistakes are easily spotted
+:!FeatureName:
+
+[NOTE]
+====
+* {pac} cancels a pipeline run _after_ starting a new copy of this pipeline run successfully. The `pipelinesascode.tekton.dev/cancel-in-progress` setting does _not_ ensure that only one copy of the pipeline run is executing at any time.
+
+* To enable `cancellation-in-progress` for all default pipeline runs, use the `enable-cancel-in-progress-on-pull-requests` and the `enable-cancel-in-progress-on-push` settings. These settings are available in the `platforms.openshift.pipelinesAsCode.settings` spec of the `TektonConfig` custom resource (CR) configure {pac}.
+====
+
+[role="_additional-resources"]
+.Additional resources
+
+* xref:../pac/install-config-pipelines-as-code.adoc#customizing-pipelines-as-code-configuration_install-config-pipelines-as-code[Customizing {pac} configuration]
+
+:leveloffset!:
+
+[role="_additional-resources"]
+.Additional resources
+
+* xref:../pac/using-pipelines-as-code-repos.adoc#scoping-github-token_using-pipelines-as-code-repos[Scoping the GitHub token to additional repositories]
+
+* link:https://cel.dev/[Common Expression Language (CEL)]
+
+* xref:../pac/install-config-pipelines-as-code.adoc#customizing-pipelines-as-code-configuration_install-config-pipelines-as-code[Customizing {pac} configuration]
+
+= Managing pipeline runs
+
+:_mod-docs-content-type: ASSEMBLY
+:_mod-docs-content-type: SNIPPET
+// The {product-title} attribute provides the context-sensitive name of the relevant OpenShift distribution, for example, "OpenShift Container Platform" or "OKD". The {product-version} attribute provides the product version relative to the distribution, for example "4.9".
+// {product-title} and {product-version} are parsed when AsciiBinder queries the _distro_map.yml file in relation to the base branch of a pull request.
+// See https://github.com/openshift/openshift-docs/blob/main/contributing_to_docs/doc_guidelines.adoc#product-name-and-version for more information on this topic.
+// Other common attributes are defined in the following lines:
+:data-uri:
+:icons:
+:experimental:
+:toc: macro
+:toc-title:
+:imagesdir: images
+:prewrap!:
+
+:pipelines-title: Red Hat OpenShift Pipelines
+:pipelines-shortname: OpenShift Pipelines
+:pipelines-ver: pipelines-1.22
+:pipelines-version-number: 1.22
+:osp-version-patch: 0
+:tekton-cache: Tekton Cache
+:tekton-chains: Tekton Chains
+:tekton-results: Tekton Results
+:tekton-triggers: Tekton Triggers
+:tekton-hub: Tekton Hub
+:artifact-hub: Artifact Hub
+:pac: Pipelines as Code
+:product-registry: OpenShift image registry
+// IBM Power
+:ibmpowerProductName: IBM Power
+// IBM zSystems
+:ibmzProductName: IBM zSystems
+:linuxoneProductName: IBM(R) LinuxONE
+:kebab: image:kebab.png[title="Options menu"]
+
+:op-system-base: RHEL
+:op-system-base-full: Red Hat Enterprise Linux (RHEL)
+
+:cluster-manager-first: Red Hat OpenShift Cluster Manager
+:cluster-manager: OpenShift Cluster Manager
+:cluster-manager-url: link:https://console.redhat.com/openshift[OpenShift Cluster Manager Hybrid Cloud Console]
+:cluster-manager-url-pull: link:https://console.redhat.com/openshift/install/pull-secret[pull secret from the Red Hat OpenShift Cluster Manager]
+
+:oc-first: pass:quotes[OpenShift CLI (`oc`)]
+
+// Attributes not present in the main branch
+:OCP: OpenShift Container Platform
+
+//We should use lowercase like regular OCP docs and deprecate the above.
+:ocp: OpenShift Container Platform
+
+
+:ols-official: Red{nbsp}Hat OpenShift Lightspeed
+:ols: OpenShift Lightspeed
+
+// Attributes not present in the main branch
+:rhosp: Red Hat OpenStack Platform
+[id="managing-pipeline-runs-pac_{context}"]
+= Managing pipeline runs
+:context: managing-pipeline-runs-pac
+
+toc::[]
+
+[role="_abstract"]
+Verify, run, and manage pipeline runs that use {pac}.
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/managing-pipeline-runs-pac.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="verifying-pipeline-run-pac_{context}"]
+= Verifying a pipeline run
+
+You can verify that the {pac} resolver correctly processes the pipeline run definition that you created.
+[role="_abstract"]
+You can verify that the {pac} resolver correctly processes the pipeline run definition that you created.
+
+.Prerequisites
+
+* You installed the `tkn` command line utility.
+* You logged in to your {OCP} cluster using {oc-first}.
+* You cloned your Git repository locally.
+
+.Procedure
+
+* From the root of your cloned Git repository, run the following command, specifying your pipeline run definition file name:
++
+[source, terminal]
+----
+$ tkn pac resolve .tekton/pipeline-run-definition.yaml
+----
++
+This command processes the pipeline run definition by using the {pac} resolver. If the resolver fails to find any referenced resource, the output displays an error message. If the resolver completes successfully, the output displays the definition of a `PipelineRun` custom resource (CR) that includes all referenced resources, such as remote task definitions.
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/managing-pipeline-runs-pac.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="running-pipeline-run-using-pipelines-as-code_{context}"]
+= Running a pipeline run using {pac}
+
+[role="_abstract"]
+With default configuration, {pac} runs any pipeline run in the `.tekton/` directory of the default branch of repository, when specified events such as pull request or push occurs on the repository. For example, if a pipeline run on the default branch has the annotation `pipelinesascode.tekton.dev/on-event: "[pull_request]"`, it will run whenever a pull request event occurs.
+
+In case of a pull request or a merge request, {pac} also runs pipelines from branches other than the default branch, if the author of the pull request meets the following conditions:
+
+* The author is the owner of the repository.
+* The author is a collaborator on the repository.
+* The author is a public member on the organization of the repository.
+* The `OWNERS` file lists the pull request author in the `approvers` or `reviewers` section in the root of the repository, as defined in the https://www.kubernetes.dev/docs/guide/owners/[Kubernetes documentation]. {pac} supports the specification for the `OWNERS` and `OWNERS_ALIASES` files. If the `OWNERS` file includes a https://github.com/kubernetes/community/blob/master/contributors/guide/owners.md#filters[filters] section, {pac} matches approvers and reviewers only against the `.*` filter.
+
+If the pull request author does not meet the requirements, another user who meets them can comment `/ok-to-test` on the pull request. The user can also post this comment in a discussion thread reply.
+
+*Pipeline run execution*
+A pipeline run always runs in the namespace of the `Repository` custom resource definition (CRD) associated with the repository that generated the event.
+
+You can observe the execution of your pipeline runs using the `tkn pac` CLI tool.
+
+* To follow the execution of the last pipeline run, use the following example:
++
+[source,terminal]
+----
+$ tkn pac logs -n <my_pipeline_ci> -L
+----
+`<my_pipeline_ci>`:: The namespace for the `Repository` CRD.
+
+* To follow the execution of any pipeline run interactively, use the following example:
++
+[source,terminal]
+----
+$ tkn pac logs -n <my_pipeline_ci>
+----
+`<my_pipeline_ci>`:: The namespace for the `Repository` CRD.
+If you need to view a pipeline run other than the last one, you can use the `tkn pac logs` command to select a `PipelineRun` attached to the repository:
+
+If you have configured {pac} with a GitHub App, {pac} posts a URL in the *Checks* tab of the GitHub App. You can click the URL and follow the pipeline execution.
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assembly:
+// * pac/managing-pipeline-runs-pac.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id="op-triggering-pipelinerun-on-git-tags-using-pipelines-as-code_{context}"]
+= Triggering a PipelineRun on Git tags
+
+[role="_abstract"]
+
+When you create or reference a Git tag in a repository that integrates with {pac}, you can trigger a `PipelineRun` on a tag by using GitOps comment. This capability enables you to test or deploy tagged versions of your code, supporting release-based workflows and version control practices.
+
+{pac} resolves the Git tag to its corresponding commit SHA and runs the `PipelineRun` defined for that commit. You can start or manage such runs by commenting on the tagged commit by using supported GitOps commands.
+
+GitHub App, GitHub Webhook, and GitLab integrations support triggering `PipelineRun` on Git tags. This functionality is not currently available for Gitea, Bitbucket Cloud, or Bitbucket Data Center.
+
+== Supported GitOps commands
+
+* `/test tag:<tag>`:: Retrigger all matching `PipelineRun` for the tag commit
+* `/test <pipelinerun_name> tag:<tag>`:: Retrigger only the named `PipelineRun`
+* `/retest tag:<tag>`:: Retrigger all matching `PipelineRun` for the tag commit
+* `/retest <pipelinerun_name> tag:<tag>`:: Retrigger only the named `PipelineRun`
+* `/cancel tag:<tag>`:: Cancel all running `PipelineRun` for the tag commit
+* `/cancel <pipelinerun_name> tag:<tag>`:: Cancel only the named `PipelineRun`
+
+A `PipelineRun` configured to respond to tag events typically includes annotations such as `pipelinesascode.tekton.dev/on-target-branch: "[refs/tags/*]"` and `pipelinesascode.tekton.dev/on-event: "[push]"`. These annotations ensure that {pac} recognizes tag creation events as push events and processes them correctly. When you create or reference a tag, {pac} treats it as a push event and uses the resolved commit SHA to run the associated `PipelineRun`. The same logic applies to next GitOps commands added as comments on the tagged commit.
+
+Tag based triggering is particularly useful in continuous delivery scenarios where tags represent specific versions or releases. This method enables you to validate and promote release artifacts consistently without modifying the branch state.
+
+The following example shows a minimal `PipelineRun` configuration that triggers on tag events:
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: pipelinerun-on-tag
+  annotations:
+    pipelinesascode.tekton.dev/on-target-branch: "[refs/tags/*]"
+    pipelinesascode.tekton.dev/on-event: "[push]"
+spec:
+  pipelineSpec:
+    tasks:
+      - name: tag-task
+        taskSpec:
+          steps:
+            - name: echo
+              image: registry.access.redhat.com/ubi9/ubi-micro
+              script: |
+                echo "tag: {{ git_tag }}"
+----
+
+:leveloffset!:
+
+:leveloffset: +2
+
+// This module is included in the following assembly:
+// * pac/managing-pipeline-runs-pac.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="op-triggering-pipelineruns-for-gitops-commands-using-tagged-commits_{context}"]
+= Triggering PipelineRuns for GitOps commands using tagged commits
+
+[role="_abstract"]
+You can trigger a `PipelineRun` by using a Git tag for tagged commits.
+
+.Procedure
+
+. Open your GitHub repository.
+. Navigate to the *Tags* view or the *Releases* section.
+. Select the required tag, for example `v1.0.0`, to view its associated commit.
+. Click the commit SHA for the selected tag.
+. In the comment field of the commit, enter a supported GitOps command, such as `/test tag:v1.0.0` or `/cancel tag:v1.0.0`.
+. Verify that {pac} processes the comment and triggers or updates the corresponding `PipelineRun`.
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/managing-pipeline-runs-pac.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="restarting-or-canceling-pipeline-run-using-pipelines-as-code_{context}"]
+= Restarting or canceling a pipeline run using {pac}
+
+You can restart or cancel a pipeline run without triggering an event, such as sending a new commit to a branch or creating a pull request. To restart all pipeline runs, use the *Re-run all checks* feature in the GitHub App.
+[role="_abstract"]
+You can restart or cancel a pipeline run without triggering an event, such as sending a new commit to a branch or creating a pull request. To restart all pipeline runs, use the *Re-run all checks* feature in the GitHub App.
+
+To restart all or specific pipeline runs, use the following comments:
+
+* The `/test` and `/retest` comments restart all pipeline runs.
+
+* The `/test <pipeline_run_name>` and `/retest <pipeline_run_name>` comments start or restart a specific pipeline run. You can use these commands to start any {pac} pipeline run on the repository, whether or not an event triggered this pipeline run.
+
+To cancel all or specific pipeline runs, use the following comments:
+
+* The `/cancel` comment cancels all pipeline runs.
+
+* The `/cancel <pipeline_run_name>` comment cancels a specific pipeline run.
+
+The results of the comments are visible under the *Checks* tab of the GitHub App.
+
+The comment starts, restarts, or cancels any pipeline runs only if the comment author meets one of the following requirements:
+
+* The author is the owner of the repository.
+* The author is a collaborator on the repository.
+* The author is a public member of the organization that owns the repository.
+* The `OWNERS` file lists the comment author in the `approvers` or `reviewers` section in the root of the repository, as defined in the https://www.kubernetes.dev/docs/guide/owners/[Kubernetes documentation]. {pac} supports the specification for the `OWNERS` and `OWNERS_ALIASES` files. If the `OWNERS` file includes a https://github.com/kubernetes/community/blob/master/contributors/guide/owners.md#filters[filters] section, {pac} matches approvers and reviewers only against the `.*` filter.
+
+:FeatureName: Using a comment to start a pipeline run that does not match an event
+:_mod-docs-content-type: SNIPPET
+// When including this file, ensure that {FeatureName} is set immediately before
+// the include. Otherwise it will result in an incorrect replacement.
+
+[IMPORTANT]
+====
+[subs="attributes+"]
+{FeatureName} is a Technology Preview feature only. Technology Preview features are not supported with Red Hat production service level agreements (SLAs) and might not be functionally complete. Red Hat does not recommend using them in production. These features provide early access to upcoming product features, enabling customers to test functionality and provide feedback during the development process.
+
+For more information about the support scope of Red Hat Technology Preview features, see link:https://access.redhat.com/support/offerings/techpreview/[Technology Preview Features Support Scope].
+====
+// Undefine {FeatureName} attribute, so that any mistakes are easily spotted
+:!FeatureName:
+
+
+.Procedure
+
+* If you target a pull request and you use the GitHub App, go to the *Checks* tab and click *Re-run all checks*.
+
+* If you target a pull or merge request, use the comments inside your pull request:
++
+.Example comment that cancels all pipeline runs
+[source]
+----
+This is a comment inside a pull request.
+/cancel
+----
+
+* If you target a push request, include the comments within your commit messages.
++
+[NOTE]
+====
+{pac} supports this feature for GitHub and GitLab providers only.
+====
+
+.. Go to your GitHub or GitLab repository.
+
+.. In GitHub, click the *Commits* section. In GitLab, click the *History* section.
+
+.. Click the commit where you want to restart a pipeline run.
+
+.. click the line number where you want to add a comment. The following example shows a comment that starts or restarts a specific pipeline run:
++
+[source]
+----
+This is a comment inside a commit.
+/retest example_pipeline_run
+----
++
+[NOTE]
+====
+If you run a command on a commit that exists in many branches within a push request, {pac} uses the branch with the latest commit.
+
+This results in two situations:
+
+* If you run a command on a commit without any argument, such as `/test`, the test is automatically performed on the `main` branch.
+
+* If you include a branch specification, such as `/test branch:user-branch`, {pac} performs the test on the commit that has the comment with the context of the `user-branch` branch.
+====
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/managing-pipeline-runs-pac.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="monitoring-pipeline-run-status-using-pipelines-as-code_{context}"]
+= Monitoring pipeline run status using {pac}
+
+[role="_abstract"]
+Depending on the context and supported tools, you can monitor the status of a pipeline run in different ways.
+
+*Status on GitHub Apps*
+When a pipeline run finishes, {pac} adds the status in the *Check* tabs with limited information about how long each task of your pipeline took, and the output of the `tkn pipelinerun describe` command.
+
+*Log error snippet*
+When {pac} detects an error in one of the tasks of a pipeline, the page displays a small snippet consisting of the last 3 lines in the task breakdown of the first failed task.
+
+[NOTE]
+====
+{pac} avoids leaking secrets by looking into the pipeline run and replacing secret values with hidden characters. However, {pac} cannot hide secrets coming from workspaces and `envFrom` source.
+====
+
+*Annotations for log error snippets*
+
+In the `TektonConfig` custom resource, in the `pipelinesAsCode.settings` spec, you can set the `error-detection-from-container-logs` parameter to `true`. In this case, {pac} detects the errors from the container logs and adds them as annotations on the pull request where the error occurred.
+
+:FeatureName: Adding annotations for log error snippets
+:_mod-docs-content-type: SNIPPET
+// When including this file, ensure that {FeatureName} is set immediately before
+// the include. Otherwise it will result in an incorrect replacement.
+
+[IMPORTANT]
+====
+[subs="attributes+"]
+{FeatureName} is a Technology Preview feature only. Technology Preview features are not supported with Red Hat production service level agreements (SLAs) and might not be functionally complete. Red Hat does not recommend using them in production. These features provide early access to upcoming product features, enabling customers to test functionality and provide feedback during the development process.
+
+For more information about the support scope of Red Hat Technology Preview features, see link:https://access.redhat.com/support/offerings/techpreview/[Technology Preview Features Support Scope].
+====
+// Undefine {FeatureName} attribute, so that any mistakes are easily spotted
+:!FeatureName:
+
+Currently, {pac} supports only the simple cases where the error looks like `makefile` or `grep` output of the following format:
+[source,yaml]
+----
+<filename>:<line>:<column>: <error message>
+----
+
+You can customize the regular expression used to detect the errors with the `error-detection-simple-regexp` parameter. The regular expression uses named groups to give flexibility on how to specify the matching. The groups needed to match are `filename`, `line`, and `error`. You can view the {pac} config map for the default regular expression.
+
+[NOTE]
+====
+By default, {pac} scans only the last 50 lines of the container logs. You can increase this value in the `error-detection-max-number-of-lines` field or set `-1` for an unlimited number of lines. However, such configurations might increase the memory usage of the watcher.
+====
+
+*Status for webhook*
+For webhook, when the event is a pull request, {pac} adds the status as a comment on the pull or merge request.
+
+*Failures*
+If {pac} matches a namespace to a `Repository` custom resource definition (CRD), {pac} emits its failure log messages in the Kubernetes events inside the namespace.
+
+*YAML parting error messages in pull request comments*
+{pac} detects and reports YAML errors in `PipelineRun` definitions within the `.tekton` directory. When {pac} finds an invalid `PipelineRun` YAML in a pull request (PR) event, {pac} creates a comment on the PR describing the error and halts the execution of other correctly formatted pipeline runs. Consider the following scenarios:
+
+* If you update the PR and {pac} detects new YAML errors, {pac} updates the comment with the latest information.
+* If {pac} finds no new errors, the existing comment remains unchanged and {pac} does not delete it.
+* If {pac} finds a validation issue, {pac} logs the error in the user namespace events log and the {pac} controller log.
+
+These error scenarios do not halt the execution of valid pipeline runs. The system continues to process validated and matched pipeline runs, preventing a single validation problem from disrupting the entire workflow.
+
+*Status associated with Repository CRD*
+{pac} stores the last 5 status messages for a pipeline run inside the `Repository` custom resource.
+
+[source,terminal]
+----
+$ oc get repo -n <pipelines_as_code_ci>
+----
+
+.Example output
+[source,terminal]
+----
+NAME                  URL                                                        NAMESPACE             SUCCEEDED   REASON      STARTTIME   COMPLETIONTIME
+pipelines-as-code-ci   https://github.com/openshift-pipelines/pipelines-as-code   pipelines-as-code-ci   True        Succeeded   59m         56m
+----
+
+Using the `tkn pac describe` command, you can extract the status of the runs associated with your repository and its metadata.
+
+*Notifications*
+{pac} does not manage notifications. If you need to have notifications, use the `finally` feature of pipelines.
+
+:leveloffset!:
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://github.com/chmouel/tekton-slack-task-status[An example task to send Slack messages on success or failure]
+
+* link:https://github.com/openshift-pipelines/pipelines-as-code/blob/7b41cc3f769af40a84b7ead41c6f037637e95070/.tekton/push.yaml[An example of a pipeline run with `finally` tasks triggered on push events]
+
+* link:https://github.com/openshift-pipelines/pipelines-as-code/blob/main/test/testdata/pipelinerun_git_clone_private.yaml[An example of the `git-clone` task used for cloning private repositories]
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/managing-pipeline-runs-pac.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="cleaning-up-pipeline-run-using-pipelines-as-code_{context}"]
+= Cleaning up pipeline run using {pac}
+
+[role="_abstract"]
+
+There can be many pipeline runs in a user namespace. By setting the `max-keep-runs` annotation, you can configure {pac} to retain a limited number of pipeline runs that matches an event. For example:
+
+[source,yaml]
+----
+...
+  pipelinesascode.tekton.dev/max-keep-runs: "<max_number>"
+...
+----
+`<max_number>`:: {pac} starts cleaning up right after it finishes a successful execution, retaining only the maximum number of pipeline runs configured using the annotation.
++
+[NOTE]
+====
+* {pac} skips cleaning the running pipelines but cleans up the pipeline runs with an unknown status.
+* {pac} skips cleaning a failed pull request.
+====
+
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/managing-pipeline-runs-pac.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="using-incoming-webhook-with-pipelines-as-code_{context}"]
+= Using incoming webhook with {pac}
+
+[role="_abstract"]
+Using an incoming webhook URL and a shared secret, you can start a pipeline run in a repository.
+
+To use incoming webhooks, specify the following within the `spec` section of the `Repository` custom resource definition (CRD):
+
+* The incoming webhook URL that {pac} matches.
+* The Git provider and the user token. Currently, {pac} supports `github`, `gitlab`, and `bitbucket-cloud`.
++
+[NOTE]
+====
+When using incoming webhook URLs in the context of GitHub app, you must specify the token.
+====
+* The target branches and a secret for the incoming webhook URL.
+
+.Example: `Repository` CRD with incoming webhook
+[source,yaml]
+----
+apiVersion: "pipelinesascode.tekton.dev/v1alpha1"
+kind: Repository
+metadata:
+  name: repo
+  namespace: ns
+spec:
+  url: "https://github.com/owner/repo"
+  git_provider:
+    type: github
+    secret:
+      name: "owner-token"
+  incoming:
+    - targets:
+      - main
+      secret:
+        name: repo-incoming-secret
+      type: webhook-url
+----
+
+.Example: The `repo-incoming-secret` secret for incoming webhook
+[source,yaml]
+----
+apiVersion: v1
+kind: Secret
+metadata:
+  name: repo-incoming-secret
+  namespace: ns
+type: Opaque
+stringData:
+  secret: <very_secure_shared_secret>
+----
+
+To trigger a pipeline run located in the `.tekton` directory of a Git repository, use the following command:
+
+[source,terminal]
+----
+$ curl -X POST 'https://control.pac.url/incoming?secret=very-secure-shared-secret&repository=repo&branch=main&pipelinerun=target_pipelinerun'
+----
+
+{pac} matches the incoming URL and treats it as a `push` event. However, {pac} does not report status of the pipeline runs triggered by this command.
+
+To get a report or a notification, add it directly with a `finally` task to your pipeline. Or, you can inspect the `Repository` CRD with the `tkn pac` CLI tool.
+
+:leveloffset!:
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://github.com/openshift-pipelines/pipelines-as-code/tree/main/.tekton[An example of the `.tekton/` directory in the {pac} repository]
+
+* link:https://docs.openshift.com/container-platform/latest/applications/creating_applications/odc-creating-applications-using-developer-perspective.html[Creating applications using the Developer perspective]
+
+= Pipelines as Code command reference
+
+:_mod-docs-content-type: ASSEMBLY
+:_mod-docs-content-type: SNIPPET
+// The {product-title} attribute provides the context-sensitive name of the relevant OpenShift distribution, for example, "OpenShift Container Platform" or "OKD". The {product-version} attribute provides the product version relative to the distribution, for example "4.9".
+// {product-title} and {product-version} are parsed when AsciiBinder queries the _distro_map.yml file in relation to the base branch of a pull request.
+// See https://github.com/openshift/openshift-docs/blob/main/contributing_to_docs/doc_guidelines.adoc#product-name-and-version for more information on this topic.
+// Other common attributes are defined in the following lines:
+:data-uri:
+:icons:
+:experimental:
+:toc: macro
+:toc-title:
+:imagesdir: images
+:prewrap!:
+
+:pipelines-title: Red Hat OpenShift Pipelines
+:pipelines-shortname: OpenShift Pipelines
+:pipelines-ver: pipelines-1.22
+:pipelines-version-number: 1.22
+:osp-version-patch: 0
+:tekton-cache: Tekton Cache
+:tekton-chains: Tekton Chains
+:tekton-results: Tekton Results
+:tekton-triggers: Tekton Triggers
+:tekton-hub: Tekton Hub
+:artifact-hub: Artifact Hub
+:pac: Pipelines as Code
+:product-registry: OpenShift image registry
+// IBM Power
+:ibmpowerProductName: IBM Power
+// IBM zSystems
+:ibmzProductName: IBM zSystems
+:linuxoneProductName: IBM(R) LinuxONE
+:kebab: image:kebab.png[title="Options menu"]
+
+:op-system-base: RHEL
+:op-system-base-full: Red Hat Enterprise Linux (RHEL)
+
+:cluster-manager-first: Red Hat OpenShift Cluster Manager
+:cluster-manager: OpenShift Cluster Manager
+:cluster-manager-url: link:https://console.redhat.com/openshift[OpenShift Cluster Manager Hybrid Cloud Console]
+:cluster-manager-url-pull: link:https://console.redhat.com/openshift/install/pull-secret[pull secret from the Red Hat OpenShift Cluster Manager]
+
+:oc-first: pass:quotes[OpenShift CLI (`oc`)]
+
+// Attributes not present in the main branch
+:OCP: OpenShift Container Platform
+
+//We should use lowercase like regular OCP docs and deprecate the above.
+:ocp: OpenShift Container Platform
+
+
+:ols-official: Red{nbsp}Hat OpenShift Lightspeed
+:ols: OpenShift Lightspeed
+
+// Attributes not present in the main branch
+:rhosp: Red Hat OpenStack Platform
+[id="pac-command-reference_{context}"]
+= {pac} command reference
+:context: pac-command-reference
+
+toc::[]
+
+[role="_abstract"]
+You can use the `tkn pac` CLI tool to control {pac}. You can also configure {pac} logging with the `TektonConfig` custom resource and use the `oc` command to view {pac} logs.
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/pac-command-reference.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="pipelines-as-code-command-reference_{context}"]
+= {pac} command reference
+
+[role="_abstract"]
+The `tkn pac` CLI tool offers the following capabilities:
+
+* Bootstrap {pac} installation and configuration.
+* Create a new {pac} repository.
+* List all {pac} repositories.
+* Describe a {pac} repository and the associated runs.
+* Generate a simple pipeline run to get started.
+* Resolve a pipeline run as if {pac} executed it.
+
+[TIP]
+====
+You can use the commands corresponding to the capabilities for testing and experimentation, so that you do not have to make changes to the Git repository containing the application source code.
+====
+
+== Basic syntax
+
+.Example
+[source,terminal]
+----
+$ tkn pac [command or options] [arguments]
+----
+
+== Global options
+
+.Example
+[source,terminal]
+----
+$ tkn pac --help
+----
+
+== Utility commands
+
+bootstrap::
+
+[options="header"]
+|===
+
+| Command | Description
+
+| `tkn pac bootstrap` | Installs and configures {pac} for Git repository hosting service providers, such as GitHub and GitHub Enterprise.
+
+| `tkn pac bootstrap --nightly` | Installs the nightly build of {pac}.
+
+| `tkn pac bootstrap --route-url <public_url_to_ingress_spec>` | Overrides the OpenShift route URL.
+
+By default, `tkn pac bootstrap` detects the OpenShift route, which is automatically associated with the {pac} controller service.
+
+If you do not have an {OCP} cluster, it asks you for the public URL that points to the ingress endpoint.
+
+| `tkn pac bootstrap github-app` | Create a GitHub application and secrets in the `openshift-pipelines` namespace.
+
+|===
+
+repository::
+
+[options="header"]
+|===
+
+| Command | Description
+
+| `tkn pac create repository` | Creates a new {pac} repository and a namespace based on the pipeline run template.
+
+| `tkn pac list` | Lists all the {pac} repositories and displays the last status of the associated runs.
+
+| `tkn pac repo describe` | Describes a {pac} repository and the associated runs.
+
+|===
+
+generate::
+
+[options="header"]
+|===
+
+| Command | Description
+
+| `tkn pac generate` | Generates a simple pipeline run.
+
+When executed from the directory containing the source code, it automatically detects current Git information.
+
+In addition, it uses basic language detection capability and adds extra tasks depending on the language.
+
+For example, if it detects a `setup.py` file at the repository root, the link:https://hub.tekton.dev/tekton/task/pylint[pylint task] is automatically added to the generated pipeline run.
+
+|===
+
+resolve::
+
+[options="header"]
+|===
+
+| Command | Description
+
+| `tkn pac resolve` | Executes a pipeline run as if the {pac} on service owns it.
+
+| `tkn pac resolve -f .tekton/pull-request.yaml \| oc apply -f -` | Displays the status of a live pipeline run that uses the template in `.tekton/pull-request.yaml`.
+
+Combined with a Kubernetes installation running on your local machine, you can observe the pipeline run without generating a new commit.
+
+If you run the command from a source code repository, it attempts to detect the current Git information and automatically resolve parameters such as current revision or branch.
+
+| `tkn pac resolve -f .tekton/pr.yaml -p revision=main -p repo_name=<repository_name>` | Executes a pipeline run by overriding default parameter values derived from the Git repository.
+
+The `-f` option can also accept a directory path and apply the `tkn pac resolve` command on all `.yaml` or `.yml` files in that directory. You can also use the `-f` flag many times in the same command.
+
+You can override the default information gathered from the Git repository by specifying parameter values by using the `-p` option. For example, you can use a Git branch as a revision and a different repository name.
+
+|===
+
+Common Expression Language (CEL)::
+
+[options="header"]
+|===
+
+| Command | Description
+
+| `tkn pac cel` | Evaluate Common Expression Language (CEL) expressions against webhook payloads and headers. Because the command requires access to the raw webhook payload and header data that the Git provider provides, administrators use it for testing and debugging event filtering logic in {pac}.
+
+|===
+
+:FeatureName: The `tkn pac cel` command
+:_mod-docs-content-type: SNIPPET
+// When including this file, ensure that {FeatureName} is set immediately before
+// the include. Otherwise it will result in an incorrect replacement.
+
+[IMPORTANT]
+====
+[subs="attributes+"]
+{FeatureName} is a Technology Preview feature only. Technology Preview features are not supported with Red Hat production service level agreements (SLAs) and might not be functionally complete. Red Hat does not recommend using them in production. These features provide early access to upcoming product features, enabling customers to test functionality and provide feedback during the development process.
+
+For more information about the support scope of Red Hat Technology Preview features, see link:https://access.redhat.com/support/offerings/techpreview/[Technology Preview Features Support Scope].
+====
+// Undefine {FeatureName} attribute, so that any mistakes are easily spotted
+:!FeatureName:
+
+The `tkn pac cel` command uses the following syntax:
+
+[source,terminal]
+----
+tkn pac cel -b <body.json> -H <headers.txt> [-p <provider>]
+----
+
+[options="header"]
+|===
+| Option | Description
+
+| `-b, --body` | Specify the JSON payload file.
+| `-H, --headers` | Specify the headers file (plain text, JSON, or gosmee script).
+| `-p, --provider` | Optional: specify the Git provider (`auto`, `github`, `gitlab`, `bitbucket-cloud`, `bitbucket-datacenter`, `gitea`).
+|===
+
+*Header formats*
+
+The `tkn pac cel` command supports the following header formats:
+
+* Plain HTTP header format
++
+[source,text]
+----
+X-GitHub-Event: pull_request
+Content-Type: application/json
+User-Agent: GitHub-Hookshot/abc123
+----
+
+* JSON header format
++
+[source,json]
+----
+{
+  "X-GitHub-Event": "pull_request",
+  "Content-Type": "application/json",
+  "User-Agent": "GitHub-Hookshot/abc123"
+}
+----
+
+* Gosmee-generated shell scripts
++
+The `tkn pac cel` command automatically detects and parses headers from gosmee `--save` scripts. The following is an example by using GitHub:
++
+[source,bash]
+----
+#!/usr/bin/env bash
+curl -X POST "http://localhost:8080/" \
+  -H "X-GitHub-Event: pull_request" \
+  -H "Content-Type: application/json" \
+  -H "User-Agent: GitHub-Hookshot/abc123" \
+  -d @payload.json
+----
+
+*Interactive mode*
+
+The `tkn pac cel` command displays an interactive `CEL expression` prompt when executed in a terminal. Expression history is navigable using arrow keys and persists between sessions. Pressing *Enter* on an empty line exits the prompt.
+
+*noninteractive mode*
+
+The `tkn pac cel` command accepts CEL expressions by using standard input (`stdin`), allowing evaluation without using the interactive prompt. For example:
+
+[source,terminal]
+----
+echo 'event == "pull_request"' | tkn pac cel -b body.json -H headers.txt
+----
+
+*Available variables*
+
+The `tkn pac cel` command exposes the following variables that you can use in CEL expressions to filter or inspect events:
+
+* `event`: Event type (`push`, `pull_request`)
+* `target_branch`: Target branch name
+* `source_branch`: Source branch name
+* `target_url`: Target repository URL
+* `source_url`: Source repository URL
+* `event_title`: Pull request title or commit message
+* `body.*`: All fields from the webhook payload
+* `headers.*`: All HTTP headers
+* `files.*`: Always empty in CLI mode
+* `pac.*`: All {pac} parameters for backward compatibility
+
+[NOTE]
+====
+When evaluating CEL expressions locally using the CLI, `files.*` variables are always empty, and functions such as `fileChanged`, `fileDeleted`, and `fileModified` are unavailable.
+====
+
+*Example expressions*
+
+The following expressions illustrate typical use cases, including event filtering, branch matching, and header inspection:
+
+[source,terminal]
+----
+event == "pull_request" && target_branch == "main"
+event == "pull_request" && source_branch.matches(".*feat/.*")
+body.action == "synchronize"
+!body.pull_request.draft
+headers["x-github-event"] == "pull_request"
+----
+
+*History storage*
+
+The `tkn pac cel` command maintains a persistent history and creates the `cel-history` directory automatically if it does not exist in the following paths:
+
+* *Linux or macOS:* `~/.cache/tkn-pac/cel-history`
+* *Windows:* `%USERPROFILE%\.cache\tkn-pac\cel-history`
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assembly:
+//
+// * pac/pac-command-reference.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="configuring-pipelines-as-code-logging_{context}"]
+= Configuring {pac} logging
+
+[role="_abstract"]
+You can configure {pac} logging by editing the `pac-config-logging` config map in the `TektonConfig` custom resource (CR).
+
+.Prerequisites
+
+* You have {pac} installed on your cluster.
+
+.Procedure
+
+. In the *Administrator* perspective of the web console, go to *Administration* → *`CustomResourceDefinitions`*.
+
+. Use the *Search by name* field to search for the `tektonconfigs.operator.tekton.dev` custom resource definition (CRD) and click *`TektonConfig`* to view the CRD *Details* page.
+
+. Click the *Instances* tab.
+
+. Click the *config* instance to view the `TektonConfig` CR details.
+
+. Click the *YAML* tab.
+
+. Edit the `loglevel.` fields under the `.options.configMaps.pac-config-logging.data` parameter based on your requirements.
++
+.Example `TektonConfig` CR with the {pac} log level fields set to `warn`
+[source,yaml]
+----
+apiVersion: operator.tekton.dev/v1alpha1
+kind: TektonConfig
+metadata:
+  name: config
+spec:
+  platforms:
+    openshift:
+      pipelinesAsCode:
+        options:
+          configMaps:
+            pac-config-logging:
+              data:
+                loglevel.pac-watcher: warn
+                loglevel.pipelines-as-code-webhook: warn
+                loglevel.pipelinesascode: warn
+                zap-logger-config: |
+                  {
+                    "level": "info",
+                    "development": false,
+                    "sampling": {
+                      "initial": 100,
+                      "thereafter": 100
+                    },
+                    "outputPaths": ["stdout"],
+                    "errorOutputPaths": ["stderr"],
+                    "encoding": "json",
+                    "encoderConfig": {
+                      "timeKey": "ts",
+                      "levelKey": "level",
+                      "nameKey": "logger",
+                      "callerKey": "caller",
+                      "messageKey": "msg",
+                      "stacktraceKey": "stacktrace",
+                      "lineEnding": "",
+                      "levelEncoder": "",
+                      "timeEncoder": "iso8601",
+                      "durationEncoder": "",
+                      "callerEncoder": ""
+                    }
+                  }
+----
+`loglevel.pac-watcher`:: The log level for the `pipelines-as-code-watcher` component.
+`loglevel.pipelines-as-code-webhook`:: The log level for the `pipelines-as-code-webhook` component.
+`loglevel.pipelinesascode`:: The log level for the `pipelines-as-code-controller` component.
+
+. Optional: Create a custom logging config map for the {pac} components by changing the `.env.value` for each component under the `.options.deployments` field. The example below shows the configuration with the custom config map called `custom-pac-config-logging`.
++
+.Example `TektonConfig` CR with the {pac} custom logging config map
+[source,yaml]
+----
+apiVersion: operator.tekton.dev/v1alpha1
+kind: TektonConfig
+metadata:
+  name: config
+spec:
+  platforms:
+    openshift:
+      pipelinesAsCode:
+        enable: true
+        options:
+          configMaps:
+            custom-pac-config-logging:
+              data:
+                loglevel.pac-watcher: warn
+                loglevel.pipelines-as-code-webhook: warn
+                loglevel.pipelinesascode: warn
+                zap-logger-config: |
+                  {
+                    "level": "info",
+                    "development": false,
+                    "sampling": {
+                      "initial": 100,
+                      "thereafter": 100
+                    },
+                    "outputPaths": ["stdout"],
+                    "errorOutputPaths": ["stderr"],
+                    "encoding": "json",
+                    "encoderConfig": {
+                      "timeKey": "ts",
+                      "levelKey": "level",
+                      "nameKey": "logger",
+                      "callerKey": "caller",
+                      "messageKey": "msg",
+                      "stacktraceKey": "stacktrace",
+                      "lineEnding": "",
+                      "levelEncoder": "",
+                      "timeEncoder": "iso8601",
+                      "durationEncoder": "",
+                      "callerEncoder": ""
+                    }
+                  }
+          deployments:
+            pipelines-as-code-controller:
+              spec:
+                template:
+                  spec:
+                    containers:
+                    - name: pac-controller
+                      env:
+                      - name: CONFIG_LOGGING_NAME
+                        value: custom-pac-config-logging
+            pipelines-as-code-watcher:
+              spec:
+                template:
+                  spec:
+                    containers:
+                    - name: pac-watcher
+                      env:
+                      - name: CONFIG_LOGGING_NAME
+                        value: custom-pac-config-logging
+            pipelines-as-code-webhook:
+              spec:
+                template:
+                  spec:
+                    containers:
+                    - name: pac-webhook
+                      env:
+                      - name: CONFIG_LOGGING_NAME
+                        value: custom-pac-config-logging
+----
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/pac-command-reference.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="splitting-pipelines-as-code-logs-by-namespace_{context}"]
+= Splitting {pac} logs by namespace
+
+[role="_abstract"]
+{pac} logs contain the namespace information to make it possible to filter logs or split the logs by a particular namespace. For example, to view the {pac} logs related to the `mynamespace` namespace, enter the following command:
+
+[source,terminal]
+----
+$ oc logs pipelines-as-code-controller-<unique_id> -n openshift-pipelines | grep mynamespace
+----
+`<unique_id>`:: Replace `pipelines-as-code-controller-<unique_id>` with the {pac} controller name.
+
+:leveloffset!:
+
+
+
+[role="_additional-resources"]
+.Additional resources
+
+* xref:../install_config/installing-pipelines.adoc#installing-pipelines[Installing {pipelines-shortname}]
+
+* xref:../tkn_cli/installing-tkn.adoc#installing-tkn[Installing tkn]

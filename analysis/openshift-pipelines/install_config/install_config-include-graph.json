@@ -1,0 +1,182 @@
+{
+  "assemblies": [
+    {
+      "name": "Installing OpenShift Pipelines",
+      "file": "installing-pipelines.adoc",
+      "modules": [
+        {
+          "file": "modules/op-installing-pipelines-operator-in-web-console.adoc",
+          "type": "PROCEDURE",
+          "leveloffset": "+1"
+        },
+        {
+          "file": "modules/op-installing-pipelines-operator-using-the-cli.adoc",
+          "type": "PROCEDURE",
+          "leveloffset": "+1"
+        },
+        {
+          "file": "modules/op-pipelines-operator-in-restricted-environment.adoc",
+          "type": "CONCEPT",
+          "leveloffset": "+1"
+        }
+      ]
+    },
+    {
+      "name": "Uninstalling OpenShift Pipelines",
+      "file": "uninstalling-pipelines.adoc",
+      "modules": [
+        {
+          "file": "modules/op-deleting-the-pipelines-custom-resources.adoc",
+          "type": "PROCEDURE",
+          "leveloffset": "+1"
+        },
+        {
+          "file": "modules/op-uninstalling-the-pipelines-operator.adoc",
+          "type": "PROCEDURE",
+          "leveloffset": "+1"
+        },
+        {
+          "file": "modules/op-deleting-the-tekton-dev-crds.adoc",
+          "type": "PROCEDURE",
+          "leveloffset": "+1"
+        }
+      ]
+    },
+    {
+      "name": "Customizing configurations in the TektonConfig custom resource",
+      "file": "customizing-configurations-in-the-tektonconfig-cr.adoc",
+      "modules": [
+        {
+          "file": "modules/op-performance-tuning-using-tektonconfig-cr.adoc",
+          "type": "REFERENCE",
+          "leveloffset": "+1"
+        },
+        {
+          "file": "modules/op-configuring-pipelines-control-plane.adoc",
+          "type": "PROCEDURE",
+          "leveloffset": "+1"
+        },
+        {
+          "file": "modules/op-modifiable-fields-with-default-values.adoc",
+          "type": "REFERENCE",
+          "leveloffset": "+2"
+        },
+        {
+          "file": "modules/op-optional-configuration-fields.adoc",
+          "type": "REFERENCE",
+          "leveloffset": "+2"
+        },
+        {
+          "file": "modules/op-changing-default-service-account.adoc",
+          "type": "CONCEPT",
+          "leveloffset": "+1"
+        },
+        {
+          "file": "modules/op-setting-annotations-labels-namespace.adoc",
+          "type": "CONCEPT",
+          "leveloffset": "+1"
+        },
+        {
+          "file": "modules/op-setting-resync-period.adoc",
+          "type": "PROCEDURE",
+          "leveloffset": "+1"
+        },
+        {
+          "file": "modules/op-disabling-the-service-monitor.adoc",
+          "type": "CONCEPT",
+          "leveloffset": "+1"
+        },
+        {
+          "file": "modules/op-configuring-pipeline-resolvers.adoc",
+          "type": "CONCEPT",
+          "leveloffset": "+1"
+        },
+        {
+          "file": "modules/op-disabling-pipeline-templates.adoc",
+          "type": "CONCEPT",
+          "leveloffset": "+1"
+        },
+        {
+          "file": "modules/op-disabling-pipeline-triggers.adoc",
+          "type": "CONCEPT",
+          "leveloffset": "+1"
+        },
+        {
+          "file": "modules/op-disabling-the-integretion-of-tekton-hub.adoc",
+          "type": "CONCEPT",
+          "leveloffset": "+1"
+        },
+        {
+          "file": "modules/op-migrating-from-tekton-hub-to-artifact-hub.adoc",
+          "type": "CONCEPT",
+          "leveloffset": "+1"
+        },
+        {
+          "file": "modules/op-assess-migration-impact.adoc",
+          "type": "CONCEPT",
+          "leveloffset": "+2"
+        },
+        {
+          "file": "modules/op-migrating-to-artifact-hub.adoc",
+          "type": "CONCEPT",
+          "leveloffset": "+2"
+        },
+        {
+          "file": "modules/op-configuring-private-artifact-hub.adoc",
+          "type": "PROCEDURE",
+          "leveloffset": "+2"
+        },
+        {
+          "file": "modules/op-disabling-automatic-creation-of-rbac-resources.adoc",
+          "type": "PROCEDURE",
+          "leveloffset": "+1"
+        },
+        {
+          "file": "modules/op-disabling-inline-spec.adoc",
+          "type": "CONCEPT",
+          "leveloffset": "+1"
+        },
+        {
+          "file": "modules/op-configuration-rbac-trusted-ca-flags.adoc",
+          "type": "CONCEPT",
+          "leveloffset": "+1"
+        },
+        {
+          "file": "modules/op-automatic-pruning-taskrun-pipelinerun.adoc",
+          "type": "CONCEPT",
+          "leveloffset": "+1"
+        },
+        {
+          "file": "modules/op-default-pruner-configuration.adoc",
+          "type": "REFERENCE",
+          "leveloffset": "+2"
+        },
+        {
+          "file": "modules/op-annotations-for-automatic-pruning-taskruns-pipelineruns.adoc",
+          "type": "REFERENCE",
+          "leveloffset": "+2"
+        },
+        {
+          "file": "modules/op-event-pruner-configuration.adoc",
+          "type": "PROCEDURE",
+          "leveloffset": "+1"
+        },
+        {
+          "file": "modules/op-event-pruner-reference.adoc",
+          "type": "REFERENCE",
+          "leveloffset": "+2"
+        },
+        {
+          "file": "modules/op-event-pruner-observability.adoc",
+          "type": "REFERENCE",
+          "leveloffset": "+2"
+        },
+        {
+          "file": "modules/op-additional-options-webhooks.adoc",
+          "type": "PROCEDURE",
+          "leveloffset": "+1"
+        }
+      ]
+    }
+  ]
+}

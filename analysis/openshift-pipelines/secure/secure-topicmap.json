@@ -1,0 +1,35 @@
+{
+  "book_name": "Securing OpenShift Pipelines",
+  "book_dir": "secure",
+  "distro": "openshift-pipelines",
+  "topics": [
+    {
+      "name": "Using Tekton Chains for OpenShift Pipelines supply chain security",
+      "file": "using-tekton-chains-for-openshift-pipelines-supply-chain-security"
+    },
+    {
+      "name": "Setting up Openshift Pipelines in the web console to view Software Supply Chain Security elements",
+      "file": "setting-up-openshift-pipelines-to-view-software-supply-chain-security-elements"
+    },
+    {
+      "name": "Configuring the security context for pods",
+      "file": "configuring-security-context-for-pods"
+    },
+    {
+      "name": "Securing webhooks with event listeners",
+      "file": "securing-webhooks-with-event-listeners"
+    },
+    {
+      "name": "Authenticating pipelines with repositories using secrets",
+      "file": "authenticating-pipelines-repos-using-secrets"
+    },
+    {
+      "name": "Unprivileged building of container images using Buildah",
+      "file": "unprivileged-building-of-container-images-using-buildah"
+    },
+    {
+      "name": "Using buildah-ns tekton task",
+      "file": "using-buildah-ns-tekton-task"
+    }
+  ]
+}

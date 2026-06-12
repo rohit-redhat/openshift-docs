@@ -1,0 +1,133 @@
+{
+  "document": "working-with-pipelines-web-console.adoc",
+  "variant": "self-managed",
+  "includes": [
+    {
+      "assembly": "working-with-pipelines-web-console.adoc",
+      "module": "_attributes/common-attributes.adoc",
+      "type": "SNIPPET",
+      "leveloffset": null,
+      "line": 2
+    },
+    {
+      "assembly": "working-with-pipelines-web-console.adoc",
+      "module": "modules/op-odc-pipelines-abstract.adoc",
+      "type": "CONCEPT",
+      "leveloffset": "+1",
+      "line": 15,
+      "section_title": "Pipelines in the Developer perspective"
+    },
+    {
+      "assembly": "working-with-pipelines-web-console.adoc",
+      "module": "modules/op-constructing-pipelines-using-pipeline-builder.adoc",
+      "type": "PROCEDURE",
+      "leveloffset": "+2",
+      "line": 17,
+      "section_title": "Constructing pipelines using the pipeline builder"
+    },
+    {
+      "assembly": "working-with-pipelines-web-console.adoc",
+      "module": "modules/op-creating-pipelines-along-with-applications.adoc",
+      "type": "PROCEDURE",
+      "leveloffset": "+2",
+      "line": 19,
+      "section_title": "Creating pipelines along with applications"
+    },
+    {
+      "assembly": "working-with-pipelines-web-console.adoc",
+      "module": "modules/odc-adding-a-GitHub-repository-containing-pipelines.adoc",
+      "type": "PROCEDURE",
+      "leveloffset": "+2",
+      "line": 21,
+      "section_title": "Adding a GitHub repository containing pipelines"
+    },
+    {
+      "assembly": "working-with-pipelines-web-console.adoc",
+      "module": "modules/op-interacting-with-pipelines-using-the-developer-perspective.adoc",
+      "type": "PROCEDURE",
+      "leveloffset": "+2",
+      "line": 23,
+      "section_title": "Interacting with pipelines using the Developer perspective"
+    },
+    {
+      "assembly": "working-with-pipelines-web-console.adoc",
+      "module": "modules/op-starting-pipelines-from-pipelines-view.adoc",
+      "type": "PROCEDURE",
+      "leveloffset": "+2",
+      "line": 25,
+      "section_title": "Starting pipelines from Pipelines view"
+    },
+    {
+      "assembly": "working-with-pipelines-web-console.adoc",
+      "module": "modules/op-starting-pipelines-from-topology-view.adoc",
+      "type": "PROCEDURE",
+      "leveloffset": "+2",
+      "line": 27,
+      "section_title": "Starting pipelines from Topology view"
+    },
+    {
+      "assembly": "working-with-pipelines-web-console.adoc",
+      "module": "modules/op-interacting-pipelines-from-topology-view.adoc",
+      "type": "PROCEDURE",
+      "leveloffset": "+2",
+      "line": 29,
+      "section_title": "Interacting with pipelines from Topology view"
+    },
+    {
+      "assembly": "working-with-pipelines-web-console.adoc",
+      "module": "modules/op-editing-pipelines.adoc",
+      "type": "PROCEDURE",
+      "leveloffset": "+2",
+      "line": 31,
+      "section_title": "Editing pipelines"
+    },
+    {
+      "assembly": "working-with-pipelines-web-console.adoc",
+      "module": "modules/op-deleting-pipelines.adoc",
+      "type": "PROCEDURE",
+      "leveloffset": "+2",
+      "line": 33,
+      "section_title": "Deleting pipelines"
+    },
+    {
+      "assembly": "working-with-pipelines-web-console.adoc",
+      "module": "modules/op-creating-pipeline-templates-admin-console.adoc",
+      "type": "PROCEDURE",
+      "leveloffset": "+1",
+      "line": 41,
+      "section_title": "Creating pipeline templates in the Administrator perspective"
+    },
+    {
+      "assembly": "working-with-pipelines-web-console.adoc",
+      "module": "modules/op-console-statistics.adoc",
+      "type": "CONCEPT",
+      "leveloffset": "+1",
+      "line": 43,
+      "section_title": "Pipeline statistics in the web console"
+    },
+    {
+      "assembly": "working-with-pipelines-web-console.adoc",
+      "module": "modules/op-enabling-plugin.adoc",
+      "type": "PROCEDURE",
+      "leveloffset": "+2",
+      "line": 48,
+      "section_title": "Enabling the plugin"
+    },
+    {
+      "assembly": "working-with-pipelines-web-console.adoc",
+      "module": "modules/op-webstat-general.adoc",
+      "type": "REFERENCE",
+      "leveloffset": "+2",
+      "line": 49,
+      "section_title": "General statistics"
+    },
+    {
+      "assembly": "working-with-pipelines-web-console.adoc",
+      "module": "modules/op-webstat-pipeline.adoc",
+      "type": "REFERENCE",
+      "leveloffset": "+2",
+      "line": 50,
+      "section_title": "Pipeline statistics"
+    }
+  ]
+}

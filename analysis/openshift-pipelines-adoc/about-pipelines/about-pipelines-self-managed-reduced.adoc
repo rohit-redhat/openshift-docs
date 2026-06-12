@@ -1,0 +1,80 @@
+:_mod-docs-content-type: ASSEMBLY
+:_mod-docs-content-type: SNIPPET
+// The {product-title} attribute provides the context-sensitive name of the relevant OpenShift distribution, for example, "OpenShift Container Platform" or "OKD". The {product-version} attribute provides the product version relative to the distribution, for example "4.9".
+// {product-title} and {product-version} are parsed when AsciiBinder queries the _distro_map.yml file in relation to the base branch of a pull request.
+// See https://github.com/openshift/openshift-docs/blob/main/contributing_to_docs/doc_guidelines.adoc#product-name-and-version for more information on this topic.
+// Other common attributes are defined in the following lines:
+:data-uri:
+:icons:
+:experimental:
+:toc: macro
+:toc-title:
+:imagesdir: images
+:prewrap!:
+
+:pipelines-title: Red Hat OpenShift Pipelines
+:pipelines-shortname: OpenShift Pipelines
+:pipelines-ver: pipelines-1.22
+:pipelines-version-number: 1.22
+:osp-version-patch: 0
+:tekton-cache: Tekton Cache
+:tekton-chains: Tekton Chains
+:tekton-results: Tekton Results
+:tekton-triggers: Tekton Triggers
+:tekton-hub: Tekton Hub
+:artifact-hub: Artifact Hub
+:pac: Pipelines as Code
+:product-registry: OpenShift image registry
+// IBM Power
+:ibmpowerProductName: IBM Power
+// IBM zSystems
+:ibmzProductName: IBM zSystems
+:linuxoneProductName: IBM(R) LinuxONE
+:kebab: image:kebab.png[title="Options menu"]
+
+:op-system-base: RHEL
+:op-system-base-full: Red Hat Enterprise Linux (RHEL)
+
+:cluster-manager-first: Red Hat OpenShift Cluster Manager
+:cluster-manager: OpenShift Cluster Manager
+:cluster-manager-url: link:https://console.redhat.com/openshift[OpenShift Cluster Manager Hybrid Cloud Console]
+:cluster-manager-url-pull: link:https://console.redhat.com/openshift/install/pull-secret[pull secret from the Red Hat OpenShift Cluster Manager]
+
+:oc-first: pass:quotes[OpenShift CLI (`oc`)]
+
+// Attributes not present in the main branch
+:OCP: OpenShift Container Platform
+
+//We should use lowercase like regular OCP docs and deprecate the above.
+:ocp: OpenShift Container Platform
+
+
+:ols-official: Red{nbsp}Hat OpenShift Lightspeed
+:ols: OpenShift Lightspeed
+
+// Attributes not present in the main branch
+:rhosp: Red Hat OpenStack Platform
+[id="about-pipelines"]
+= About {pipelines-title}
+:context: about-pipelines
+
+toc::[]
+
+[role="_abstract"]
+{pipelines-title} is a cloud-native, continuous integration and continuous delivery (CI/CD) solution based on Kubernetes resources. It uses Tekton building blocks to automate deployments across many platforms. Tekton introduces several standard custom resource definitions (CRDs) for defining CI/CD pipelines that are portable across Kubernetes distributions.
+
+[NOTE]
+====
+{pipelines-title} releases on a different cadence than {OCP}. The {pipelines-title} documentation is available as separate documentation sets for each minor version.
+
+The {pipelines-title} documentation is available at link:https://docs.openshift.com/pipelines/[{pipelines-shortname} documentation].
+
+To access a specific version, use the version selector drop-down list or add the version to the URL, for example, link:https://docs.openshift.com/pipelines/{pipelines-version-number}[{pipelines-shortname} version {pipelines-version-number} documentation].
+
+The {pipelines-title} documentation is also available on the Red Hat Customer Portal at https://access.redhat.com/documentation/en-us/red_hat_openshift_pipelines/[].
+
+
+For more information about the {pipelines-title} life cycle and supported platforms, see the link:https://access.redhat.com/support/policy/updates/openshift#pipelines[Platform Life Cycle Policy].
+====
+
+// add something about CLI tools?

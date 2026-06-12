@@ -1,0 +1,306 @@
+:_mod-docs-content-type: ASSEMBLY
+:_mod-docs-content-type: SNIPPET
+// The {product-title} attribute provides the context-sensitive name of the relevant OpenShift distribution, for example, "OpenShift Container Platform" or "OKD". The {product-version} attribute provides the product version relative to the distribution, for example "4.9".
+// {product-title} and {product-version} are parsed when AsciiBinder queries the _distro_map.yml file in relation to the base branch of a pull request.
+// See https://github.com/openshift/openshift-docs/blob/main/contributing_to_docs/doc_guidelines.adoc#product-name-and-version for more information on this topic.
+// Other common attributes are defined in the following lines:
+:data-uri:
+:icons:
+:experimental:
+:toc: macro
+:toc-title:
+:imagesdir: images
+:prewrap!:
+
+:pipelines-title: Red Hat OpenShift Pipelines
+:pipelines-shortname: OpenShift Pipelines
+:pipelines-ver: pipelines-1.22
+:pipelines-version-number: 1.22
+:osp-version-patch: 0
+:tekton-cache: Tekton Cache
+:tekton-chains: Tekton Chains
+:tekton-results: Tekton Results
+:tekton-triggers: Tekton Triggers
+:tekton-hub: Tekton Hub
+:artifact-hub: Artifact Hub
+:pac: Pipelines as Code
+:product-registry: OpenShift image registry
+// IBM Power
+:ibmpowerProductName: IBM Power
+// IBM zSystems
+:ibmzProductName: IBM zSystems
+:linuxoneProductName: IBM(R) LinuxONE
+:kebab: image:kebab.png[title="Options menu"]
+
+:op-system-base: RHEL
+:op-system-base-full: Red Hat Enterprise Linux (RHEL)
+
+:cluster-manager-first: Red Hat OpenShift Cluster Manager
+:cluster-manager: OpenShift Cluster Manager
+:cluster-manager-url: link:https://console.redhat.com/openshift[OpenShift Cluster Manager Hybrid Cloud Console]
+:cluster-manager-url-pull: link:https://console.redhat.com/openshift/install/pull-secret[pull secret from the Red Hat OpenShift Cluster Manager]
+
+:oc-first: pass:quotes[OpenShift CLI (`oc`)]
+
+// Attributes not present in the main branch
+:OCP: OpenShift Container Platform
+
+//We should use lowercase like regular OCP docs and deprecate the above.
+:ocp: OpenShift Container Platform
+
+
+:ols-official: Red{nbsp}Hat OpenShift Lightspeed
+:ols: OpenShift Lightspeed
+
+// Attributes not present in the main branch
+:rhosp: Red Hat OpenStack Platform
+[id="using-repository-crd"]
+= Using the Repository custom resource
+:context: using-repository-crd
+
+toc::[]
+[role="_abstract"]
+The `Repository` custom resource (CR) has the following primary functions:
+
+* Inform {pac} about processing an event from a URL.
+* Inform {pac} about the namespace for the pipeline runs.
+* Reference an API secret, username, or an API URL necessary for Git provider platforms when using webhook methods.
+* Show the last pipeline run status for a repository.
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/using-repository-crd.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="creating-repository-cr_{context}"]
+= Creating the Repository custom resource
+
+[role="_abstract"]
+You can use the `tkn pac` CLI or other alternative methods to create a `Repository` custom resource (CR) inside the target namespace. For example:
+
+[source,terminal]
+----
+$ cat <<EOF|kubectl create -n my-pipeline-ci -f-
+
+apiVersion: "pipelinesascode.tekton.dev/v1alpha1"
+kind: Repository
+metadata:
+  name: project-repository
+spec:
+  url: "https://github.com/<repository>/<project>"
+EOF
+----
+`-n`:: `my-pipeline-ci` is the target namespace.
+
+Whenever an event comes from a URL such as `\https://github.com/<repository>/<project>`, {pac} matches it and checks out the repository content. It then matches the pipeline run against the content in the `.tekton/` directory.
+
+[NOTE]
+====
+* You must create the `Repository` CR in the same namespace where pipelines associated with the source code repository run; it cannot target a different namespace.
+
+* If many `Repository` CRs match the same event, {pac} processes only the oldest one. If you need to match a specific namespace, add the `pipelinesascode.tekton.dev/target-namespace: "<mynamespace>"` annotation. Such explicit targeting prevents a malicious actor from executing a pipeline run in a namespace to which they do not have access.
+====
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/using-repository-crd.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="creating-global-repository-cr_{context}"]
+= Creating the global Repository custom resource
+
+[role="_abstract"]
+Optionally, you can create a global `Repository` custom resource (CR) in the namespace where you installed {pipelines-shortname}, normally `openshift-pipelines`. If you create this CR, the settings that you specify in it apply by default to all `Repository` CRs that you create.
+
+:FeatureName: The global `Repository` CR
+:_mod-docs-content-type: SNIPPET
+// When including this file, ensure that {FeatureName} is set immediately before
+// the include. Otherwise it will result in an incorrect replacement.
+
+[IMPORTANT]
+====
+[subs="attributes+"]
+{FeatureName} is a Technology Preview feature only. Technology Preview features are not supported with Red Hat production service level agreements (SLAs) and might not be functionally complete. Red Hat does not recommend using them in production. These features provide early access to upcoming product features, enabling customers to test functionality and provide feedback during the development process.
+
+For more information about the support scope of Red Hat Technology Preview features, see link:https://access.redhat.com/support/offerings/techpreview/[Technology Preview Features Support Scope].
+====
+// Undefine {FeatureName} attribute, so that any mistakes are easily spotted
+:!FeatureName:
+
+.Prerequisites
+
+* You have administrator access to the `openshift-pipelines` namespace.
+* You logged on to the OpenShift cluster using the `oc` command line utility.
+
+.Procedure
+
+* Create a `Repository` CR named `pipeline-as-code` in the `openshift-pipelines` namespace. Specify all the required default settings in this CR.
++
+.Example command to create the CR
+[source,terminal]
+----
+$ cat <<EOF|oc create -n openshift-pipelines -f -
+
+apiVersion: "pipelinesascode.tekton.dev/v1alpha1"
+kind: Repository
+metadata:
+  name: pipelines-as-code
+spec:
+  git_provider:
+    secret:
+      name: "gitlab-webhook-config"
+      key: "provider.token"
+    webhook_secret:
+      name: "gitlab-webhook-config"
+      key: "webhook.secret"
+EOF
+----
++
+In this example, all `Repository` CRs that you create include the common secrets for accessing your GitLab repositories. You can set different repository URLs and other settings in the CRs.
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/using-repository-crd.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="setting-concurrency-limits-in-repository-crd_{context}"]
+= Setting concurrency limits
+
+[role="_abstract"]
+You can use the `concurrency_limit` spec in the `Repository` custom resource definition (CRD) to define the maximum number of pipeline runs running simultaneously for a repository.
+
+[source,yaml]
+----
+apiVersion: "pipelinesascode.tekton.dev/v1alpha1"
+kind: Repository
+metadata:
+  name: my-repo
+  namespace: target-namespace
+spec:
+# ...
+  concurrency_limit: <number>
+# ...
+
+----
+
+If there are many pipeline runs matching an event, the pipeline runs that match the event start in an alphabetical order.
+
+For example, if you have three pipeline runs in the `.tekton` directory and you create a pull request with a `concurrency_limit` of `1`, then {pac} executes all the pipeline runs in alphabetical order. At any given time, only one pipeline run is in the running state. The system queues the rest.
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/using-repository-crd.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="changing-source-branch-in-repository-crd_{context}"]
+= Changing the source branch for the pipeline definition
+
+[role="_abstract"]
+By default, {pac} fetches the pipeline definition from the branch that triggered the event. To fetch the definition from the default branch instead (such as `main`, `master`, or `trunk`), set `pipelinerun_provenance` in the `Repository` custom resource definition (CRD).
+
+[source,yaml]
+----
+apiVersion: "pipelinesascode.tekton.dev/v1alpha1"
+kind: Repository
+metadata:
+  name: my-repo
+  namespace: target-namespace
+spec:
+# ...
+  settings:
+    pipelinerun_provenance: "default_branch"
+# ...
+----
+
+[NOTE]
+====
+Use this setting as a security precaution. By default, {pac} uses the pipeline definition in the submitted pull request. With the `default-branch` setting, you must merge the pipeline definition into the default branch before {pac} runs it. This ensures that merge reviews verify all changes.
+====
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/using-repository-crd.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id="op-custom-parameter-expansion_{context}"]
+= Custom parameter expansion
+
+[role="_abstract"]
+You can use {pac} to expand a custom parameter within your `PipelineRun` resource by using the `params` field. You can specify a value for the custom parameter inside the template of the `Repository` custom resource (CR). The specified value replaces the custom parameter in your pipeline run.
+
+You can use custom parameters in the following scenarios:
+
+* To define a URL parameter, such as a registry URL that varies based on a push or a pull request.
+* To define a parameter, such as an account UUID that an administrator can manage without necessitating changes to the `PipelineRun` execution in the Git repository.
+
+[NOTE]
+====
+Use the custom parameter expansion feature only when you cannot use the Tekton `PipelineRun` parameters because you define Tekton parameters in a `Pipeline` resource and customize them alongside it inside a Git repository. However, you define and customize custom parameters in the location of the `Repository` CR. Therefore, you cannot manage your CI/CD pipeline from a single point.
+====
+
+The following example shows a custom parameter named `company` in the `Repository` CR:
+
+[source,yaml]
+----
+...
+spec:
+  params:
+    - name: company
+      value: "ABC Company"
+...
+----
+
+The value `ABC Company` replaces the parameter name `company` in your pipeline run and in the remotely fetched tasks.
+
+You can also retrieve the value for a custom parameter from a Kubernetes secret, as shown in the following example:
+
+[source,yaml]
+----
+...
+spec:
+  params:
+    - name: company
+      secret_ref:
+        name: my-secret
+        key: companyname
+...
+----
+
+{pac} parses and uses custom parameters in the following manner:
+
+* If you have a `value` and a `secret_ref` defined, {pac} uses the `value`.
+* If you do not have a `name` in the `params` section, {pac} does not parse the parameter.
+* If you have many `params` with the same `name`, {pac} uses the last parameter.
+
+You can also define a custom parameter and use its expansion only when specified conditions match a Common Expression Language (CEL) filter. The following example shows a CEL filter applicable on a custom parameter named `company` when a pull request event triggers:
+
+[source,yaml]
+----
+...
+spec:
+  params:
+    - name: company
+      value: "ABC Company"
+      filter: pac.event_type == "pull_request"
+...
+----
+
+[NOTE]
+====
+When you have many parameters with the same name and different filters, {pac} uses the first parameter that matches the filter. You can then expand parameters according to different event types. For example, you can combine a push and a pull request event.
+====
+
+:leveloffset!:

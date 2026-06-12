@@ -1,0 +1,227 @@
+:_mod-docs-content-type: ASSEMBLY
+:_mod-docs-content-type: SNIPPET
+// The {product-title} attribute provides the context-sensitive name of the relevant OpenShift distribution, for example, "OpenShift Container Platform" or "OKD". The {product-version} attribute provides the product version relative to the distribution, for example "4.9".
+// {product-title} and {product-version} are parsed when AsciiBinder queries the _distro_map.yml file in relation to the base branch of a pull request.
+// See https://github.com/openshift/openshift-docs/blob/main/contributing_to_docs/doc_guidelines.adoc#product-name-and-version for more information on this topic.
+// Other common attributes are defined in the following lines:
+:data-uri:
+:icons:
+:experimental:
+:toc: macro
+:toc-title:
+:imagesdir: images
+:prewrap!:
+
+:pipelines-title: Red Hat OpenShift Pipelines
+:pipelines-shortname: OpenShift Pipelines
+:pipelines-ver: pipelines-1.22
+:pipelines-version-number: 1.22
+:osp-version-patch: 0
+:tekton-cache: Tekton Cache
+:tekton-chains: Tekton Chains
+:tekton-results: Tekton Results
+:tekton-triggers: Tekton Triggers
+:tekton-hub: Tekton Hub
+:artifact-hub: Artifact Hub
+:pac: Pipelines as Code
+:product-registry: OpenShift image registry
+// IBM Power
+:ibmpowerProductName: IBM Power
+// IBM zSystems
+:ibmzProductName: IBM zSystems
+:linuxoneProductName: IBM(R) LinuxONE
+:kebab: image:kebab.png[title="Options menu"]
+
+:op-system-base: RHEL
+:op-system-base-full: Red Hat Enterprise Linux (RHEL)
+
+:cluster-manager-first: Red Hat OpenShift Cluster Manager
+:cluster-manager: OpenShift Cluster Manager
+:cluster-manager-url: link:https://console.redhat.com/openshift[OpenShift Cluster Manager Hybrid Cloud Console]
+:cluster-manager-url-pull: link:https://console.redhat.com/openshift/install/pull-secret[pull secret from the Red Hat OpenShift Cluster Manager]
+
+:oc-first: pass:quotes[OpenShift CLI (`oc`)]
+
+// Attributes not present in the main branch
+:OCP: OpenShift Container Platform
+
+//We should use lowercase like regular OCP docs and deprecate the above.
+:ocp: OpenShift Container Platform
+
+
+:ols-official: Red{nbsp}Hat OpenShift Lightspeed
+:ols: OpenShift Lightspeed
+
+// Attributes not present in the main branch
+:rhosp: Red Hat OpenStack Platform
+[id="understanding-the-tekton-results-retention-policy"]
+= Understanding the Tekton Results retention policy
+:context: understanding-the-tekton-results-retention-policy
+
+toc::[]
+
+[role="_abstract"]
+The {tekton-results} Retention Policy Agent manages how long the database retains {tekton-results} and Records before pruning them. You can configure the retention behavior by using the `tekton-results-config-results-retention-policy` config map in the `tekton-pipelines` namespace.
+
+The retention policy determines when and how old {tekton-results} and Records are automatically deleted from the database. You can define global defaults and fine-grained rules based on namespaces, labels, annotations, or run statuses.
+
+Use the following sample YAML configuration to define Tekton Results settings, including log retention policies, namespaces, and runtime options:
+
+[source,YAML]
+----
+apiVersion: operator.tekton.dev/v1alpha1
+kind: TektonConfig
+metadata:
+  labels:
+    openshift-pipelines.tekton.dev/sa-created: "true"
+    operator.tekton.dev/release-version: 1.21.0
+  name: config
+spec:
+...
+  result:
+    disabled: false
+    is_external_db: false
+    log_level: debug
+    loki_stack_name: logging-loki
+    loki_stack_namespace: openshift-logging
+    options:
+      configMaps:
+        tekton-results-config-results-retention-policy:
+          data:
+            defaultRetention: 30m
+            policies: |
+              - name: "prod-failed-retention"
+                selector:
+                  matchNamespaces:
+                    - "prod-1"
+                    - "prod-west"
+                  matchStatuses:
+                  - "Failed"
+                  matchLabels:
+                    "env": ["prod"]
+                retention: "10m"
+              - name: "all-prod-retention"
+                selector:
+                  matchNamespaces:
+                    - "prod-1"
+                    - "prod-west"
+                retention: "3m"
+            runAt: '*/1 * * * *'
+          metadata:
+            creationTimestamp: null
+----
+
+The following fields in the config map define the retention configuration:
+
+[options="header"]
+|===
+|Field |Description |Default
+
+|`runAt`
+|Specifies when the pruning job runs. The value must use a cron schedule format.
+|`"7 7 * * 7"` (every Sunday at 7:07 a.m.)
+
+|`defaultRetention`
+|Specifies the fallback retention period for Results and Records when no specific policy matches. The value can be a number (in days) or a duration string such as `30d` or `24h`.
+|`30d`
+
+|`maxRetention`
+|(Deprecated). Used for backward compatibility if `defaultRetention` is not set. This field will be removed in a future release. This field functions in the same way as `defaultRetention`.
+|N/A
+
+|`policies`
+|Defines a list of fine-grained retention policies for more specific control, in order of precedence. Each policy includes a name, selector, and retention period. For Records and Results matched by a policy's selector, the policy's retention period overrides the `defaultRetention`.
+|None
+|===
+
+:leveloffset: +1
+
+// This module is included in the following assembly:
+//
+// * records/understanding-the-tekton-results-retention-policy.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id="op-fine-grained-retention-policies_{context}"]
+= Fine-grained retention policies
+
+[role="_abstract"]
+You can use the `policies` field to define rules that apply to specific Results. {tekton-results} evaluates the policies in order, and applies the first matching policy. If no policies match, {tekton-results} uses the `defaultRetention` value.
+
+Each policy includes the following fields:
+
+[options="header"]
+|===
+|Field |Description
+
+|`name`
+|A descriptive name for the policy.
+
+|`selector`
+|Defines criteria for matching Results. All selector types use `AND` logic, meaning a Result must satisfy all specified conditions to match. You can omit a selector type to match all Results for that criterion.
+
+|`matchNamespaces`
+|A list of namespaces. The policy matches Results in any of the listed namespaces.
+
+|`matchLabels`
+|A map of label keys and possible values. A Result must have all listed label keys, and each value must match one of the values in the list.
+
+|`matchAnnotations`
+|A map of annotation keys and possible values. Works similarly to `matchLabels`.
+
+|`matchStatuses`
+|A list of final statuses such as `Succeeded`, `Failed`, `Cancelled`, `Running`, or `Pending`. The policy matches if the Result's final status reason is in this list.
+
+|`retention`
+|The retention period for matching Results. The value can be a number (days) or a duration string such as `24h` or `7d`.
+|===
+
+The following example shows a config map that defines many retention policies:
+
+[source,yaml]
+----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tekton-results-config-results-retention-policy
+  namespace: openshift-pipelines
+data:
+  runAt: "0 2 * * *"
+  defaultRetention: "30d"
+  policies: |
+    - name: "retain-critical-failures-long-term"
+      selector:
+        matchNamespaces:
+          - "production"
+          - "prod-east"
+        matchLabels:
+          "criticality": ["high"]
+        matchStatuses:
+          - "Failed"
+      retention: "180d"
+    - name: "retain-annotated-for-debug"
+      selector:
+        matchAnnotations:
+          "debug/retain": ["true"]
+      retention: "14d"
+    - name: "default-production-policy"
+      selector:
+        matchNamespaces:
+          - "production"
+          - "prod-east"
+      retention: "60d"
+    - name: "short-term-ci-retention"
+      selector:
+        matchNamespaces:
+          - "ci"
+      retention: "7d"
+----
+
+The following examples describe how {tekton-results} applies the defined retention policies to different Results based on their namespaces, labels, annotations, and statuses.
+
+* {tekton-results} retains a failed Result in the `production` or `prod-east` namespace with the label `criticality: high` for 180 days.
+* {tekton-results} retains any Result with the annotation `debug/retain: "true"` for 14 days.
+* {tekton-results} retains Results in the `production` or `prod-east` namespaces for 60 days.
+* {tekton-results} retains Results in the `ci` namespace for 7 days.
+* {tekton-results} retains all other Results that do not match any policy for the default 30 days.
+
+:leveloffset!:

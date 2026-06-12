@@ -1,0 +1,107 @@
+OpenShift Pipelines JTBD Analysis - Export Manifest
+====================================================
+
+Export Date: 2026-06-12
+Export Location: /Users/roparmar/git/openshift-docs/analysis/_consolidated/jtbd-individual-runs/openshift-pipelines/
+
+TOTAL FILES: 56
+TOTAL SIZE: 2.0 MB
+
+FILES EXPORTED
+--------------
+
+Master Documents (6 files):
+  ✓ MAIN_JOBS_ONLY.csv (76K) - 91 main jobs for spreadsheet import
+  ✓ ALL_BOOKS_JTBD_JOBS.csv (310K) - 355 complete records
+  ✓ NEXT_STEPS.md (14K) - Implementation roadmap
+  ✓ EXECUTIVE_SUMMARY.md (11K) - Stakeholder one-pager
+  ✓ README.md (17K) - Master index and guide
+  ✓ COMPLETE_FILE_LIST.md (12K) - All 170+ files listing
+
+Consolidation Reports (10 files):
+  ✓ about-consolidation-report.md
+  ✓ create-consolidation-report.md
+  ✓ hub-consolidation-report.md
+  ✓ install_config-consolidation-report.md
+  ✓ pac-consolidation-report.md
+  ✓ records-consolidation-report.md
+  ✓ release_notes-consolidation-report.md
+  ✓ resource-consolidation-report.md
+  ✓ secure-consolidation-report.md
+  ✓ tkn_cli-consolidation-report.md
+
+TOC Files (10 files):
+  ✓ about-toc-new_taxonomy.md
+  ✓ create-toc-new_taxonomy.md
+  ✓ hub-toc-new_taxonomy.md
+  ✓ install_config-toc-new_taxonomy.md
+  ✓ pac-toc-new_taxonomy.md
+  ✓ records-toc-new_taxonomy.md
+  ✓ release_notes-toc-new_taxonomy.md
+  ✓ resource-toc-new_taxonomy.md
+  ✓ secure-toc-new_taxonomy.md
+  ✓ tkn_cli-toc-new_taxonomy.md
+
+Comparison Files (10 files):
+  ✓ about-comparison.md
+  ✓ create-comparison.md
+  ✓ hub-comparison.md
+  ✓ install_config-comparison.md
+  ✓ pac-comparison.md
+  ✓ records-comparison.md
+  ✓ release_notes-comparison.md
+  ✓ resource-comparison.md
+  ✓ secure-comparison.md
+  ✓ tkn_cli-comparison.md
+
+JTBD JSONL Files (10 files):
+  ✓ about-jtbd.jsonl
+  ✓ create-jtbd.jsonl
+  ✓ hub-jtbd.jsonl
+  ✓ install_config-jtbd.jsonl
+  ✓ pac-jtbd.jsonl
+  ✓ records-jtbd.jsonl
+  ✓ release_notes-jtbd.jsonl
+  ✓ resource-jtbd.jsonl
+  ✓ secure-jtbd.jsonl
+  ✓ tkn_cli-jtbd.jsonl
+
+JTBD CSV Files (9 files):
+  ✓ about-jtbd.csv
+  ✓ create-jtbd.csv
+  ✓ install_config-jtbd.csv
+  ✓ pac-jtbd.csv
+  ✓ records-jtbd.csv
+  ✓ release_notes-jtbd.csv
+  ✓ resource-jtbd.csv
+  ✓ secure-jtbd.csv
+  ✓ tkn_cli-jtbd.csv
+
+Index Files (1 file):
+  ✓ INDEX.md - This export's index and guide
+
+ANALYSIS SUMMARY
+----------------
+Books Analyzed: 10
+Total JTBD Records: 355
+Main Jobs: 91
+User Stories: 264
+Average Navigation Improvement: 40-70%
+
+START HERE
+----------
+1. INDEX.md - Overview of this export
+2. MAIN_JOBS_ONLY.csv - Import to JTBD spreadsheet
+3. NEXT_STEPS.md - Implementation roadmap
+4. EXECUTIVE_SUMMARY.md - Stakeholder presentation
+
+VERIFICATION
+------------
+CSV files: 11
+Markdown files: 34
+JSONL files: 10
+Index files: 1
+Total: 56 files
+
+Source: /Users/roparmar/git/openshift-docs/analysis/openshift-pipelines/
+Export: /Users/roparmar/git/openshift-docs/analysis/_consolidated/jtbd-individual-runs/openshift-pipelines/

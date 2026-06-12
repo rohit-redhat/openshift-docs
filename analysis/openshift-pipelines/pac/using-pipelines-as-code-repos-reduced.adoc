@@ -1,0 +1,1374 @@
+:_mod-docs-content-type: ASSEMBLY
+:_mod-docs-content-type: SNIPPET
+// The {product-title} attribute provides the context-sensitive name of the relevant OpenShift distribution, for example, "OpenShift Container Platform" or "OKD". The {product-version} attribute provides the product version relative to the distribution, for example "4.9".
+// {product-title} and {product-version} are parsed when AsciiBinder queries the _distro_map.yml file in relation to the base branch of a pull request.
+// See https://github.com/openshift/openshift-docs/blob/main/contributing_to_docs/doc_guidelines.adoc#product-name-and-version for more information on this topic.
+// Other common attributes are defined in the following lines:
+:data-uri:
+:icons:
+:experimental:
+:toc: macro
+:toc-title:
+:imagesdir: images
+:prewrap!:
+
+:pipelines-title: Red Hat OpenShift Pipelines
+:pipelines-shortname: OpenShift Pipelines
+:pipelines-ver: pipelines-1.22
+:pipelines-version-number: 1.22
+:osp-version-patch: 0
+:tekton-cache: Tekton Cache
+:tekton-chains: Tekton Chains
+:tekton-results: Tekton Results
+:tekton-triggers: Tekton Triggers
+:tekton-hub: Tekton Hub
+:artifact-hub: Artifact Hub
+:pac: Pipelines as Code
+:product-registry: OpenShift image registry
+// IBM Power
+:ibmpowerProductName: IBM Power
+// IBM zSystems
+:ibmzProductName: IBM zSystems
+:linuxoneProductName: IBM(R) LinuxONE
+:kebab: image:kebab.png[title="Options menu"]
+
+:op-system-base: RHEL
+:op-system-base-full: Red Hat Enterprise Linux (RHEL)
+
+:cluster-manager-first: Red Hat OpenShift Cluster Manager
+:cluster-manager: OpenShift Cluster Manager
+:cluster-manager-url: link:https://console.redhat.com/openshift[OpenShift Cluster Manager Hybrid Cloud Console]
+:cluster-manager-url-pull: link:https://console.redhat.com/openshift/install/pull-secret[pull secret from the Red Hat OpenShift Cluster Manager]
+
+:oc-first: pass:quotes[OpenShift CLI (`oc`)]
+
+// Attributes not present in the main branch
+:OCP: OpenShift Container Platform
+
+//We should use lowercase like regular OCP docs and deprecate the above.
+:ocp: OpenShift Container Platform
+
+
+:ols-official: Red{nbsp}Hat OpenShift Lightspeed
+:ols: OpenShift Lightspeed
+
+// Attributes not present in the main branch
+:rhosp: Red Hat OpenStack Platform
+[id="using-pipelines-as-code-repos"]
+= Using {pac} with a Git repository hosting service provider
+:context: using-pipelines-as-code-repos
+
+toc::[]
+[role="_abstract"]
+After installing {pac}, cluster administrators can configure a Git repository hosting service provider.
+
+The following services are supported:
+
+* GitHub App
+* GitHub Webhook
+* GitLab
+* Bitbucket Data Center
+* Bitbucket Cloud
+
+[NOTE]
+====
+GitHub App is the recommended service for using with {pac}.
+====
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/using-pipelines-as-code-repos.adoc
+
+:_mod-docs-content-type: CONCEPT
+[id="using-pipelines-as-code-with-a-github-app_{context}"]
+= GitHub App integration with {pac}
+
+[role="_abstract"]
+GitHub Apps integrate {pipelines-title} with Git-based workflows. Cluster administrators configure a single GitHub App for all users, with webhooks pointing to the {pac} controller endpoint to trigger pipeline runs.
+
+
+There are three ways to set up a GitHub app for {pac}:
+
+* Use the `tkn` command line utility.
+* Use the Administrator perspective of the web console.
+* Set up the app manually in GitHub and then create a secret for {pac}.
+
+By default, {pac} can communicate with one GitHub app. If you configured additional {pac} controllers to communicate with additional GitHub apps, configure each of the GitHub apps separately. You must set up GitHub apps for any additional controllers manually.
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://docs.github.com/en/developers/apps/getting-started-with-apps/about-apps[About GitHub Apps on GitHub] (GitHub)
+
+:leveloffset!:
+
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * pac/using-pipelines-as-code-repos.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="pac-configuring-github-app-cli_{context}"]
+= Configure a GitHub App using the command line interface
+
+[role="_abstract"]
+You can use the `tkn` command line utility to create a GitHub app and configure the {pac} controller for the GitHub app.
+
+[IMPORTANT]
+====
+If you created additional {pac} controllers to support additional GitHub apps, you can use this procedure only for the main controller. To create a GitHub app for an additional controller, use the manual procedure.
+====
+
+.Prerequisites
+
+* You logged on to the {OCP} cluster as a cluster administrator.
+* You installed the `tkn` command line utility with the `tkn pac` plugin.
+
+.Procedure
+
+* Enter the following command:
++
+[source,terminal]
+----
+$ tkn pac bootstrap github-app
+----
++
+This command assumes that your account uses a standard github.com API endpoint. If you use a different GitHub API endpoint, for example, if you use GitHub Enterprise, use the `--github-api-url` option to specify the endpoint, as in the following example:
++
+.Example command
+[source,terminal]
+----
+$ tkn pac bootstrap github-app --github-api-url https://github.com/enterprises/example-enterprise
+----
+
+.Verification
+
+* Navigate to your GitHub account or organization settings to verify that the new GitHub App is displayed in the *GitHub Apps* section.
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://docs.github.com/en/developers/apps/getting-started-with-apps/about-apps[About GitHub Apps on GitHub] (GitHub)
+
+
+:leveloffset!:
+
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * pac/using-pipelines-as-code-repos.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="creating-a-github-application-in-administrator-perspective_{context}"]
+= Create a GitHub App in administrator perspective
+
+[role="_abstract"]
+As a cluster administrator, you can configure your GitHub App with the {ocp} cluster to use {pac}. You can then run a set of tasks required for build deployment.
+
+[IMPORTANT]
+====
+If you created additional {pac} controllers to support additional GitHub apps, you can use this procedure only for the main controller. To create a GitHub app for an additional controller, use the manual procedure.
+====
+
+.Prerequisites
+You have installed the {pipelines-title} `{pipelines-ver}` operator from the Operator Hub.
+
+.Procedure
+. In the administrator perspective, navigate to *Pipelines* using the navigation pane.
+. Click *Setup GitHub App* on the *Pipelines* page.
+. Enter your GitHub App name. For example, `pipelines-ci-clustername-testui`.
+. Click *Setup*.
+. Enter your Git password when prompted in the browser.
+. Click *Create GitHub App for <username>*, where `<username>` is your GitHub user name.
+
+.Verification
+After successful creation of the GitHub App, the {OCP} web console opens and displays the details about the application.
+
+image::Github-app-details.png[GitHub app details]
+
+{pac} saves the details of the GitHub App as a secret in the `openShift-pipelines` namespace.
+
+To view details such as name, link, and secret associated with the GitHub applications, go to *Pipelines* and click *View GitHub App*.
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://docs.github.com/en/apps/creating-github-apps/about-creating-github-apps/about-creating-github-apps[About creating GitHub Apps on GitHub] (GitHub)
+
+
+:leveloffset!:
+
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * pac/using-pipelines-as-code-repos.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="pac-configuring-github-app-manually_{context}"]
+= Configure a GitHub App manually and create a secret for {pac}
+
+[role="_abstract"]
+You can use the GitHub user interface to create a GitHub app. Then you must create a secret that configures {pac} to connect to GitHub app.
+
+If you created additional {pac} controllers to support additional GitHub apps, you must use this procedure for the additional controllers.
+
+.Prerequisites
+
+* You have installed the {pipelines-title} {pipelines-ver} Operator from the OperatorHub.
+* You have a GitHub account with permissions to create GitHub Apps for your personal account or organization.
+* You are logged on to the {OCP} cluster as a cluster administrator.
+
+.Procedure
+. Sign in to your GitHub account.
+
+. In the GitHub menu, select **Settings** -> **Developer settings** -> **GitHub Apps**, then click **New GitHub App**.
+
+. Give the following information in the GitHub App form:
+
+* **GitHub Application Name**: `{pipelines-shortname}`
+* **Homepage URL**: OpenShift Console URL
+* **Webhook URL**: The {pac} route or ingress URL. You can find it by running the following command:
++
+[source,terminal]
+----
+$ echo https://$(oc get route -n openshift-pipelines pipelines-as-code-controller -o jsonpath='{.spec.host}')
+----
++
+Alternatively, to configure the GitHub app for an additional {pac} controller, replace `pipelines-as-code-controller` with the name of the controller that you configured, as in the following example:
++
+.Example command
+[source,terminal]
+----
+$ echo https://$(oc get route -n openshift-pipelines pac_controller_2 -o jsonpath='{.spec.host}')
+----
+
+* **Webhook secret**: An arbitrary secret. You can generate a secret by running the following command:
++
+[source,terminal]
+----
+$ openssl rand -hex 20
+----
+
+. Select the following items in the **Repository permissions** section:
+
+* **Checks**: `Read & Write`
+* **Contents**: `Read & Write`
+* **Issues**: `Read & Write`
+* **Metadata**: `Read-only`
+* **Pull request**: `Read & Write`
+
+. Select the following item in the **Organization permissions** section:
+
+* **Members**: `Read-only`
+
+. Subscribe to the following events:
+
+* **Check run**
+* **Check suite**
+* **Commit comment**
+* **Issue comment**
+* **Pull request**
+* **Push**
+
+. Click **Create GitHub App**.
+
+. On the **Details** page of the newly created GitHub App, note the **App ID** displayed at the top.
+
+. In the **Private keys** section, click **Generate Private key** to automatically generate and download a private key for the GitHub app. Securely store the private key for future reference and usage.
+
+. Install the created App on a repository that you want to use with {pac}.
+
+. Configure {pac} to access the newly created GitHub App by entering the following command:
++
+[source,terminal]
+----
+$ oc -n openshift-pipelines create secret generic pipelines-as-code-secret \
+        --from-literal github-private-key="$(cat <PATH_PRIVATE_KEY>)" \
+        --from-literal github-application-id="<APP_ID>" \
+        --from-literal webhook.secret="<WEBHOOK_SECRET>"
+----
+`-n`:: If you created additional {pac} controllers and you are configuring the app for an additional controller, replace `pipelines-as-code-secret` with the name from the `secretName` parameter for that controller.
+`<PATH_PRIVATE_KEY>`:: The path to the private key you downloaded while configuring the GitHub App.
+`<APP_ID>`:: The **App ID** of the GitHub App.
+`<WEBHOOK_SECRET>`:: The webhook secret provided when you created the GitHub App.
++
+[NOTE]
+====
+{pac} works automatically with GitHub Enterprise by detecting the header set from GitHub Enterprise and using it for the GitHub Enterprise API authorization URL.
+====
+
+.Verification
+
+. Navigate to your GitHub account or organization settings to verify that the GitHub App is installed and displayed in the *Installed GitHub Apps* section.
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://docs.github.com/en/developers/apps/getting-started-with-apps/about-apps[About GitHub Apps on GitHub] (GitHub)
+
+:leveloffset!:
+
+:leveloffset: +2
+
+// This module is included in the following assemblies:
+// * pac/using-pipelines-as-code-repos.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="scoping-github-token_{context}"]
+= Scope the GitHub token to additional repositories
+
+[role="_abstract"]
+{pac} uses the GitHub App to generate an access token. {pac} uses this token to retrieve the pipeline payload and to interact with GitHub repositories.
+
+By default, {pac} scopes the access token to the repository with the pipeline definition. You might need the token to access additional repositories. For example, the `.tekton/pr.yaml` file might reside in a CI repository, but the build process in `pr.yaml` fetches tasks from a separate private CD repository.
+
+You can extend the scope of the GitHub token in two ways:
+
+* _Global configuration_: You can extend the GitHub token to a list of repositories in different namespaces. You must have administrative permissions to set this configuration.
+* _Repository level configuration_: You can extend the GitHub token to a list of repositories that exist in the same namespace as the original repository. You do not need administrative permissions to set this configuration.
+
+.Prerequisites
+
+* You have administrator access to the {OCP} cluster, or you have repository administrator access for repository-level configuration.
+* You have a {pac} GitHub App configured for your {OCP} cluster.
+* You know the names of the additional repositories that you want to scope the token to.
+* The additional repositories must already exist in your GitHub organization or account.
+
+.Procedure
+
+. In the `TektonConfig` custom resource (CR), in the `pipelinesAsCode.settings` spec, set `secret-github-app-token-scoped` to `false`. This enables the GitHub token to access repositories in both the global and repository-level configuration.
+
+. To set global configuration, specify the additional repositories in the `secret-github-app-scope-extra-repos` parameter of the `TektonConfig` CR:
++
+[source,yaml]
+----
+apiVersion: operator.tekton.dev/v1alpha1
+kind: TektonConfig
+metadata:
+  name: config
+spec:
+  platforms:
+    openshift:
+      pipelinesAsCode:
+        enable: true
+        settings:
+          secret-github-app-token-scoped: false
+          secret-github-app-scope-extra-repos: "owner2/project2, owner3/project3"
+----
++
+. To set repository-level configuration, specify the additional repositories in the `github_app_token_scope_repos` parameter of the `Repository` CR:
++
+[source,yaml]
+----
+apiVersion: "pipelinesascode.tekton.dev/v1alpha1"
+kind: Repository
+metadata:
+  name: test
+  namespace: test-repo
+spec:
+  url: "https://github.com/linda/project"
+  settings:
+    github_app_token_scope_repos:
+    - "owner/project"
+    - "owner1/project1"
+----
++
+In this example, the `Repository` CR applies to `linda/project` in the `test-repo` namespace. {pac} extends the token scope to `owner/project`, `owner1/project1`, and `linda/project`. All repositories must exist in the `test-repo` namespace.
++
+[NOTE]
+====
+The additional repositories can be public or private, but must reside in the same namespace as the repository that you associate with the `Repository` resource.
+
+If any of the repositories do not exist in the namespace, the scoping of the GitHub token fails with an error message:
+
+.Example output
+[source,terminal]
+----
+failed to scope GitHub token as repo owner1/project1 does not exist in namespace test-repo
+----
+====
+
+.Verification
+
+The generated GitHub token enables access to the additional repositories that you configured in the global and repository level configuration, and the original repository where the {pac} payload files reside.
+
+If you give both global configuration and repository level configuration, {pac} scopes the token to all the repositories from both configurations, as in the following example.
+
+*`TektonConfig` custom resource*
+[source,yaml]
+----
+apiVersion: operator.tekton.dev/v1alpha1
+kind: TektonConfig
+metadata:
+  name: config
+spec:
+  platforms:
+    openshift:
+      pipelinesAsCode:
+        enable: true
+        settings:
+          secret-github-app-token-scoped: false
+          secret-github-app-scope-extra-repos: "owner2/project2, owner3/project3"
+----
+
+*`Repository` custom resource*
+[source,yaml]
+----
+apiVersion: "pipelinesascode.tekton.dev/v1alpha1"
+kind: Repository
+metadata:
+ name: test
+ namespace: test-repo
+spec:
+ url: "https://github.com/linda/project"
+ settings:
+   github_app_token_scope_repos:
+   - "owner/project"
+   - "owner1/project1"
+----
+
+{pac} scopes the GitHub token to the `owner/project`, `owner1/project1`, `owner2/project2`, `owner3/project3`, and `linda/project` repositories.
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://docs.openshift.com/container-platform/latest/architecture/control-plane.html[Understanding the control plane]
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/using-pipelines-as-code-repos.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="using-pipelines-as-code-with-github-webhook_{context}"]
+= Use {pac} with GitHub Webhook
+
+[role="_abstract"]
+Use {pac} with GitHub Webhook if you cannot create a GitHub App. However, GitHub Webhook does not give access to the GitHub Check Runs API. {pac} reports task status as pull request comments instead of the *Checks* tab.
+
+[NOTE]
+====
+{pac} with GitHub Webhook does not support GitOps comments such as `/retest` and `/ok-to-test`. To restart the continuous integration (CI), create a new commit to the repository. For example, to create a new commit without any changes, you can use the following command:
+
+[source,terminal]
+----
+$ git --amend -a --no-edit && git push --force-with-lease <origin> <branchname>
+----
+====
+
+.Prerequisites
+
+* You installed {pac} on the cluster.
+
+* For authorization, you created a personal access token on GitHub.
+
+** To generate a secure and fine-grained token, restrict its scope to a specific repository and grant the following permissions:
++
+.Permissions for fine-grained tokens
+[options="header"]
+|===
+
+| Name | Access
+
+| Administration | Read-only
+
+| Metadata | Read-only
+
+| Content | Read-only
+
+| Commit statuses | Read and Write
+
+| Pull request | Read and Write
+
+| Webhooks | Read and Write
+
+|===
+
+** To use classic tokens, set the scope as `public_repo` for public repositories and `repo` for private repositories. In addition, give a short token expiration period and note the token in an alternate location.
++
+[NOTE]
+====
+If you want to configure the webhook using the `tkn pac` CLI, add the `admin:repo_hook` scope.
+====
+
+.Procedure
+
+. Configure the webhook and create a `Repository` custom resource (CR).
+
+** To configure a webhook and create a `Repository` CR _automatically_ using the `tkn pac` CLI tool, use the following command:
++
+[source,terminal]
+----
+$ tkn pac create repo
+----
++
+.Sample interactive output
+[source,terminal]
+----
+? Enter the Git repository url (default: https://github.com/owner/repo):
+? Please enter the namespace where the pipeline should run (default: repo-pipelines):
+! Namespace repo-pipelines is not found
+? Would you like me to create the namespace repo-pipelines? Yes
+✓ Repository owner-repo has been created in repo-pipelines namespace
+✓ Setting up GitHub Webhook for Repository https://github.com/owner/repo
+👀 I have detected a controller url: https://pipelines-as-code-controller-openshift-pipelines.apps.example.com
+? Do you want me to use it? Yes
+? Please enter the secret to configure the webhook for payload validation (default: sJNwdmTifHTs):  sJNwdmTifHTs
+ℹ ️You now need to create a GitHub personal access token, please checkout the docs at https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token for the required scopes
+? Please enter the GitHub access token:  ****************************************
+✓ Webhook has been created on repository owner/repo
+🔑 Webhook Secret owner-repo has been created in the repo-pipelines namespace.
+🔑 Repository CR owner-repo has been updated with webhook secret in the repo-pipelines namespace
+ℹ Directory .tekton has been created.
+✓ We have detected your repository using the programming language Go.
+✓ A basic template has been created in /home/Go/src/github.com/owner/repo/.tekton/pipelinerun.yaml, feel free to customize it.
+----
+
+** To configure a webhook and create a `Repository` CR _manually_, perform the following steps:
+
+... On your {ocp} cluster, extract the public URL of the {pac} controller.
++
+[source,terminal]
+----
+$ echo https://$(oc get route -n openshift-pipelines pipelines-as-code-controller -o jsonpath='{.spec.host}')
+----
+
+... On your GitHub repository or organization, perform the following steps:
+
+.... Go to *Settings* –> *Webhooks* and click *Add webhook*.
+
+.... Set the *Payload URL* to the {pac} controller public URL.
+
+.... Select the content type as *application/json*.
+
+.... Add a webhook secret and note it in an alternate location. With `openssl` installed on your local machine, generate a random secret.
++
+[source,terminal]
+----
+$ openssl rand -hex 20
+----
+
+.... Click *Let me select individual events* and select these events: *Commit comments*, *Issue comments*, *Pull request*, and *Pushes*.
+
+.... Click *Add webhook*.
+
+... On your {ocp} cluster, create a `Secret` object with the personal access token and webhook secret.
++
+[source,terminal]
+----
+$ oc -n target-namespace create secret generic github-webhook-config \
+  --from-literal provider.token="<GITHUB_PERSONAL_ACCESS_TOKEN>" \
+  --from-literal webhook.secret="<WEBHOOK_SECRET>"
+----
+
+... Create a `Repository` CR.
++
+.Example: `Repository` CR
+[source,yaml]
+----
+apiVersion: "pipelinesascode.tekton.dev/v1alpha1"
+kind: Repository
+metadata:
+  name: my-repo
+  namespace: target-namespace
+spec:
+  url: "https://github.com/owner/repo"
+  git_provider:
+    secret:
+      name: "github-webhook-config"
+      key: "provider.token" # Set this if you have a different key in your secret
+    webhook_secret:
+      name: "github-webhook-config"
+      key: "webhook.secret" # Set this if you have a different key for your secret
+----
++
+[NOTE]
+====
+{pac} assumes that the OpenShift Secret object and the Repository CR are in the same namespace.
+====
+
+. Optional: For an existing Repository CR, add many GitHub Webhook secrets or give a substitute for a deleted secret.
+
+.. Add a webhook by using the `tkn pac` CLI tool.
++
+.Example: Additional webhook by using the `tkn pac` CLI
+[source,terminal]
+----
+$ tkn pac webhook add -n repo-pipelines
+----
++
+.Sample interactive output
+[source,terminal]
+----
+✓ Setting up GitHub Webhook for Repository https://github.com/owner/repo
+👀 I have detected a controller url: https://pipelines-as-code-controller-openshift-pipelines.apps.example.com
+? Do you want me to use it? Yes
+? Please enter the secret to configure the webhook for payload validation (default: AeHdHTJVfAeH):  AeHdHTJVfAeH
+✓ Webhook has been created on repository owner/repo
+🔑 Secret owner-repo has been updated with webhook secret in the repo-pipelines namespace.
+----
+
+.. Update the `webhook.secret` key in the existing OpenShift Secret object.
+
+. Optional: For an existing `Repository` CR, update the personal access token.
+
+** Update the personal access token by using the `tkn pac` CLI tool.
++
+.Example: Updating personal access token by using the `tkn pac` CLI
+[source,terminal]
+----
+$ tkn pac webhook update-token -n repo-pipelines
+----
++
+.Sample interactive output
+[source,terminal]
+----
+? Please enter your personal access token:  ****************************************
+🔑 Secret owner-repo has been updated with new personal access token in the repo-pipelines namespace.
+----
+
+** Or, update the personal access token by modifying the `Repository` CR.
+
+... Find the name of the secret in the `Repository` CR.
++
+[source,yaml]
+----
+apiVersion: "pipelinesascode.tekton.dev/v1alpha1"
+kind: Repository
+metadata:
+  name: my-repo
+  namespace: target-namespace
+spec:
+# ...
+  git_provider:
+    secret:
+      name: "github-webhook-config"
+# ...
+----
+
+... Use the `oc patch` command to update the values of the `$NEW_TOKEN` in the `$target_namespace` namespace.
++
+[source,terminal]
+----
+$ oc -n $target_namespace patch secret github-webhook-config -p "{\"data\": {\"provider.token\": \"$(echo -n $NEW_TOKEN|base64 -w0)\"}}"
+----
+
+.Verification
+
+Verify the webhook configuration in your GitHub repository.
+
+. Go to your GitHub repository *Settings* -> *Webhooks*.
+
+. Verify that the webhook is displayed in the list with the {pac} controller URL.
+
+.. Check that the recent deliveries show successful responses with a checkmark.
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token[Creating a personal access token] (GitHub)
+* link:https://docs.github.com/en/developers/webhooks-and-events/webhooks/about-webhooks[About webhooks] (GitHub)
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/using-pipelines-as-code-repos.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="using-pipelines-as-code-with-gitlab_{context}"]
+= Use {pac} with GitLab
+
+[role="_abstract"]
+If your organization or project uses GitLab as the preferred platform, you can use {pac} for your repository with a webhook on GitLab.
+
+.Prerequisites
+
+* You installed {pac} on the cluster.
+
+* For authorization, you generated a personal access token as the manager of the project or organization on GitLab.
++
+[NOTE]
+====
+* If you want to configure the webhook using the `tkn pac` CLI, add the `admin:repo_hook` scope to the token.
+
+* Using a token scoped for a specific project cannot give API access to a merge request (MR) sent from a forked repository. In such cases, {pac} displays the result of a pipeline as a comment on the MR.
+====
+
+.Procedure
+
+. Configure the webhook and create a `Repository` custom resource (CR).
+
+** To configure a webhook and create a `Repository` CR _automatically_ using the `tkn pac` CLI tool, use the following command:
++
+[source,terminal]
+----
+$ tkn pac create repo
+----
++
+.Sample interactive output
+[source,terminal]
+----
+? Enter the Git repository url (default: https://gitlab.com/owner/repo):
+? Please enter the namespace where the pipeline should run (default: repo-pipelines):
+! Namespace repo-pipelines is not found
+? Would you like me to create the namespace repo-pipelines? Yes
+✓ Repository repositories-project has been created in repo-pipelines namespace
+✓ Setting up GitLab Webhook for Repository https://gitlab.com/owner/repo
+? Please enter the project ID for the repository you want to be configured,
+  project ID refers to an unique ID (e.g. 34405323) shown at the top of your GitLab project : 17103
+👀 I have detected a controller url: https://pipelines-as-code-controller-openshift-pipelines.apps.example.com
+? Do you want me to use it? Yes
+? Please enter the secret to configure the webhook for payload validation (default: lFjHIEcaGFlF):  lFjHIEcaGFlF
+ℹ ️You now need to create a GitLab personal access token with `api` scope
+ℹ ️Go to this URL to generate one https://gitlab.com/-/profile/personal_access_tokens, see https://is.gd/rOEo9B for documentation
+? Please enter the GitLab access token:  **************************
+? Please enter your GitLab API URL::  https://gitlab.com
+✓ Webhook has been created on your repository
+🔑 Webhook Secret repositories-project has been created in the repo-pipelines namespace.
+🔑 Repository CR repositories-project has been updated with webhook secret in the repo-pipelines namespace
+ℹ Directory .tekton has been created.
+✓ A basic template has been created in /home/Go/src/gitlab.com/repositories/project/.tekton/pipelinerun.yaml, feel free to customize it.
+----
+
+** To configure a webhook and create a `Repository` CR _manually_, perform the following steps:
+
+... On your {ocp} cluster, extract the public URL of the {pac} controller.
++
+[source,terminal]
+----
+$ echo https://$(oc get route -n openshift-pipelines pipelines-as-code-controller -o jsonpath='{.spec.host}')
+----
+
+... On your GitLab project, perform the following steps:
+
+.... Use the left sidebar to go to *Settings* –> *Webhooks*.
+
+.... Set the *URL* to the {pac} controller public URL.
+
+.... Add a webhook secret and note it in an alternate location. With `openssl` installed on your local machine, generate a random secret.
++
+[source,terminal]
+----
+$ openssl rand -hex 20
+----
+
+.... Click *Let me select individual events* and select these events: *Commit comments*, *Issue comments*, *Pull request*, and *Pushes*.
+
+.... Click *Save changes*.
+
+... On your {ocp} cluster, create a `Secret` object with the personal access token and webhook secret.
++
+[source,terminal]
+----
+$ oc -n target-namespace create secret generic gitlab-webhook-config \
+  --from-literal provider.token="<GITLAB_PERSONAL_ACCESS_TOKEN>" \
+  --from-literal webhook.secret="<WEBHOOK_SECRET>"
+----
+
+... Create a `Repository` CR.
++
+.Example: `Repository` CR
+[source,yaml]
+----
+apiVersion: "pipelinesascode.tekton.dev/v1alpha1"
+kind: Repository
+metadata:
+  name: my-repo
+  namespace: target-namespace
+spec:
+  url: "https://gitlab.com/owner/repo" # The repository URL
+  git_provider:
+    #url: "https://gitlab.example.com/"
+    secret:
+      name: "gitlab-webhook-config"
+      key: "provider.token" # Set this if you have a different key in your secret
+    webhook_secret:
+      name: "gitlab-webhook-config"
+      key: "webhook.secret" # Set this if you have a different key for your secret
+----
+`git_provider.url`:: If you are using a private instance of GitLab and not GitLab.com, uncomment this field and set it to the URL of your GitLab API. The GitLab API is the same host as the repository. For example, if the repository is `\https://gitlab.example.com/owner/repo`, the API URL is `\https://gitlab.example.com/`.
+
++
+[NOTE]
+====
+* {pac} assumes that the OpenShift Secret object and the Repository CR are in the same namespace.
+====
+
+. Optional: For an existing Repository CR, add many GitLab Webhook secrets or give a substitute for a deleted secret.
+
+.. Add a webhook by using the `tkn pac` CLI tool.
++
+.Example: Adding additional webhook by using the `tkn pac` CLI
+[source,terminal]
+----
+$ tkn pac webhook add -n repo-pipelines
+----
++
+.Sample interactive output
+[source,terminal]
+----
+✓ Setting up GitLab Webhook for Repository https://gitlab.com/owner/repo
+👀 I have detected a controller url: https://pipelines-as-code-controller-openshift-pipelines.apps.example.com
+? Do you want me to use it? Yes
+? Please enter the secret to configure the webhook for payload validation (default: AeHdHTJVfAeH):  AeHdHTJVfAeH
+✓ Webhook has been created on repository owner/repo
+🔑 Secret owner-repo has been updated with webhook secret in the repo-pipelines namespace.
+----
+
+.. Update the `webhook.secret` key in the existing OpenShift Secret object.
+
+. Optional: For an existing `Repository` CR, update the personal access token.
+
+** Update the personal access token by using the `tkn pac` CLI tool.
++
+.Example: Updating personal access token by using the `tkn pac` CLI
+[source,terminal]
+----
+$ tkn pac webhook update-token -n repo-pipelines
+----
++
+.Sample interactive output
+[source,terminal]
+----
+? Please enter your personal access token:  ****************************************
+🔑 Secret owner-repo has been updated with new personal access token in the repo-pipelines namespace.
+----
+
+** Or, update the personal access token by modifying the `Repository` CR.
+
+... Find the name of the secret in the `Repository` CR.
++
+[source,yaml]
+----
+...
+spec:
+  git_provider:
+    secret:
+      name: "gitlab-webhook-config"
+...
+----
+
+... Use the `oc patch` command to update the values of the `$NEW_TOKEN` in the `$target_namespace` namespace.
++
+[source,terminal]
+----
+$ oc -n $target_namespace patch secret gitlab-webhook-config -p "{\"data\": {\"provider.token\": \"$(echo -n $NEW_TOKEN|base64 -w0)\"}}"
+----
+
+.Verification
+
+* Check the webhook configuration in your GitLab project:
+.. Navigate to *Settings* -> *Webhooks*.
+.. Verify that the webhook URL points to {pac} controller.
+.. Click *Test* and select *Push events* to verify connectivity.
+
+* Trigger a pipeline run by pushing a commit to your repository or creating a merge request.
+
+* Check that the pipeline status is reported back to GitLab in the merge request or commit status.
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html[Personal access tokens] (GitLab)
+* link:https://docs.gitlab.com/ee/user/project/integrations/webhooks.html[Webhooks] (GitLab)
+
+
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/using-pipelines-as-code-repos.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="using-pipelines-as-code-with-bitbucket-cloud_{context}"]
+= Use {pac} with Bitbucket Cloud
+
+[role="_abstract"]
+If your organization or project uses Bitbucket Cloud as the preferred platform, you can use {pac} for your repository with a webhook on Bitbucket Cloud.
+
+.Prerequisites
+
+* You installed {pac} on the cluster.
+
+* You created an app password on Bitbucket Cloud.
+
+** Check the following boxes to add appropriate permissions to the token:
+*** Account: `Email`, `Read`
+*** Workspace membership: `Read`, `Write`
+*** Projects: `Read`, `Write`
+*** Issues: `Read`, `Write`
+*** Pull requests: `Read`, `Write`
++
+[NOTE]
+====
+* If you want to configure the webhook using the `tkn pac` CLI, add the `Webhooks`: `Read` and `Write` permission to the token.
+
+* Once generated, save a copy of the password or token in an alternate location.
+====
+
+.Procedure
+
+. Configure the webhook and create a `Repository` CR.
+
+** To configure a webhook and create a `Repository` CR _automatically_ using the `tkn pac` CLI tool, use the following command:
++
+[source,terminal]
+----
+$ tkn pac create repo
+----
++
+.Sample interactive output
+[source,terminal]
+----
+? Enter the Git repository url (default: https://bitbucket.org/workspace/repo):
+? Please enter the namespace where the pipeline should run (default: repo-pipelines):
+! Namespace repo-pipelines is not found
+? Would you like me to create the namespace repo-pipelines? Yes
+✓ Repository workspace-repo has been created in repo-pipelines namespace
+✓ Setting up Bitbucket Webhook for Repository https://bitbucket.org/workspace/repo
+? Please enter your bitbucket cloud username:  <username>
+ℹ ️You now need to create a Bitbucket Cloud app password, please checkout the docs at https://is.gd/fqMHiJ for the required permissions
+? Please enter the Bitbucket Cloud app password:  ************************************
+👀 I have detected a controller url: https://pipelines-as-code-controller-openshift-pipelines.apps.example.com
+? Do you want me to use it? Yes
+✓ Webhook has been created on repository workspace/repo
+🔑 Webhook Secret workspace-repo has been created in the repo-pipelines namespace.
+🔑 Repository CR workspace-repo has been updated with webhook secret in the repo-pipelines namespace
+ℹ Directory .tekton has been created.
+✓ A basic template has been created in /home/Go/src/bitbucket/repo/.tekton/pipelinerun.yaml, feel free to customize it.
+----
+
+** To configure a webhook and create a `Repository` CR _manually_, perform the following steps:
+
+... On your {ocp} cluster, extract the public URL of the {pac} controller.
++
+[source,terminal]
+----
+$ echo https://$(oc get route -n openshift-pipelines pipelines-as-code-controller -o jsonpath='{.spec.host}')
+----
+
+... On Bitbucket Cloud, perform the following steps:
+
+.... Use the left navigation pane of your Bitbucket Cloud repository to go to *Repository settings* –> *Webhooks* and click *Add webhook*.
+
+.... Set a *Title*. For example, "{pac}".
+
+.... Set the *URL* to the {pac} controller public URL.
+
+.... Select these events: *Repository: Push*, *Pull Request: Created*, *Pull Request: Updated*, and *Pull Request: Comment created*.
+
+.... Click *Save*.
+
+... On your {ocp} cluster, create a `Secret` object with the app password in the target namespace.
++
+[source,terminal]
+----
+$ oc -n target-namespace create secret generic bitbucket-cloud-token \
+  --from-literal provider.token="<BITBUCKET_APP_PASSWORD>"
+----
+
+... Create a `Repository` CR.
++
+.Example: `Repository` CR
+[source,yaml]
+----
+apiVersion: "pipelinesascode.tekton.dev/v1alpha1"
+kind: Repository
+metadata:
+  name: my-repo
+  namespace: target-namespace
+spec:
+  url: "https://bitbucket.com/workspace/repo"
+  branch: "main"
+  git_provider:
+    user: "<BITBUCKET_USERNAME>"
+    secret:
+      name: "bitbucket-cloud-token"
+      key: "provider.token" # Set this if you have a different key in your secret
+----
+`git_provider.user`:: You can only reference a user by the `ACCOUNT_ID` in an owner file.
+`git_provider.secret.name`:: {pac} assumes that the secret referred in the `git_provider.secret` spec and the `Repository` CR is in the same namespace.
+
++
+[NOTE]
+====
+* The `tkn pac create` and `tkn pac bootstrap` commands are not supported on Bitbucket Cloud.
+
+* Bitbucket Cloud does not support webhook secrets. To secure the payload and prevent hijacking of the CI, {pac} fetches the list of Bitbucket Cloud IP addresses and ensures that the webhook receptions come only from those IP addresses.
+** To disable the default behavior, set the `bitbucket-cloud-check-source-ip` parameter to `false` in the `TektonConfig` custom resource, in the `pipelinesAsCode.settings` spec.
+** To allow additional safe IP addresses or networks, add them as comma-separated values to the `bitbucket-cloud-additional-source-ip` parameter in the `TektonConfig` custom resource, in the `pipelinesAsCode.settings` spec.
+====
+
+. Optional: For an existing `Repository` CR, add many Bitbucket Cloud Webhook secrets or give a substitute for a deleted secret.
+
+.. Add a webhook by using the `tkn pac` CLI tool.
++
+.Example: Adding additional webhook by using the `tkn pac` CLI
+[source,terminal]
+----
+$ tkn pac webhook add -n repo-pipelines
+----
++
+.Sample interactive output
+[source,terminal]
+----
+✓ Setting up Bitbucket Webhook for Repository https://bitbucket.org/workspace/repo
+? Please enter your bitbucket cloud username:  <username>
+👀 I have detected a controller url: https://pipelines-as-code-controller-openshift-pipelines.apps.example.com
+? Do you want me to use it? Yes
+✓ Webhook has been created on repository workspace/repo
+🔑 Secret workspace-repo has been updated with webhook secret in the repo-pipelines namespace.
+----
++
+[NOTE]
+====
+Use the `[-n <namespace>]` option with the `tkn pac webhook add` command only when the `Repository` CR exists in a namespace other than the default namespace.
+====
+
+.. Update the `webhook.secret` key in the existing OpenShift Secret object.
+
+. Optional: For an existing `Repository` CR, update the personal access token.
+
+** Update the personal access token by using the `tkn pac` CLI tool.
++
+.Example: Updating personal access token by using the `tkn pac` CLI
+[source,terminal]
+----
+$ tkn pac webhook update-token -n repo-pipelines
+----
++
+.Sample interactive output
+[source,terminal]
+----
+? Please enter your personal access token:  ****************************************
+🔑 Secret owner-repo has been updated with new personal access token in the repo-pipelines namespace.
+----
++
+[NOTE]
+====
+Use the `[-n <namespace>]` option with the `tkn pac webhook update-token` command only when the `Repository` CR exists in a namespace other than the default namespace.
+====
+
+** Or, update the personal access token by modifying the `Repository` CR.
+
+... Find the name of the secret in the `Repository` CR.
++
+[source,yaml]
+----
+...
+spec:
+  git_provider:
+    user: "<BITBUCKET_USERNAME>"
+    secret:
+      name: "bitbucket-cloud-token"
+      key: "provider.token"
+...
+----
+
+... Use the `oc patch` command to update the values of the `$password` in the `$target_namespace` namespace.
++
+[source,terminal]
+----
+$ oc -n $target_namespace patch secret bitbucket-cloud-token -p "{\"data\": {\"provider.token\": \"$(echo -n $NEW_TOKEN|base64 -w0)\"}}"
+----
+
+.Verification
+
+. Verify that the Repository custom resource is created:
++
+[source,terminal]
+----
+$ oc get repository -n <namespace>
+----
++
+.Example output
+[source,terminal]
+----
+NAME              URL                                      NAMESPACE           SUCCEEDED   REASON
+workspace-repo    https://bitbucket.org/workspace/repo     repo-pipelines      True        Succeeded
+----
+
+. Verify the webhook configuration in your Bitbucket Cloud repository:
+.. Navigate to your Bitbucket Cloud repository in a web browser.
+.. Go to *Repository settings* → *Webhooks*.
+.. Verify that the webhook is displayed with the {pac} controller URL.
+.. Check the webhook history for successful deliveries after you trigger an event.
+
+. Trigger a test event by pushing a commit to your repository or creating a pull request.
+
+. Verify that the pipeline run is created in response to the event:
++
+[source,terminal]
+----
+$ oc get pipelinerun -n <namespace>
+----
++
+.Example output
+[source,terminal]
+----
+NAME                          SUCCEEDED   REASON      STARTTIME   COMPLETIONTIME
+workspace-repo-run-abc123     True        Succeeded   5m          2m
+----
+
+. Verify that the pipeline status is reported back to Bitbucket Cloud:
+.. Navigate to your pull request or commit in Bitbucket Cloud.
+.. Verify that the pipeline status displays as a build status indicator.
+.. Verify that the status shows the correct state (running, succeeded, or failed).
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://support.atlassian.com/bitbucket-cloud/docs/app-passwords/[Creating app password on Bitbucket Cloud] (Bitbucket Cloud)
+* link:https://developer.atlassian.com/cloud/bitbucket/bitbucket-api-changes-gdpr/#introducing-atlassian-account-id-and-nicknames[Introducing Atlassian Account ID and Nicknames] (Atlassian Developer)
+
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/using-pipelines-as-code-repos.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="using-pipelines-as-code-with-bitbucket-server_{context}"]
+= Use {pac} with Bitbucket Data Center
+
+[role="_abstract"]
+If your organization or project uses Bitbucket Data Center as the preferred platform, you can use {pac} for your repository with a webhook on Bitbucket Data Center.
+
+.Prerequisites
+
+* You installed {pac} on the cluster.
+
+* You generated a personal access token as the manager of the project on Bitbucket Data Center, and saved a copy of it in an alternate location.
++
+[NOTE]
+====
+* The token must have the `PROJECT_ADMIN` and `REPOSITORY_ADMIN` permissions.
+* The token must have access to forked repositories in pull requests.
+====
+
+.Procedure
+
+. On your {ocp} cluster, extract the public URL of the {pac} controller.
++
+[source,terminal]
+----
+$ echo https://$(oc get route -n openshift-pipelines pipelines-as-code-controller -o jsonpath='{.spec.host}')
+----
+
+. On Bitbucket Data Center, perform the following steps:
+
+.. Use the left navigation pane of your Bitbucket Data Center repository to go to *Repository settings* –> *Webhooks* and click *Add webhook*.
+
+.. Set a *Title*. For example, "{pac}".
+
+.. Set the *URL* to the {pac} controller public URL.
+
+.. Add a webhook secret and save a copy of it in an alternate location. If you have `openssl` installed on your local machine, generate a random secret using the following command:
++
+[source,terminal]
+----
+$ openssl rand -hex 20
+----
+
+.. Select the following events:
+*** *Repository: Push*
+*** *Repository: Modified*
+*** *Pull Request: Opened*
+*** *Pull Request: Source branch updated*
+*** *Pull Request: Comment added*
+
+.. Click *Save*.
+
+. On your {ocp} cluster, create a `Secret` object with the app password in the target namespace.
++
+[source,terminal]
+----
+$ oc -n target-namespace create secret generic bitbucket-datacenter-webhook-config \
+  --from-literal provider.token="<PERSONAL_TOKEN>" \
+  --from-literal webhook.secret="<WEBHOOK_SECRET>"
+----
+
+. Create a `Repository` CR.
++
+.Example: `Repository` CR
+[source,yaml]
+----
+apiVersion: "pipelinesascode.tekton.dev/v1alpha1"
+kind: Repository
+metadata:
+  name: my-repo
+  namespace: target-namespace
+spec:
+  url: "https://bitbucket.com/workspace/repo"
+  git_provider:
+    url: "https://bitbucket.datacenter.api.url/rest"
+    user: "<BITBUCKET_USERNAME>"
+    secret:
+      name: "bitbucket-datacenter-webhook-config"
+      key: "provider.token" # Set this if you have a different key in your secret
+    webhook_secret:
+      name: "bitbucket-datacenter-webhook-config"
+      key: "webhook.secret" # Set this if you have a different key for your secret
+----
+`git_provider.url`:: Ensure that you have the right Bitbucket Data Center API URL without the `/api/v1.0` suffix. Usually, the default install has a `/rest` suffix.
+`git_provider.user`:: You can only reference a user by the `ACCOUNT_ID` in an owner file.
+`git_provider.secret`:: {pac} assumes that the secret referred in the `git_provider.secret` spec and the `Repository` CR is in the same namespace.
++
+[NOTE]
+====
+The `tkn pac create` and `tkn pac bootstrap` commands are not supported on Bitbucket Data Center.
+====
+
+.Verification
+
+. Verify that the Repository custom resource is created:
++
+[source,terminal]
+----
+$ oc get repository -n <namespace>
+----
++
+.Example output
+[source,terminal]
+----
+NAME      URL                                       NAMESPACE           SUCCEEDED   REASON
+my-repo   https://bitbucket.com/workspace/repo      target-namespace    True        Succeeded
+----
+
+. Verify the webhook configuration in your Bitbucket Data Center repository:
+.. Navigate to your Bitbucket Data Center repository in a web browser.
+.. Go to *Repository settings* → *Webhooks*.
+.. Verify that the webhook is displayed with the {pac} controller URL.
+.. Check the webhook history for successful deliveries after you trigger an event.
+
+. Trigger a test event by pushing a commit to your repository or creating a pull request.
+
+. Verify that the pipeline run is created in response to the event:
++
+[source,terminal]
+----
+$ oc get pipelinerun -n <namespace>
+----
++
+.Example output
+[source,terminal]
+----
+NAME                   SUCCEEDED   REASON      STARTTIME   COMPLETIONTIME
+my-repo-run-xyz456     True        Succeeded   4m          1m
+----
+
+. Verify that the pipeline status is reported back to Bitbucket Data Center:
+.. Navigate to your pull request or commit in Bitbucket Data Center.
+.. Verify that the pipeline status displays as a build status indicator.
+.. Verify that the status shows the correct state (running, succeeded, or failed).
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://pipelinesascode.com/docs/guides/repository-crd/[Using the Repository custom resource]
+* link:https://confluence.atlassian.com/bitbucketserver/personal-access-tokens-939515499.html[Creating personal tokens on Bitbucket Data Center] (Bitbucket Data Center)
+* link:https://confluence.atlassian.com/bitbucketserver/manage-webhooks-938025878.html[Managing webhooks on Bitbucket Data Center] (Bitbucket Data Center)
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/using-pipelines-as-code-repos.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="interfacing-pipelines-as-code-with-custom-certificates_{context}"]
+= Configure custom certificates for {pac}
+
+[role="_abstract"]
+To configure {pac} with a Git repository that uses a privately signed or custom certificate, expose the certificate to {pac}.
+
+.Procedure
+
+* If you have installed {pac} using the {pipelines-title} Operator, you can add your custom certificate to the cluster using the `Proxy` object. The Operator exposes the certificate in all {pipelines-title} components and workloads, including {pac}.
+
+
+:leveloffset!:
+
+:leveloffset: +1
+
+// This module is included in the following assemblies:
+// * pac/using-pipelines-as-code-repos.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="using-private-repositories-with-pipelines-as-code_{context}"]
+= Private repository support in {pac}
+
+[role="_abstract"]
+{pac} supports private repositories by creating or updating a secret in the target namespace with the user token. The `git-clone` task from {tekton-hub} uses the user token to clone private repositories.
+
+Whenever {pac} creates a new pipeline run in the target namespace, it creates or updates a secret with the  `pac-gitauth-<REPOSITORY_OWNER>-<REPOSITORY_NAME>-<RANDOM_STRING>` format.
+
+You must reference the secret with the `basic-auth` workspace in your pipeline run and pipeline definitions, which is then passed on to the `git-clone` task.
+
+[source,yaml]
+----
+...
+  workspace:
+  - name: basic-auth
+    secret:
+      secretName: "{{ git_auth_secret }}"
+...
+----
+
+In the pipeline, you can reference the `basic-auth` workspace for the `git-clone` task to reuse:
+
+[source,yaml]
+----
+...
+workspaces:
+  - name basic-auth
+params:
+    - name: repo_url
+    - name: revision
+...
+tasks:
+  workspaces:
+    - name: basic-auth
+      workspace: basic-auth
+  ...
+  tasks:
+  - name: git-clone-from-catalog
+      taskRef:
+        name: git-clone
+      params:
+        - name: url
+          value: $(params.repo_url)
+        - name: revision
+          value: $(params.revision)
+...
+----
+`name`:: The `git-clone` task picks up the `basic-auth` workspace and uses it to clone the private repository.
+
+You can change this configuration by setting the `secret-auto-create` parameter to either a `false` or `true` value, as required, in the `TektonConfig` custom resource, in the `pipelinesAsCode.settings` spec.
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://hub.tekton.dev/tekton/task/git-clone[git-clone task on {tekton-hub}]
+
+:leveloffset!:
+
+[role="_additional-resources"]
+.Additional resources
+* link:https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html[GitLab Webhook documentation on GitLab]
+* link:https://support.atlassian.com/bitbucket-cloud/docs/app-passwords/[Creating app password on Bitbucket Cloud]
+* link:https://developer.atlassian.com/cloud/bitbucket/bitbucket-api-changes-gdpr/#introducing-atlassian-account-id-and-nicknames[Introducing Atlassian Account ID and Nicknames]
+* link:https://confluence.atlassian.com/bitbucketserver/personal-access-tokens-939515499.html[Creating personal tokens on Bitbucket Data Center]
+* link:https://confluence.atlassian.com/bitbucketserver/manage-webhooks-938025878.html[Managing webhooks on Bitbucket Data Center]
+* xref:../pac/install-config-pipelines-as-code.adoc#pac-additional-controller_install-config-pipelines-as-code[Configuring additional {pac} controllers to support additional GitHub apps]
+* link:https://docs.openshift.com/container-platform/latest/networking/enable-cluster-wide-proxy.html[Enabling the cluster-wide proxy]
